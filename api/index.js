@@ -243,7 +243,7 @@ const superAdminLimiter = rateLimit({
 
 const allowedOrigins = process.env.CORS_ORIGINS 
   ? process.env.CORS_ORIGINS.split(',') 
-  : ['http://localhost:3000', 'http://localhost:8080'];
+  : ['http://localhost:3000', 'http://localhost:8080', 'https://app-livraison-one.vercel.app'];
 
 app.use(cors({ 
   origin: (origin, callback) => {
@@ -252,6 +252,10 @@ app.use(cors({
     // En production, vérifier l'origin
     if (process.env.NODE_ENV === 'production') {
       if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      // Permettre les sous-domaines vercel
+      if (origin.includes('vercel.app')) {
         return callback(null, true);
       }
       return callback(new Error('CORS non autorisé'), false);
