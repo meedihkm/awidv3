@@ -30,6 +30,10 @@ app.use(express.json({ limit: '1mb' }));
 app.use('/api/', globalLimiter);
 
 // Routes publiques
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', version: '2.0.0', name: 'Awid API', timestamp: new Date().toISOString() });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', version: '2.0.0', timestamp: new Date().toISOString() });
 });
