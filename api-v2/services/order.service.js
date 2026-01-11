@@ -1,5 +1,12 @@
 const pool = require('../config/database');
 
+// Helper pour parsing sécurisé
+const safeParseFloat = (value) => {
+  if (value === null || value === undefined) return 0;
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 /**
  * Récupère les items d'une commande
  */
@@ -15,9 +22,9 @@ async function getOrderItems(orderId) {
     id: item.id,
     orderId: item.order_id,
     productId: item.product_id,
-    productName: item.product_name,
-    unitPrice: parseFloat(item.price),
-    quantity: item.quantity
+    productName: item.product_name || '',
+    unitPrice: safeParseFloat(item.price),
+    quantity: item.quantity || 0
   }));
 }
 
@@ -42,17 +49,17 @@ async function getOrderWithItems(orderId) {
     id: order.id,
     organizationId: order.organization_id,
     cafeteriaId: order.cafeteria_id,
-    date: order.date,
-    total: parseFloat(order.total),
-    status: order.status,
+    date: order.date || '',
+    total: safeParseFloat(order.total),
+    status: order.status || 'pending',
     paymentStatus: order.payment_status || 'unpaid',
-    amountPaid: parseFloat(order.amount_paid || 0),
+    amountPaid: safeParseFloat(order.amount_paid),
     createdAt: order.created_at,
     items,
     cafeteria: {
       id: order.cafeteria_id,
-      name: order.cafeteria_name,
-      phone: order.cafeteria_phone
+      name: order.cafeteria_name || '',
+      phone: order.cafeteria_phone || null
     }
   };
 }
@@ -65,14 +72,14 @@ function formatOrder(order, items, cafeteria = null) {
     id: order.id,
     organizationId: order.organization_id,
     cafeteriaId: order.cafeteria_id,
-    date: order.date,
-    total: parseFloat(order.total),
-    status: order.status,
+    date: order.date || '',
+    total: safeParseFloat(order.total),
+    status: order.status || 'pending',
     paymentStatus: order.payment_status || 'unpaid',
-    amountPaid: parseFloat(order.amount_paid || 0),
+    amountPaid: safeParseFloat(order.amount_paid),
     createdAt: order.created_at,
     items,
-    cafeteria: cafeteria || { id: order.cafeteria_id, name: order.cafeteria_name }
+    cafeteria: cafeteria || { id: order.cafeteria_id, name: order.cafeteria_name || '' }
   };
 }
 

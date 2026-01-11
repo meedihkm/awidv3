@@ -256,8 +256,8 @@ router.get('/locations', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-// GET /api/deliverers/:id/history
-router.get('/:id/location-history', authenticate, validateUUID('id'), async (req, res) => {
+// GET /api/deliverers/:id/history (alias pour compatibilité)
+router.get('/:id/history', authenticate, validateUUID('id'), async (req, res) => {
   try {
     const { date } = req.query;
     const result = await pool.query(
@@ -271,6 +271,7 @@ router.get('/:id/location-history', authenticate, validateUUID('id'), async (req
     res.json({ success: true, data: result.rows });
   } catch (error) {
     console.error('Get history error:', error);
+    // Retourner tableau vide si table n'existe pas
     res.json({ success: true, data: [] });
   }
 });

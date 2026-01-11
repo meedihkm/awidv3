@@ -355,6 +355,13 @@ const authenticateSuperAdmin = (req, res, next) => {
 
 // ===== HELPERS =====
 
+// Helper pour parsing sécurisé (évite NaN si valeur null/undefined)
+const safeParseFloat = (value) => {
+  if (value === null || value === undefined) return 0;
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 async function getOrderItems(orderId) {
   const itemsResult = await pool.query(
     `SELECT oi.*, p.name as product_name 
@@ -367,9 +374,9 @@ async function getOrderItems(orderId) {
     id: item.id,
     orderId: item.order_id,
     productId: item.product_id,
-    productName: item.product_name,
-    unitPrice: parseFloat(item.price),
-    quantity: item.quantity
+    productName: item.product_name || '',
+    unitPrice: safeParseFloat(item.price),
+    quantity: item.quantity || 0
   }));
 }
 
@@ -390,17 +397,17 @@ async function getOrderWithItems(orderId) {
     id: order.id,
     organizationId: order.organization_id,
     cafeteriaId: order.cafeteria_id,
-    date: order.date,
-    total: parseFloat(order.total),
-    status: order.status,
+    date: order.date || '',
+    total: safeParseFloat(order.total),
+    status: order.status || 'pending',
     paymentStatus: order.payment_status || 'unpaid',
-    amountPaid: parseFloat(order.amount_paid || 0),
+    amountPaid: safeParseFloat(order.amount_paid),
     createdAt: order.created_at,
     items,
     cafeteria: {
       id: order.cafeteria_id,
-      name: order.cafeteria_name,
-      phone: order.cafeteria_phone
+      name: order.cafeteria_name || '',
+      phone: order.cafeteria_phone || null
     }
   };
 }
@@ -852,10 +859,10 @@ app.get('/api/orders', authenticate, async (req, res) => {
         organizationId: order.organization_id,
         cafeteriaId: order.cafeteria_id,
         date: order.date,
-        total: parseFloat(order.total),
+        total: safeParseFloat(order.total),
         status: order.status,
         paymentStatus: order.payment_status || 'unpaid',
-        amountPaid: parseFloat(order.amount_paid || 0),
+        amountPaid: safeParseFloat(order.amount_paid),
         createdAt: order.created_at,
         items,
         cafeteria: { id: order.cafeteria_id, name: order.cafeteria_name }
@@ -884,10 +891,10 @@ app.get('/api/orders/my', authenticate, async (req, res) => {
         organizationId: order.organization_id,
         cafeteriaId: order.cafeteria_id,
         date: order.date,
-        total: parseFloat(order.total),
+        total: safeParseFloat(order.total),
         status: order.status,
         paymentStatus: order.payment_status || 'unpaid',
-        amountPaid: parseFloat(order.amount_paid || 0),
+        amountPaid: safeParseFloat(order.amount_paid),
         createdAt: order.created_at,
         items
       });
@@ -1062,7 +1069,7 @@ app.get('/api/deliveries', authenticate, async (req, res) => {
         delivererId: d.deliverer_id,
         status: d.status,
         paymentStatus: d.payment_status || 'unpaid',
-        amountCollected: parseFloat(d.amount_collected || 0),
+        amountCollected: safeParseFloat(d.amount_collected),
         comment: d.comment,
         failureReason: d.failure_reason,
         failedAt: d.failed_at,
@@ -1100,7 +1107,7 @@ app.get('/api/deliveries/route', authenticate, async (req, res) => {
         delivererId: d.deliverer_id,
         status: d.status,
         paymentStatus: d.payment_status || 'unpaid',
-        amountCollected: parseFloat(d.amount_collected || 0),
+        amountCollected: safeParseFloat(d.amount_collected),
         comment: d.comment,
         failureReason: d.failure_reason,
         failedAt: d.failed_at,
@@ -1138,7 +1145,7 @@ app.get('/api/deliveries/history', authenticate, async (req, res) => {
         delivererId: d.deliverer_id,
         status: d.status,
         paymentStatus: d.payment_status || 'unpaid',
-        amountCollected: parseFloat(d.amount_collected || 0),
+        amountCollected: safeParseFloat(d.amount_collected),
         comment: d.comment,
         failureReason: d.failure_reason,
         deliveredAt: d.delivered_at,
@@ -1179,7 +1186,7 @@ app.get('/api/deliveries/:id', authenticate, async (req, res) => {
         delivererId: d.deliverer_id,
         status: d.status,
         paymentStatus: d.payment_status || 'unpaid',
-        amountCollected: parseFloat(d.amount_collected || 0),
+        amountCollected: safeParseFloat(d.amount_collected),
         comment: d.comment,
         deliveredAt: d.delivered_at,
         createdAt: d.created_at,
@@ -1413,7 +1420,7 @@ app.get('/api/orders/kitchen', authenticate, requireKitchen, async (req, res) =>
         organizationId: order.organization_id,
         cafeteriaId: order.cafeteria_id,
         date: order.date,
-        total: parseFloat(order.total),
+        total: safeParseFloat(order.total),
         status: order.status,
         createdAt: order.created_at,
         items,
