@@ -50,16 +50,12 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
       case 'today':
         return _deliveries.where((d) {
           if (d.deliveredAt == null) return false;
-          final deliveryDate = DateTime.tryParse(d.deliveredAt!);
-          if (deliveryDate == null) return false;
-          return deliveryDate.isAfter(today);
+          return d.deliveredAt!.isAfter(today);
         }).toList();
       case 'week':
         return _deliveries.where((d) {
           if (d.deliveredAt == null) return false;
-          final deliveryDate = DateTime.tryParse(d.deliveredAt!);
-          if (deliveryDate == null) return false;
-          return deliveryDate.isAfter(weekAgo);
+          return d.deliveredAt!.isAfter(weekAgo);
         }).toList();
       default:
         return _deliveries;
@@ -151,10 +147,8 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
     );
   }
 
-  String _formatDate(String? dateStr) {
-    if (dateStr == null) return 'N/A';
-    final date = DateTime.tryParse(dateStr);
-    if (date == null) return dateStr;
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'N/A';
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
