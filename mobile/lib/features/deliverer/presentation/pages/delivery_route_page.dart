@@ -46,6 +46,94 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
     }
   }
 
+  // Ouvrir la navigation vers le client (OpenStreetMap)
+  Future<void> _navigateToClient(Delivery delivery) async {
+    final cafeteria = delivery.order.cafeteria;
+    if (cafeteria == null) return;
+    
+    // Si pas de coordonnées, demander l'adresse
+    if (!cafeteria.hasLocation) {
+      final address = await _showAddressDialog(cafeteria.name, cafeteria.address);
+      if (address != null && address.isNotEmpty) {
+        try {
+          final response = await _apiService.updateUserAddress(cafeteria.id, address);
+          if (response['success'] && response['data'] != null) {
+            final lat = response['data']['latitude'];
+            final lng = response['data']['longitude'];
+            if (lat != null && lng != null) {
+              _openNavigation(lat, lng, cafeteria.name);
+              _loadDeliveries(); // Recharger pour avoir les nouvelles coordonnées
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Adresse non trouvée sur la carte'), backgroundColor: Colors.orange));
+            }
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
+        }
+      }
+      return;
+    }
+    
+    _openNavigation(cafeteria.latitude!, cafeteria.longitude!, cafeteria.name);
+  }
+
+  void _openNavigation(double lat, double lng, String name) async {
+    // Essayer d'ouvrir avec l'app de navigation par défaut (Google Maps, OsmAnd, etc.)
+    final Uri osmUri = Uri.parse('geo:$lat,$lng?q=$lat,$lng($name)');
+    final Uri googleMapsUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+    
+    try {
+      if (await canLaunchUrl(osmUri)) {
+        await launchUrl(osmUri);
+      } else if (await canLaunchUrl(googleMapsUri)) {
+        await launchUrl(googleMapsUri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: ouvrir OpenStreetMap dans le navigateur
+        final Uri webUri = Uri.parse('https://www.openstreetmap.org/directions?from=&to=$lat,$lng');
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Impossible d\'ouvrir la navigation')));
+    }
+  }
+
+  Future<String?> _showAddressDialog(String clientName, String? currentAddress) async {
+    final controller = TextEditingController(text: currentAddress ?? '');
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(children: [
+          Icon(Icons.location_on, color: Colors.orange),
+          SizedBox(width: 8),
+          Expanded(child: Text('Adresse de $clientName', style: TextStyle(fontSize: 16))),
+        ]),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text('Entrez l\'adresse pour activer la navigation GPS', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+          SizedBox(height: 12),
+          TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              hintText: 'Ex: Rue Didouche Mourad, Alger',
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            maxLines: 2,
+            textCapitalization: TextCapitalization.words,
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _confirmDelivery(Delivery delivery) async {
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
@@ -209,26 +297,68 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
               Padding(
                 padding: EdgeInsets.all(16),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  // Bouton appel
-                  if (order.cafeteria?.phone != null && order.cafeteria!.phone!.isNotEmpty) ...[
-                    GestureDetector(
-                      onTap: () => _callClient(order.cafeteria!.phone!),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blue.shade200)),
-                        child: Row(children: [
-                          Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(8)), child: Icon(Icons.phone, size: 20, color: Colors.white)),
-                          SizedBox(width: 12),
-                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text('Appeler le client', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.blue.shade700)),
-                            Text(order.cafeteria!.phone!, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                          ])),
-                          Icon(Icons.arrow_forward_ios, size: 16, color: Colors.blue.shade400),
-                        ]),
+                  // Boutons appel et navigation
+                  Row(children: [
+                    // Bouton appel
+                    if (order.cafeteria?.phone != null && order.cafeteria!.phone!.isNotEmpty)
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => _callClient(order.cafeteria!.phone!),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blue.shade200)),
+                            child: Row(children: [
+                              Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(8)), child: Icon(Icons.phone, size: 20, color: Colors.white)),
+                              SizedBox(width: 8),
+                              Expanded(child: Text('Appeler', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.blue.shade700))),
+                            ]),
+                          ),
+                        ),
+                      ),
+                    if (order.cafeteria?.phone != null && order.cafeteria!.phone!.isNotEmpty) SizedBox(width: 8),
+                    // Bouton navigation GPS
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _navigateToClient(delivery),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: order.cafeteria?.hasLocation == true ? Colors.green.shade50 : Colors.orange.shade50, 
+                            borderRadius: BorderRadius.circular(12), 
+                            border: Border.all(color: order.cafeteria?.hasLocation == true ? Colors.green.shade200 : Colors.orange.shade200),
+                          ),
+                          child: Row(children: [
+                            Container(
+                              padding: EdgeInsets.all(8), 
+                              decoration: BoxDecoration(
+                                color: order.cafeteria?.hasLocation == true ? Colors.green : Colors.orange, 
+                                borderRadius: BorderRadius.circular(8),
+                              ), 
+                              child: Icon(Icons.navigation, size: 20, color: Colors.white),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(child: Text(
+                              order.cafeteria?.hasLocation == true ? 'Naviguer' : 'Ajouter GPS', 
+                              style: TextStyle(fontWeight: FontWeight.w600, color: order.cafeteria?.hasLocation == true ? Colors.green.shade700 : Colors.orange.shade700),
+                            )),
+                          ]),
+                        ),
                       ),
                     ),
-                    SizedBox(height: 12),
-                  ],
+                  ]),
+                  SizedBox(height: 12),
+                  // Adresse si disponible
+                  if (order.cafeteria?.address != null && order.cafeteria!.address!.isNotEmpty)
+                    Container(
+                      padding: EdgeInsets.all(10),
+                      margin: EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+                      child: Row(children: [
+                        Icon(Icons.location_on, size: 18, color: Colors.grey[600]),
+                        SizedBox(width: 8),
+                        Expanded(child: Text(order.cafeteria!.address!, style: TextStyle(color: Colors.grey[700], fontSize: 13))),
+                      ]),
+                    ),
                   // Articles
                   Text('Articles:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[800])),
                   SizedBox(height: 8),

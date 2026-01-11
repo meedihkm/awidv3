@@ -128,11 +128,17 @@ class Cafeteria {
   final String id;
   final String name;
   final String? phone;
+  final String? address;
+  final double? latitude;
+  final double? longitude;
 
   Cafeteria({
     required this.id,
     required this.name,
     this.phone,
+    this.address,
+    this.latitude,
+    this.longitude,
   });
 
   factory Cafeteria.fromJson(Map<String, dynamic> json) {
@@ -140,6 +146,9 @@ class Cafeteria {
       id: json['id']?.toString() ?? '',
       name: json['name'] ?? '',
       phone: json['phone'],
+      address: json['address'],
+      latitude: json['latitude'] != null ? parseDouble(json['latitude']) : null,
+      longitude: json['longitude'] != null ? parseDouble(json['longitude']) : null,
     );
   }
 
@@ -148,6 +157,11 @@ class Cafeteria {
       'id': id,
       'name': name,
       'phone': phone,
+      'address': address,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
+  
+  bool get hasLocation => latitude != null && longitude != null;
 }

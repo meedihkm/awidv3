@@ -66,6 +66,11 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS latitude DECIMAL(10,8);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS longitude DECIMAL(11,8);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS location_updated_at TIMESTAMP WITH TIME ZONE;
 
+-- 7b. Colonnes adresse clients (cafétérias) pour navigation GPS
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address_lat DECIMAL(10,8);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address_lng DECIMAL(11,8);
+
 -- 8. Table historique de localisation (optionnel)
 CREATE TABLE IF NOT EXISTS location_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -152,6 +152,8 @@ class ApiService {
   Future<Map<String, dynamic>> createUser(Map<String, dynamic> user) async => _request('POST', ApiConstants.users, body: user);
   Future<Map<String, dynamic>> deleteUser(String id) async => _request('DELETE', '${ApiConstants.users}/$id');
   Future<Map<String, dynamic>> toggleUser(String id) async => _request('PUT', '${ApiConstants.users}/$id/toggle');
+  Future<Map<String, dynamic>> updateUserAddress(String userId, String address, {double? latitude, double? longitude}) async => 
+    _request('PUT', '${ApiConstants.users}/$userId/address', body: {'address': address, 'latitude': latitude, 'longitude': longitude});
 
   // ===== ORDERS =====
   Future<Map<String, dynamic>> getOrders() async => _request('GET', ApiConstants.orders);
