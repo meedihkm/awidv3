@@ -50,9 +50,9 @@ app.use('/api/financial', organizationRoutes); // Routes financières dans organ
 app.use('/api/audit-logs', organizationRoutes); // Routes audit dans organization
 app.use('/api/super-admin', superAdminRoutes);
 
-// Page Super Admin HTML (servie depuis fichier séparé)
+// Page Super Admin HTML
 app.get('/api/admin', (req, res) => {
-  res.sendFile('super-admin.html', { root: './' });
+  res.sendFile('super-admin.html', { root: __dirname + '/..' });
 });
 
 // 404 handler
