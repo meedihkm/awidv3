@@ -55,7 +55,7 @@ router.put('/settings', authenticate, requireAdmin, validate('updateOrgSettings'
 });
 
 // GET /api/financial/daily
-router.get('/financial/daily', authenticate, async (req, res) => {
+router.get('/daily', authenticate, async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
     const result = await pool.query(
@@ -71,7 +71,7 @@ router.get('/financial/daily', authenticate, async (req, res) => {
 });
 
 // GET /api/financial/debts
-router.get('/financial/debts', authenticate, async (req, res) => {
+router.get('/debts', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT u.id, u.name, u.email, 
@@ -92,8 +92,8 @@ router.get('/financial/debts', authenticate, async (req, res) => {
   }
 });
 
-// GET /api/audit-logs
-router.get('/audit-logs', authenticate, requireAdmin, async (req, res) => {
+// GET /api/audit-logs (monté sur /api/audit-logs)
+router.get('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const { limit, offset, action, userId } = req.query;
     const logs = await getAuditLogs(req.user.organization_id, { limit, offset, action, userId });
