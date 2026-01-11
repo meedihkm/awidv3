@@ -232,12 +232,33 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limiter strict pour super-admin
+const superAdminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Trop de requêtes super-admin, réessayez plus tard' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const allowedOrigins = process.env.CORS_ORIGINS 
   ? process.env.CORS_ORIGINS.split(',') 
   : ['http://localhost:3000', 'http://localhost:8080'];
 
 app.use(cors({ 
-  origin: process.env.NODE_ENV === 'production' ? allowedOrigins : '*',
+  origin: (origin, callback) => {
+    // Permettre les requêtes sans origin (apps mobiles, Postman)
+    if (!origin) return callback(null, true);
+    // En production, vérifier l'origin
+    if (process.env.NODE_ENV === 'production') {
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('CORS non autorisé'), false);
+    }
+    // En dev, tout autoriser
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-super-admin-key']
@@ -1480,7 +1501,7 @@ app.get('/api/audit-logs', authenticate, requireAdmin, async (req, res) => {
 
 // ===== ROUTES SUPER ADMIN =====
 
-app.get('/api/super-admin/test', authenticateSuperAdmin, (req, res) => {
+app.get('/api/super-admin/test', superAdminLimiter, authenticateSuperAdmin, (req, res) => {
   res.json({ success: true, message: 'Super-admin OK' });
 });
 
