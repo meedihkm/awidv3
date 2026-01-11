@@ -54,23 +54,36 @@ router.put('/settings', authenticate, requireAdmin, validate('updateOrgSettings'
   }
 });
 
-// GET /api/financial/daily
+// GET /api/financial/daily - Résumé financier du jour
 router.get('/daily', authenticate, async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
     const result = await pool.query(
-      `SELECT COALESCE(SUM(total), 0) as total_orders, COALESCE(SUM(amount_paid), 0) as total_collected, COUNT(*) as order_count
+      `SELECT 
+        COALESCE(SUM(total), 0) as total_orders, 
+        COALESCE(SUM(amount_paid), 0) as total_collected, 
+        COUNT(*) as order_count
        FROM orders 
        WHERE organization_id = $1 AND DATE(created_at) = $2`,
       [req.user.organization_id, today]
     );
-    res.json({ success: true, data: result.rows[0] });
+    
+    const data = result.rows[0];
+    res.json({ 
+      success: true, 
+      data: {
+        total_orders: parseFloat(data.total_orders) || 0,
+        total_collected: parseFloat(data.total_collected) || 0,
+        order_count: parseInt(data.order_count) || 0
+      }
+    });
   } catch (error) {
+    console.error('Daily financial error:', error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
-// GET /api/financial/debts
+// GET /api/financial/debts - Liste des dettes par client
 router.get('/debts', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
@@ -86,8 +99,20 @@ router.get('/debts', authenticate, async (req, res) => {
        ORDER BY debt DESC`,
       [req.user.organization_id]
     );
-    res.json({ success: true, data: result.rows });
+    
+    // Formater les données pour éviter les problèmes de parsing
+    const data = result.rows.map(row => ({
+      id: row.id,
+      name: row.name || '',
+      email: row.email || '',
+      debt: parseFloat(row.debt) || 0,
+      order_count: parseInt(row.order_count) || 0,
+      last_order: row.last_order
+    }));
+    
+    res.json({ success: true, data });
   } catch (error) {
+    console.error('Debts error:', error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });

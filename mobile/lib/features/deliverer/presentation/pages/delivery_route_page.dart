@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../core/services/print_service.dart';
+import '../../../../core/services/location_service.dart';
 import '../../../../core/models/delivery_model.dart';
 
 class DeliveryRoutePage extends StatefulWidget {
@@ -12,6 +14,7 @@ class DeliveryRoutePage extends StatefulWidget {
 class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
   final ApiService _apiService = ApiService();
   final PrintService _printService = PrintService();
+  final LocationService _locationService = LocationService();
   List<Delivery> _deliveries = [];
   bool _isLoading = true;
 
@@ -141,12 +144,34 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
     );
     if (result != null) {
       try {
+        // Confirmer la livraison
         await _apiService.updateDeliveryStatus(delivery.id, {
           'status': 'delivered',
           'paymentStatus': result['paymentStatus'],
           'amountCollected': result['amountCollected'],
           'comment': result['comment'],
         });
+        
+        // Si le client n'a pas d'adresse enregistrée, capturer la position GPS actuelle
+        final cafeteria = delivery.order.cafeteria;
+        if (cafeteria != null && !cafeteria.hasLocation) {
+          try {
+            final position = await _locationService.getCurrentPosition();
+            if (position != null) {
+              // Enregistrer la position comme adresse du client (géocodage inverse côté serveur optionnel)
+              await _apiService.updateUserAddress(
+                cafeteria.id, 
+                'Position GPS capturée',
+                latitude: position.latitude,
+                longitude: position.longitude,
+              );
+            }
+          } catch (e) {
+            // Silently fail - pas grave si on ne peut pas capturer la position
+            print('GPS capture failed: $e');
+          }
+        }
+        
         _loadDeliveries();
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Livraison confirmée!'), backgroundColor: Colors.green));
       } catch (e) {
