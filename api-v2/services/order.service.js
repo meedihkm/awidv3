@@ -33,7 +33,7 @@ async function getOrderItems(orderId) {
  */
 async function getOrderWithItems(orderId) {
   const orderResult = await pool.query(
-    `SELECT o.*, u.name as cafeteria_name, u.phone as cafeteria_phone
+    `SELECT o.*, u.name as cafeteria_name, u.phone as cafeteria_phone, u.address as cafeteria_address, u.address_lat as cafeteria_lat, u.address_lng as cafeteria_lng
      FROM orders o 
      JOIN users u ON o.cafeteria_id = u.id 
      WHERE o.id = $1`,
@@ -59,7 +59,10 @@ async function getOrderWithItems(orderId) {
     cafeteria: {
       id: order.cafeteria_id,
       name: order.cafeteria_name || '',
-      phone: order.cafeteria_phone || null
+      phone: order.cafeteria_phone || null,
+      address: order.cafeteria_address || null,
+      latitude: order.cafeteria_lat ? parseFloat(order.cafeteria_lat) : null,
+      longitude: order.cafeteria_lng ? parseFloat(order.cafeteria_lng) : null
     }
   };
 }

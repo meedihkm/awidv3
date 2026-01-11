@@ -447,99 +447,102 @@ class _DeliveryConfirmSheetState extends State<_DeliveryConfirmSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
     return Container(
-      margin: EdgeInsets.all(16),
+      margin: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16 + bottomPadding),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: EdgeInsets.all(20),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Header
-          Row(children: [
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(12)),
-              child: Icon(Icons.check_circle, color: Colors.green, size: 28),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Header
+            Row(children: [
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(12)),
+                child: Icon(Icons.check_circle, color: Colors.green, size: 28),
+              ),
+              SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Confirmer la livraison', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(widget.delivery.order.cafeteria?.name ?? '', style: TextStyle(color: Colors.grey[600])),
+              ])),
+              IconButton(icon: Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+            ]),
+            SizedBox(height: 20),
+            
+            // Statut paiement
+            Text('Statut du paiement', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            Row(children: [
+              Expanded(child: _PaymentOption(
+                label: 'Payé', icon: Icons.check_circle, color: Colors.green,
+                selected: _paymentStatus == 'paid',
+                onTap: () => setState(() => _paymentStatus = 'paid'),
+              )),
+              SizedBox(width: 12),
+              Expanded(child: _PaymentOption(
+                label: 'Partiel', icon: Icons.pie_chart, color: Colors.orange,
+                selected: _paymentStatus == 'partial',
+                onTap: () => setState(() => _paymentStatus = 'partial'),
+              )),
+              SizedBox(width: 12),
+              Expanded(child: _PaymentOption(
+                label: 'Crédit', icon: Icons.schedule, color: Colors.red,
+                selected: _paymentStatus == 'unpaid',
+                onTap: () => setState(() => _paymentStatus = 'unpaid'),
+              )),
+            ]),
+            SizedBox(height: 16),
+            
+            // Montant collecté
+            Text('Montant collecté (DA)', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: '0',
+                prefixIcon: Icon(Icons.payments, color: Colors.green),
+                suffixText: 'DA',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.green, width: 2)),
+              ),
             ),
-            SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Confirmer la livraison', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              Text(widget.delivery.order.cafeteria?.name ?? '', style: TextStyle(color: Colors.grey[600])),
-            ])),
-            IconButton(icon: Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+            SizedBox(height: 16),
+            
+            // Commentaire
+            Text('Commentaire (optionnel)', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            TextField(
+              controller: _commentController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: 'Ajouter une note...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            SizedBox(height: 20),
+            
+            // Bouton confirmer
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context, {
+                    'paymentStatus': _paymentStatus,
+                    'amountCollected': double.tryParse(_amountController.text) ?? 0,
+                    'comment': _commentController.text.isEmpty ? null : _commentController.text,
+                  });
+                },
+                icon: Icon(Icons.check),
+                label: Text('CONFIRMER LA LIVRAISON', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              ),
+            ),
           ]),
-          SizedBox(height: 20),
-          
-          // Statut paiement
-          Text('Statut du paiement', style: TextStyle(fontWeight: FontWeight.w600)),
-          SizedBox(height: 8),
-          Row(children: [
-            Expanded(child: _PaymentOption(
-              label: 'Payé', icon: Icons.check_circle, color: Colors.green,
-              selected: _paymentStatus == 'paid',
-              onTap: () => setState(() => _paymentStatus = 'paid'),
-            )),
-            SizedBox(width: 12),
-            Expanded(child: _PaymentOption(
-              label: 'Partiel', icon: Icons.pie_chart, color: Colors.orange,
-              selected: _paymentStatus == 'partial',
-              onTap: () => setState(() => _paymentStatus = 'partial'),
-            )),
-            SizedBox(width: 12),
-            Expanded(child: _PaymentOption(
-              label: 'Crédit', icon: Icons.schedule, color: Colors.red,
-              selected: _paymentStatus == 'unpaid',
-              onTap: () => setState(() => _paymentStatus = 'unpaid'),
-            )),
-          ]),
-          SizedBox(height: 16),
-          
-          // Montant collecté
-          Text('Montant collecté (DA)', style: TextStyle(fontWeight: FontWeight.w600)),
-          SizedBox(height: 8),
-          TextField(
-            controller: _amountController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              hintText: '0',
-              prefixIcon: Icon(Icons.payments, color: Colors.green),
-              suffixText: 'DA',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.green, width: 2)),
-            ),
-          ),
-          SizedBox(height: 16),
-          
-          // Commentaire
-          Text('Commentaire (optionnel)', style: TextStyle(fontWeight: FontWeight.w600)),
-          SizedBox(height: 8),
-          TextField(
-            controller: _commentController,
-            maxLines: 2,
-            decoration: InputDecoration(
-              hintText: 'Ajouter une note...',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          SizedBox(height: 20),
-          
-          // Bouton confirmer
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(context, {
-                  'paymentStatus': _paymentStatus,
-                  'amountCollected': double.tryParse(_amountController.text) ?? 0,
-                  'comment': _commentController.text.isEmpty ? null : _commentController.text,
-                });
-              },
-              icon: Icon(Icons.check),
-              label: Text('CONFIRMER LA LIVRAISON', style: TextStyle(fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            ),
-          ),
-        ]),
+        ),
       ),
     );
   }
@@ -617,139 +620,148 @@ class _FailureReportSheetState extends State<_FailureReportSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
     return Container(
-      margin: EdgeInsets.all(16),
+      margin: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16 + bottomPadding),
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: EdgeInsets.all(20),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Header
-          Row(children: [
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12)),
-              child: Icon(Icons.warning_amber, color: Colors.red, size: 28),
-            ),
-            SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Signaler un problème', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              Text(widget.delivery.order.cafeteria?.name ?? '', style: TextStyle(color: Colors.grey[600])),
-            ])),
-            IconButton(icon: Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-          ]),
-          SizedBox(height: 20),
-          
-          // Type d'action
-          Text('Action', style: TextStyle(fontWeight: FontWeight.w600)),
-          SizedBox(height: 8),
-          Row(children: [
-            Expanded(child: _ActionOption(
-              label: 'Échec', icon: Icons.cancel, color: Colors.red,
-              selected: _action == 'failed',
-              onTap: () => setState(() => _action = 'failed'),
-            )),
-            SizedBox(width: 12),
-            Expanded(child: _ActionOption(
-              label: 'Reporter', icon: Icons.schedule, color: Colors.orange,
-              selected: _action == 'postponed',
-              onTap: () => setState(() => _action = 'postponed'),
-            )),
-          ]),
-          SizedBox(height: 16),
-          
-          // Raison
-          Text('Raison', style: TextStyle(fontWeight: FontWeight.w600)),
-          SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _reasons.map((r) => GestureDetector(
-              onTap: () => setState(() => _failureReason = r['value']),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _failureReason == r['value'] ? Colors.red.shade50 : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _failureReason == r['value'] ? Colors.red : Colors.transparent),
-                ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(r['icon'], size: 18, color: _failureReason == r['value'] ? Colors.red : Colors.grey),
-                  SizedBox(width: 6),
-                  Text(r['label'], style: TextStyle(fontSize: 13, color: _failureReason == r['value'] ? Colors.red : Colors.grey[700])),
-                ]),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Header
+            Row(children: [
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12)),
+                child: Icon(Icons.warning_amber, color: Colors.red, size: 28),
               ),
-            )).toList(),
-          ),
-          
-          // Date de report (si action = postponed)
-          if (_action == 'postponed') ...[
-            SizedBox(height: 16),
-            Text('Reporter à', style: TextStyle(fontWeight: FontWeight.w600)),
+              SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Signaler un problème', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(widget.delivery.order.cafeteria?.name ?? '', style: TextStyle(color: Colors.grey[600])),
+              ])),
+              IconButton(icon: Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+            ]),
+            SizedBox(height: 20),
+            
+            // Type d'action
+            Text('Action', style: TextStyle(fontWeight: FontWeight.w600)),
             SizedBox(height: 8),
-            GestureDetector(
-              onTap: _selectDate,
-              child: Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Row(children: [
-                  Icon(Icons.calendar_today, color: Colors.orange),
-                  SizedBox(width: 12),
-                  Text(
-                    _postponedDate != null 
-                      ? '${_postponedDate!.day}/${_postponedDate!.month}/${_postponedDate!.year}'
-                      : 'Sélectionner une date',
-                    style: TextStyle(fontSize: 16, color: _postponedDate != null ? Colors.black : Colors.grey),
+            Row(children: [
+              Expanded(child: _ActionOption(
+                label: 'Échec', icon: Icons.cancel, color: Colors.red,
+                selected: _action == 'failed',
+                onTap: () => setState(() => _action = 'failed'),
+              )),
+              SizedBox(width: 12),
+              Expanded(child: _ActionOption(
+                label: 'Reporter', icon: Icons.schedule, color: Colors.orange,
+                selected: _action == 'postponed',
+                onTap: () => setState(() => _action = 'postponed'),
+              )),
+            ]),
+            SizedBox(height: 16),
+            
+            // Raison
+            Text('Raison', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _reasons.map((r) => GestureDetector(
+                onTap: () => setState(() => _failureReason = r['value']),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _failureReason == r['value'] ? Colors.red.shade50 : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _failureReason == r['value'] ? Colors.red : Colors.transparent),
                   ),
-                ]),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(r['icon'], size: 18, color: _failureReason == r['value'] ? Colors.red : Colors.grey),
+                    SizedBox(width: 6),
+                    Text(r['label'], style: TextStyle(fontSize: 13, color: _failureReason == r['value'] ? Colors.red : Colors.grey[700])),
+                  ]),
+                ),
+              )).toList(),
+            ),
+            
+            // Date de report (si action = postponed)
+            if (_action == 'postponed') ...[
+              SizedBox(height: 16),
+              Text('Reporter à', style: TextStyle(fontWeight: FontWeight.w600)),
+              SizedBox(height: 8),
+              GestureDetector(
+                onTap: _selectDate,
+                child: Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(children: [
+                    Icon(Icons.calendar_today, color: Colors.orange),
+                    SizedBox(width: 12),
+                    Text(
+                      _postponedDate != null 
+                        ? '${_postponedDate!.day}/${_postponedDate!.month}/${_postponedDate!.year}'
+                        : 'Sélectionner une date',
+                      style: TextStyle(fontSize: 16, color: _postponedDate != null ? Colors.black : Colors.grey),
+                    ),
+                  ]),
+                ),
+              ),
+            ],
+            SizedBox(height: 16),
+            
+            // Commentaire
+            Text('Commentaire', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            TextField(
+              controller: _commentController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: 'Détails supplémentaires...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
-          ],
-          SizedBox(height: 16),
-          
-          // Commentaire
-          Text('Commentaire', style: TextStyle(fontWeight: FontWeight.w600)),
-          SizedBox(height: 8),
-          TextField(
-            controller: _commentController,
-            maxLines: 2,
-            decoration: InputDecoration(
-              hintText: 'Détails supplémentaires...',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          SizedBox(height: 20),
-          
-          // Bouton envoyer
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                if (_action == 'postponed' && _postponedDate == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner une date'), backgroundColor: Colors.orange));
-                  return;
-                }
-                Navigator.pop(context, {
-                  'status': _action,
-                  'failureReason': _failureReason,
-                  'postponedTo': _postponedDate?.toIso8601String(),
-                  'comment': _commentController.text.isEmpty ? null : _commentController.text,
-                });
-              },
-              icon: Icon(_action == 'failed' ? Icons.report : Icons.schedule),
-              label: Text(_action == 'failed' ? 'SIGNALER L\'ÉCHEC' : 'REPORTER LA LIVRAISON', style: TextStyle(fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _action == 'failed' ? Colors.red : Colors.orange,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            SizedBox(height: 20),
+            
+            // Bouton envoyer
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  if (_action == 'postponed' && _postponedDate == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner une date'), backgroundColor: Colors.orange));
+                    return;
+                  }
+                  // Format date as YYYY-MM-DD for API
+                  String? postponedDateStr;
+                  if (_postponedDate != null) {
+                    postponedDateStr = '${_postponedDate!.year}-${_postponedDate!.month.toString().padLeft(2, '0')}-${_postponedDate!.day.toString().padLeft(2, '0')}';
+                  }
+                  Navigator.pop(context, {
+                    'status': _action,
+                    'failureReason': _failureReason,
+                    'postponedTo': postponedDateStr,
+                    'comment': _commentController.text.isEmpty ? null : _commentController.text,
+                  });
+                },
+                icon: Icon(_action == 'failed' ? Icons.report : Icons.schedule),
+                label: Text(_action == 'failed' ? 'SIGNALER L\'ÉCHEC' : 'REPORTER LA LIVRAISON', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _action == 'failed' ? Colors.red : Colors.orange,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ),
-          ),
-        ]),
+          ]),
+        ),
       ),
     );
   }

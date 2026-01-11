@@ -165,6 +165,20 @@ router.put('/:id/status', authenticate, validateUUID('id'), validate('updateDeli
   try {
     const { status, paymentStatus, amountCollected, comment, failureReason, postponedTo } = req.body;
     
+    // Vérifier que la livraison existe et appartient au livreur
+    const checkDelivery = await pool.query(
+      'SELECT id, deliverer_id FROM deliveries WHERE id = $1',
+      [req.params.id]
+    );
+    
+    if (checkDelivery.rows.length === 0) {
+      return res.status(404).json({ error: 'Livraison non trouvée' });
+    }
+    
+    if (checkDelivery.rows[0].deliverer_id !== req.user.id) {
+      return res.status(403).json({ error: 'Cette livraison ne vous est pas assignée' });
+    }
+    
     if (status === 'delivered') {
       await pool.query(
         `UPDATE deliveries SET status = $1, payment_status = $2, amount_collected = $3, comment = $4, delivered_at = NOW() 
@@ -216,7 +230,7 @@ router.put('/:id/status', authenticate, validateUUID('id'), validate('updateDeli
     res.json({ success: true });
   } catch (error) {
     console.error('Delivery status error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ error: 'Erreur serveur: ' + error.message });
   }
 });
 
