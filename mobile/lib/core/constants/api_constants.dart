@@ -1,5 +1,10 @@
 class ApiConstants {
-  static const String baseUrl = 'https://app-livraison-one.vercel.app/api';
+  // URL configurable via --dart-define=API_URL=...
+  // En production: flutter build apk --dart-define=API_URL=https://votre-api.com/api
+  static const String baseUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'https://app-livraison-one.vercel.app/api',
+  );
   
   // Auth endpoints
   static const String login = '$baseUrl/auth/login';
