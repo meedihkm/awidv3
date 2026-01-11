@@ -43,3 +43,17 @@ Thumbs.db
 *.temp
 .vercel
 .env*.local
+
+# Android - fichiers locaux et cache
+mobile/android/local.properties
+mobile/android/.gradle/
+mobile/android/app/build/
+mobile/android/build/
+*.keystore
+*.jks
+
+# iOS
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/Flutter.podspec
