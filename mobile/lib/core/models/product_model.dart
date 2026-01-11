@@ -23,6 +23,9 @@ class Product {
   final String organizationId;
   final String? category;
   final int sortOrder;
+  final bool isNew;
+  final bool isPromo;
+  final double? promoPrice;
 
   Product({
     required this.id,
@@ -33,6 +36,9 @@ class Product {
     required this.organizationId,
     this.category,
     this.sortOrder = 0,
+    this.isNew = false,
+    this.isPromo = false,
+    this.promoPrice,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -45,6 +51,9 @@ class Product {
       organizationId: json['organization_id']?.toString() ?? '',
       category: json['category'],
       sortOrder: parseInt(json['sort_order']),
+      isNew: json['is_new'] ?? false,
+      isPromo: json['is_promo'] ?? false,
+      promoPrice: json['promo_price'] != null ? parseDouble(json['promo_price']) : null,
     );
   }
 
@@ -58,8 +67,14 @@ class Product {
       'organization_id': organizationId,
       'category': category,
       'sort_order': sortOrder,
+      'is_new': isNew,
+      'is_promo': isPromo,
+      'promo_price': promoPrice,
     };
   }
+
+  // Prix effectif (promo si disponible)
+  double get effectivePrice => isPromo && promoPrice != null ? promoPrice! : price;
 
   Product copyWith({
     String? id,
@@ -70,6 +85,9 @@ class Product {
     String? organizationId,
     String? category,
     int? sortOrder,
+    bool? isNew,
+    bool? isPromo,
+    double? promoPrice,
   }) {
     return Product(
       id: id ?? this.id,
@@ -80,6 +98,9 @@ class Product {
       organizationId: organizationId ?? this.organizationId,
       category: category ?? this.category,
       sortOrder: sortOrder ?? this.sortOrder,
+      isNew: isNew ?? this.isNew,
+      isPromo: isPromo ?? this.isPromo,
+      promoPrice: promoPrice ?? this.promoPrice,
     );
   }
 }

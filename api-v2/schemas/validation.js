@@ -26,15 +26,21 @@ const schemas = {
   createProduct: z.object({
     name: z.string().min(1, 'Nom requis').max(100),
     price: z.number().positive('Prix doit être positif'),
-    imageUrl: z.string().url().optional().nullable(),
-    category: z.string().max(50).optional().nullable()
+    imageUrl: z.string().optional().nullable(),
+    category: z.string().max(50).optional().nullable(),
+    isNew: z.boolean().optional(),
+    isPromo: z.boolean().optional(),
+    promoPrice: z.number().positive().optional().nullable()
   }),
   
   updateProduct: z.object({
     name: z.string().min(1, 'Nom requis').max(100),
     price: z.number().positive('Prix doit être positif'),
-    imageUrl: z.string().url().optional().nullable(),
-    category: z.string().max(50).optional().nullable()
+    imageUrl: z.string().optional().nullable(),
+    category: z.string().max(50).optional().nullable(),
+    isNew: z.boolean().optional(),
+    isPromo: z.boolean().optional(),
+    promoPrice: z.number().positive().optional().nullable()
   }),
   
   reorderProduct: z.object({

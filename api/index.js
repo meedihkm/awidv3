@@ -61,14 +61,20 @@ const schemas = {
     name: z.string().min(1, 'Nom requis').max(100),
     price: z.number().positive('Prix doit être positif'),
     imageUrl: z.string().optional().nullable(),
-    category: z.string().max(50).optional().nullable()
+    category: z.string().max(50).optional().nullable(),
+    isNew: z.boolean().optional(),
+    isPromo: z.boolean().optional(),
+    promoPrice: z.number().positive().optional().nullable()
   }).passthrough(),
   
   updateProduct: z.object({
     name: z.string().min(1, 'Nom requis').max(100),
     price: z.number().positive('Prix doit être positif'),
     imageUrl: z.string().optional().nullable(),
-    category: z.string().max(50).optional().nullable()
+    category: z.string().max(50).optional().nullable(),
+    isNew: z.boolean().optional(),
+    isPromo: z.boolean().optional(),
+    promoPrice: z.number().positive().optional().nullable()
   }).passthrough(),
   
   reorderProduct: z.object({
@@ -605,7 +611,7 @@ app.get('/api/products/categories', authenticate, async (req, res) => {
 
 app.post('/api/products', authenticate, requireAdmin, validate(schemas.createProduct), async (req, res) => {
   try {
-    const { name, price, imageUrl, category } = req.body;
+    const { name, price, imageUrl, category, isNew, isPromo, promoPrice } = req.body;
     
     const maxOrder = await pool.query(
       'SELECT COALESCE(MAX(sort_order), 0) + 1 as next_order FROM products WHERE organization_id = $1',
@@ -614,8 +620,8 @@ app.post('/api/products', authenticate, requireAdmin, validate(schemas.createPro
     const sortOrder = maxOrder.rows[0].next_order;
     
     const result = await pool.query(
-      'INSERT INTO products (organization_id, name, price, image_url, category, sort_order) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [req.user.organization_id, name, price, imageUrl || null, category || null, sortOrder]
+      'INSERT INTO products (organization_id, name, price, image_url, category, sort_order, is_new, is_promo, promo_price) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+      [req.user.organization_id, name, price, imageUrl || null, category || null, sortOrder, isNew || false, isPromo || false, promoPrice || null]
     );
     
     await logAudit('PRODUCT_CREATED', req.user.id, req.user.organization_id, { productId: result.rows[0].id, name, price }, req);
@@ -628,10 +634,10 @@ app.post('/api/products', authenticate, requireAdmin, validate(schemas.createPro
 
 app.put('/api/products/:id', authenticate, requireAdmin, validate(schemas.updateProduct), async (req, res) => {
   try {
-    const { name, price, imageUrl, category } = req.body;
+    const { name, price, imageUrl, category, isNew, isPromo, promoPrice } = req.body;
     const result = await pool.query(
-      'UPDATE products SET name = $1, price = $2, image_url = $3, category = $4, updated_at = NOW() WHERE id = $5 AND organization_id = $6 RETURNING *',
-      [name, price, imageUrl || null, category || null, req.params.id, req.user.organization_id]
+      'UPDATE products SET name = $1, price = $2, image_url = $3, category = $4, is_new = $5, is_promo = $6, promo_price = $7, updated_at = NOW() WHERE id = $8 AND organization_id = $9 RETURNING *',
+      [name, price, imageUrl || null, category || null, isNew || false, isPromo || false, promoPrice || null, req.params.id, req.user.organization_id]
     );
     
     await logAudit('PRODUCT_UPDATED', req.user.id, req.user.organization_id, { productId: req.params.id, name, price }, req);

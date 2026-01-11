@@ -135,121 +135,187 @@ class _ProductsPageState extends State<ProductsPage> {
   Future<void> _showProductDialog([Product? product]) async {
     final nameController = TextEditingController(text: product?.name ?? '');
     final priceController = TextEditingController(text: product?.price.toStringAsFixed(0) ?? '');
+    final promoPriceController = TextEditingController(text: product?.promoPrice?.toStringAsFixed(0) ?? '');
     String? imageUrl = product?.imageUrl;
     String? selectedCategory = product?.category;
+    bool isNew = product?.isNew ?? false;
+    bool isPromo = product?.isPromo ?? false;
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          height: MediaQuery.of(context).size.height * 0.9,
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-          child: Column(
-            children: [
-              Container(margin: EdgeInsets.only(top: 12), width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-              Padding(
-                padding: EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(product == null ? 'Nouveau produit' : 'Modifier produit', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.close)),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.9,
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            child: Column(
+              children: [
+                Container(margin: EdgeInsets.only(top: 12), width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+                Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Image
-                      Center(
-                        child: GestureDetector(
-                          onTap: () async {
-                            final newImage = await _pickImage();
-                            if (newImage != null) setModalState(() => imageUrl = newImage);
-                          },
-                          child: Container(
-                            width: 150, height: 150,
-                            decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey[300]!, width: 2)),
-                            child: imageUrl != null && imageUrl!.isNotEmpty
-                                ? ClipRRect(
-                                    borderRadius: BorderRadius.circular(18),
-                                    child: imageUrl!.startsWith('data:')
-                                        ? Image.memory(base64Decode(imageUrl!.split(',').last), fit: BoxFit.cover, width: 150, height: 150)
-                                        : Image.network(imageUrl!, fit: BoxFit.cover, width: 150, height: 150),
-                                  )
-                                : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                                    Icon(Icons.add_a_photo, size: 40, color: Colors.grey[400]),
-                                    SizedBox(height: 8),
-                                    Text('Ajouter photo', style: TextStyle(color: Colors.grey[500])),
-                                  ]),
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 24),
-                      
-                      // Nom
-                      Text('Nom du produit', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
-                      SizedBox(height: 8),
-                      TextField(controller: nameController, decoration: InputDecoration(hintText: 'Ex: Pizza Margherita', filled: true, fillColor: Colors.grey[100], border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), prefixIcon: Icon(Icons.fastfood))),
-                      SizedBox(height: 20),
-                      
-                      // Prix
-                      Text('Prix (DA)', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
-                      SizedBox(height: 8),
-                      TextField(controller: priceController, keyboardType: TextInputType.number, decoration: InputDecoration(hintText: 'Ex: 500', filled: true, fillColor: Colors.grey[100], border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), prefixIcon: Icon(Icons.attach_money), suffixText: 'DA')),
-                      SizedBox(height: 20),
-                      
-                      // Catégorie
-                      Text('Catégorie', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
-                      SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          ..._defaultCategories.map((cat) => GestureDetector(
-                            onTap: () => setModalState(() => selectedCategory = cat),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: selectedCategory == cat ? Colors.blue : Colors.grey[100],
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(cat, style: TextStyle(color: selectedCategory == cat ? Colors.white : Colors.grey[700], fontWeight: FontWeight.w500)),
-                            ),
-                          )),
-                          // Catégories personnalisées existantes
-                          ..._categories.where((c) => !_defaultCategories.contains(c)).map((cat) => GestureDetector(
-                            onTap: () => setModalState(() => selectedCategory = cat),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: selectedCategory == cat ? Colors.blue : Colors.grey[100],
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(cat, style: TextStyle(color: selectedCategory == cat ? Colors.white : Colors.grey[700], fontWeight: FontWeight.w500)),
-                            ),
-                          )),
-                        ],
-                      ),
-                      SizedBox(height: 30),
+                      Text(product == null ? 'Nouveau produit' : 'Modifier produit', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.close)),
                     ],
                   ),
                 ),
-              ),
-              _buildSaveButton(nameController, priceController, imageUrl, selectedCategory, product),
-            ],
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Image
+                        Center(
+                          child: GestureDetector(
+                            onTap: () async {
+                              final newImage = await _pickImage();
+                              if (newImage != null) setModalState(() => imageUrl = newImage);
+                            },
+                            child: Container(
+                              width: 150, height: 150,
+                              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey[300]!, width: 2)),
+                              child: imageUrl != null && imageUrl!.isNotEmpty
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(18),
+                                      child: imageUrl!.startsWith('data:')
+                                          ? Image.memory(base64Decode(imageUrl!.split(',').last), fit: BoxFit.cover, width: 150, height: 150)
+                                          : Image.network(imageUrl!, fit: BoxFit.cover, width: 150, height: 150),
+                                    )
+                                  : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                      Icon(Icons.add_a_photo, size: 40, color: Colors.grey[400]),
+                                      SizedBox(height: 8),
+                                      Text('Ajouter photo', style: TextStyle(color: Colors.grey[500])),
+                                    ]),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 24),
+                        
+                        // Nom
+                        Text('Nom du produit', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
+                        SizedBox(height: 8),
+                        TextField(controller: nameController, decoration: InputDecoration(hintText: 'Ex: Pizza Margherita', filled: true, fillColor: Colors.grey[100], border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), prefixIcon: Icon(Icons.fastfood))),
+                        SizedBox(height: 20),
+                        
+                        // Prix
+                        Text('Prix (DA)', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
+                        SizedBox(height: 8),
+                        TextField(controller: priceController, keyboardType: TextInputType.number, decoration: InputDecoration(hintText: 'Ex: 500', filled: true, fillColor: Colors.grey[100], border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), prefixIcon: Icon(Icons.attach_money), suffixText: 'DA')),
+                        SizedBox(height: 20),
+                        
+                        // Labels Nouveau / Promo
+                        Text('Labels', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
+                        SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setModalState(() => isNew = !isNew),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: isNew ? Colors.green : Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: isNew ? Colors.green : Colors.grey[300]!),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(isNew ? Icons.check_circle : Icons.fiber_new, color: isNew ? Colors.white : Colors.grey[600], size: 20),
+                                      SizedBox(width: 8),
+                                      Text('Nouveau', style: TextStyle(color: isNew ? Colors.white : Colors.grey[600], fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setModalState(() => isPromo = !isPromo),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: isPromo ? Colors.red : Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: isPromo ? Colors.red : Colors.grey[300]!),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(isPromo ? Icons.check_circle : Icons.local_offer, color: isPromo ? Colors.white : Colors.grey[600], size: 20),
+                                      SizedBox(width: 8),
+                                      Text('Promo', style: TextStyle(color: isPromo ? Colors.white : Colors.grey[600], fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        // Prix promo (visible si isPromo)
+                        if (isPromo) ...[
+                          SizedBox(height: 16),
+                          Text('Prix promo (DA)', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.red[700])),
+                          SizedBox(height: 8),
+                          TextField(controller: promoPriceController, keyboardType: TextInputType.number, decoration: InputDecoration(hintText: 'Ex: 400', filled: true, fillColor: Colors.red[50], border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), prefixIcon: Icon(Icons.local_offer, color: Colors.red), suffixText: 'DA')),
+                        ],
+                        SizedBox(height: 20),
+                        
+                        // Catégorie
+                        Text('Catégorie', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
+                        SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ..._defaultCategories.map((cat) => GestureDetector(
+                              onTap: () => setModalState(() => selectedCategory = cat),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: selectedCategory == cat ? Colors.blue : Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(cat, style: TextStyle(color: selectedCategory == cat ? Colors.white : Colors.grey[700], fontWeight: FontWeight.w500)),
+                              ),
+                            )),
+                            // Catégories personnalisées existantes
+                            ..._categories.where((c) => !_defaultCategories.contains(c)).map((cat) => GestureDetector(
+                              onTap: () => setModalState(() => selectedCategory = cat),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: selectedCategory == cat ? Colors.blue : Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(cat, style: TextStyle(color: selectedCategory == cat ? Colors.white : Colors.grey[700], fontWeight: FontWeight.w500)),
+                              ),
+                            )),
+                          ],
+                        ),
+                        SizedBox(height: 30),
+                      ],
+                    ),
+                  ),
+                ),
+                _buildSaveButton(nameController, priceController, promoPriceController, imageUrl, selectedCategory, isNew, isPromo, product),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSaveButton(TextEditingController nameController, TextEditingController priceController, String? imageUrl, String? category, Product? product) {
+  Widget _buildSaveButton(TextEditingController nameController, TextEditingController priceController, TextEditingController promoPriceController, String? imageUrl, String? category, bool isNew, bool isPromo, Product? product) {
     return Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))]),
@@ -267,6 +333,9 @@ class _ProductsPageState extends State<ProductsPage> {
                 'price': double.tryParse(priceController.text) ?? 0, 
                 'imageUrl': imageUrl,
                 'category': category,
+                'isNew': isNew,
+                'isPromo': isPromo,
+                'promoPrice': isPromo ? (double.tryParse(promoPriceController.text)) : null,
               };
               try {
                 if (product == null) await _apiService.createProduct(data);
@@ -494,6 +563,42 @@ class _ProductsPageState extends State<ProductsPage> {
             // Badge catégorie
             if (product.category != null)
               Positioned(top: 8, left: 8, child: Container(padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.blue.withOpacity(0.9), borderRadius: BorderRadius.circular(12)), child: Text(product.category!, style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))),
+            // Badges Nouveau / Promo
+            Positioned(
+              bottom: 8,
+              left: 8,
+              child: Row(
+                children: [
+                  if (product.isNew)
+                    Container(
+                      margin: EdgeInsets.only(right: 4),
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.green[600], borderRadius: BorderRadius.circular(12)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.fiber_new, color: Colors.white, size: 12),
+                          SizedBox(width: 2),
+                          Text('Nouveau', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  if (product.isPromo)
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.red[600], borderRadius: BorderRadius.circular(12)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.local_offer, color: Colors.white, size: 12),
+                          SizedBox(width: 2),
+                          Text('Promo', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ])),
           Expanded(flex: 2, child: Padding(padding: EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Text(product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -506,7 +611,17 @@ class _ProductsPageState extends State<ProductsPage> {
 
   Widget _buildProductActions(Product product) {
     return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      Text('${product.price.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.bold, fontSize: 16)),
+      // Prix avec promo
+      product.isPromo && product.promoPrice != null
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('${product.price.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.grey, fontSize: 12, decoration: TextDecoration.lineThrough)),
+                Text('${product.promoPrice!.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.red[700], fontWeight: FontWeight.bold, fontSize: 14)),
+              ],
+            )
+          : Text('${product.price.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.bold, fontSize: 16)),
       Row(mainAxisSize: MainAxisSize.min, children: [
         GestureDetector(onTap: () async { await _apiService.toggleProduct(product.id); _loadProducts(); }, child: Icon(product.active ? Icons.visibility : Icons.visibility_off, color: product.active ? Colors.green : Colors.grey, size: 20)),
         SizedBox(width: 8),
