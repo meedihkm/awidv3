@@ -57,7 +57,7 @@ router.get('/my', authenticate, async (req, res) => {
 router.get('/kitchen', authenticate, requireKitchen, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT o.*, u.name as cafeteria_name, u.phone as cafeteria_phone, u.address as cafeteria_address
+      `SELECT o.*, u.name as cafeteria_name, u.phone as cafeteria_phone
        FROM orders o 
        JOIN users u ON o.cafeteria_id = u.id 
        WHERE o.organization_id = $1 AND o.status IN ('validated', 'preparing')
@@ -82,8 +82,7 @@ router.get('/kitchen', authenticate, requireKitchen, async (req, res) => {
         cafeteria: { 
           id: order.cafeteria_id, 
           name: order.cafeteria_name,
-          phone: order.cafeteria_phone,
-          address: order.cafeteria_address
+          phone: order.cafeteria_phone
         }
       });
     }
