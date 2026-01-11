@@ -442,7 +442,7 @@ app.post('/api/auth/login', loginLimiter, validate(schemas.login), async (req, r
         name: user.name,
         role: user.role,
         organizationId: user.organization_id,
-        organization: { id: user.organization_id, name: user.org_name, type: user.org_type }
+        organization: { id: user.organization_id, name: user.org_name || '', type: user.org_type || '' }
       }
     });
   } catch (error) {
@@ -544,7 +544,7 @@ app.get('/api/auth/me', authenticate, async (req, res) => {
         name: user.name,
         role: user.role,
         organizationId: user.organization_id,
-        organization: { id: user.organization_id, name: user.org_name, type: user.org_type }
+        organization: { id: user.organization_id, name: user.org_name || '', type: user.org_type || '' }
       }
     });
   } catch (error) {
