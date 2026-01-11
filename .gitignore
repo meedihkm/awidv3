@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+mobile/build/
+mobile/.dart_tool/
+mobile/.flutter-plugins-dependencies
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Database
+prisma/dev.db
+prisma/dev.db-journal
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Archives
+*.7z
+*.zip
+*.rar
+*.tar.gz
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+.vercel
+.env*.local
