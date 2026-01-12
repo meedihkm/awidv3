@@ -84,6 +84,22 @@ CREATE INDEX IF NOT EXISTS idx_location_history_deliverer ON location_history(de
 CREATE INDEX IF NOT EXISTS idx_location_history_date ON location_history(recorded_at);
 
 -- =============================================
+-- 9. Numérotation séquentielle des commandes
+-- =============================================
+
+-- Séquence par organisation pour numéros de commande
+CREATE TABLE IF NOT EXISTS order_sequences (
+    organization_id UUID PRIMARY KEY REFERENCES organizations(id) ON DELETE CASCADE,
+    last_number INTEGER DEFAULT 0
+);
+
+-- Colonne numéro de commande
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_number INTEGER;
+
+-- Index pour recherche rapide par numéro
+CREATE INDEX IF NOT EXISTS idx_orders_number ON orders(organization_id, order_number);
+
+-- =============================================
 -- NETTOYAGE (à exécuter périodiquement)
 -- =============================================
 

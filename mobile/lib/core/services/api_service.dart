@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
 import '../storage/secure_storage.dart';
+import 'cache_service.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -9,6 +10,7 @@ class ApiService {
   ApiService._internal();
 
   final SecureStorage _storage = SecureStorage();
+  final CacheService _cache = CacheService();
   bool _isRefreshing = false;
 
   Future<Map<String, String>> _getHeaders({bool includeAuth = true}) async {
@@ -138,41 +140,152 @@ class ApiService {
   }
 
   // ===== PRODUCTS =====
-  Future<Map<String, dynamic>> getProducts() async => _request('GET', ApiConstants.products);
-  Future<Map<String, dynamic>> createProduct(Map<String, dynamic> product) async => _request('POST', ApiConstants.products, body: product);
-  Future<Map<String, dynamic>> updateProduct(String id, Map<String, dynamic> product) async => _request('PUT', '${ApiConstants.products}/$id', body: product);
-  Future<Map<String, dynamic>> toggleProduct(String id) async => _request('PUT', '${ApiConstants.products}/$id/toggle');
-  Future<Map<String, dynamic>> deleteProduct(String id) async => _request('DELETE', '${ApiConstants.products}/$id');
+  Future<Map<String, dynamic>> getProducts({bool forceRefresh = false}) async {
+    // Essayer le cache d'abord
+    if (!forceRefresh) {
+      final cached = await _cache.getCachedProducts();
+      if (cached != null) {
+        return {'success': true, 'data': cached, 'fromCache': true};
+      }
+    }
+    final result = await _request('GET', ApiConstants.products);
+    if (result['success'] == true && result['data'] != null) {
+      await _cache.cacheProducts(result['data']);
+    }
+    return result;
+  }
+  Future<Map<String, dynamic>> createProduct(Map<String, dynamic> product) async {
+    final result = await _request('POST', ApiConstants.products, body: product);
+    await _cache.clearCache('cache_products'); // Invalider le cache
+    return result;
+  }
+  Future<Map<String, dynamic>> updateProduct(String id, Map<String, dynamic> product) async {
+    final result = await _request('PUT', '${ApiConstants.products}/$id', body: product);
+    await _cache.clearCache('cache_products');
+    return result;
+  }
+  Future<Map<String, dynamic>> toggleProduct(String id) async {
+    final result = await _request('PUT', '${ApiConstants.products}/$id/toggle');
+    await _cache.clearCache('cache_products');
+    return result;
+  }
+  Future<Map<String, dynamic>> deleteProduct(String id) async {
+    final result = await _request('DELETE', '${ApiConstants.products}/$id');
+    await _cache.clearCache('cache_products');
+    return result;
+  }
   Future<Map<String, dynamic>> reorderProduct(String id, String direction) async => _request('PUT', '${ApiConstants.products}/$id/reorder', body: {'direction': direction});
   Future<Map<String, dynamic>> getProductCategories() async => _request('GET', '${ApiConstants.products}/categories');
 
   // ===== USERS =====
-  Future<Map<String, dynamic>> getUsers() async => _request('GET', ApiConstants.users);
+  Future<Map<String, dynamic>> getUsers({bool forceRefresh = false}) async {
+    if (!forceRefresh) {
+      final cached = await _cache.getCachedUsers();
+      if (cached != null) {
+        return {'success': true, 'data': cached, 'fromCache': true};
+      }
+    }
+    final result = await _request('GET', ApiConstants.users);
+    if (result['success'] == true && result['data'] != null) {
+      await _cache.cacheUsers(result['data']);
+    }
+    return result;
+  }
   Future<Map<String, dynamic>> getDeliverers() async => _request('GET', ApiConstants.deliverers);
-  Future<Map<String, dynamic>> createUser(Map<String, dynamic> user) async => _request('POST', ApiConstants.users, body: user);
-  Future<Map<String, dynamic>> deleteUser(String id) async => _request('DELETE', '${ApiConstants.users}/$id');
-  Future<Map<String, dynamic>> toggleUser(String id) async => _request('PUT', '${ApiConstants.users}/$id/toggle');
+  Future<Map<String, dynamic>> createUser(Map<String, dynamic> user) async {
+    final result = await _request('POST', ApiConstants.users, body: user);
+    await _cache.clearCache('cache_users');
+    return result;
+  }
+  Future<Map<String, dynamic>> deleteUser(String id) async {
+    final result = await _request('DELETE', '${ApiConstants.users}/$id');
+    await _cache.clearCache('cache_users');
+    return result;
+  }
+  Future<Map<String, dynamic>> toggleUser(String id) async {
+    final result = await _request('PUT', '${ApiConstants.users}/$id/toggle');
+    await _cache.clearCache('cache_users');
+    return result;
+  }
   Future<Map<String, dynamic>> updateUserAddress(String userId, String address, {double? latitude, double? longitude}) async => 
     _request('PUT', '${ApiConstants.users}/$userId/address', body: {'address': address, 'latitude': latitude, 'longitude': longitude});
 
   // ===== ORDERS =====
-  Future<Map<String, dynamic>> getOrders() async => _request('GET', ApiConstants.orders);
+  Future<Map<String, dynamic>> getOrders({bool forceRefresh = false}) async {
+    if (!forceRefresh) {
+      final cached = await _cache.getCachedOrders();
+      if (cached != null) {
+        return {'success': true, 'data': cached, 'fromCache': true};
+      }
+    }
+    final result = await _request('GET', ApiConstants.orders);
+    if (result['success'] == true && result['data'] != null) {
+      await _cache.cacheOrders(result['data']);
+    }
+    return result;
+  }
   Future<Map<String, dynamic>> getMyOrders() async => _request('GET', ApiConstants.myOrders);
-  Future<Map<String, dynamic>> createOrder(Map<String, dynamic> order) async => _request('POST', ApiConstants.orders, body: order);
-  Future<Map<String, dynamic>> updateOrder(String id, Map<String, dynamic> order) async => _request('PUT', '${ApiConstants.orders}/$id', body: order);
-  Future<Map<String, dynamic>> lockOrder(String id) async => _request('PUT', '${ApiConstants.orders}/$id/lock');
-  Future<Map<String, dynamic>> assignDeliverer(String orderId, String delivererId) async => _request('POST', '${ApiConstants.orders}/$orderId/assign', body: {'delivererId': delivererId});
+  Future<Map<String, dynamic>> createOrder(Map<String, dynamic> order) async {
+    final result = await _request('POST', ApiConstants.orders, body: order);
+    await _cache.clearCache('cache_orders');
+    return result;
+  }
+  Future<Map<String, dynamic>> updateOrder(String id, Map<String, dynamic> order) async {
+    final result = await _request('PUT', '${ApiConstants.orders}/$id', body: order);
+    await _cache.clearCache('cache_orders');
+    return result;
+  }
+  Future<Map<String, dynamic>> lockOrder(String id) async {
+    final result = await _request('PUT', '${ApiConstants.orders}/$id/lock');
+    await _cache.clearCache('cache_orders');
+    return result;
+  }
+  Future<Map<String, dynamic>> assignDeliverer(String orderId, String delivererId) async {
+    final result = await _request('POST', '${ApiConstants.orders}/$orderId/assign', body: {'delivererId': delivererId});
+    await _cache.clearCache('cache_orders');
+    await _cache.clearCache('cache_deliveries');
+    return result;
+  }
 
   // ===== DELIVERIES =====
-  Future<Map<String, dynamic>> getDeliveries() async => _request('GET', ApiConstants.deliveries);
+  Future<Map<String, dynamic>> getDeliveries({bool forceRefresh = false}) async {
+    if (!forceRefresh) {
+      final cached = await _cache.getCachedDeliveries();
+      if (cached != null) {
+        return {'success': true, 'data': cached, 'fromCache': true};
+      }
+    }
+    final result = await _request('GET', ApiConstants.deliveries);
+    if (result['success'] == true && result['data'] != null) {
+      await _cache.cacheDeliveries(result['data']);
+    }
+    return result;
+  }
   Future<Map<String, dynamic>> getDeliveryRoute() async => _request('GET', ApiConstants.deliveryRoute);
   Future<Map<String, dynamic>> getDeliveryHistory() async => _request('GET', '${ApiConstants.baseUrl}/deliveries/history');
   Future<Map<String, dynamic>> getDelivery(String id) async => _request('GET', '${ApiConstants.deliveries}/$id');
-  Future<Map<String, dynamic>> updateDeliveryStatus(String id, Map<String, dynamic> status) async => _request('PUT', '${ApiConstants.deliveries}/$id/status', body: status);
+  Future<Map<String, dynamic>> updateDeliveryStatus(String id, Map<String, dynamic> status) async {
+    final result = await _request('PUT', '${ApiConstants.deliveries}/$id/status', body: status);
+    await _cache.clearCache('cache_deliveries');
+    await _cache.clearCache('cache_orders');
+    return result;
+  }
 
   // ===== FINANCIAL =====
   Future<Map<String, dynamic>> getDailyFinancial() async => _request('GET', ApiConstants.dailyFinancial);
-  Future<Map<String, dynamic>> getDebts() async => _request('GET', ApiConstants.debts);
+  Future<Map<String, dynamic>> getDebts({bool forceRefresh = false}) async {
+    if (!forceRefresh) {
+      final cached = await _cache.getCachedDebts();
+      if (cached != null) {
+        return {'success': true, 'data': cached, 'fromCache': true};
+      }
+    }
+    final result = await _request('GET', ApiConstants.debts);
+    if (result['success'] == true && result['data'] != null) {
+      await _cache.cacheDebts(result['data']);
+    }
+    return result;
+  }
 
   // ===== LOCATION =====
   Future<Map<String, dynamic>> updateDelivererLocation(double lat, double lng) async => _request('POST', '${ApiConstants.baseUrl}/deliverers/location', body: {'latitude': lat, 'longitude': lng});

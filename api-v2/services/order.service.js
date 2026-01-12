@@ -47,6 +47,7 @@ async function getOrderWithItems(orderId) {
   
   return {
     id: order.id,
+    orderNumber: order.order_number || null,
     organizationId: order.organization_id,
     cafeteriaId: order.cafeteria_id,
     date: order.date || '',
@@ -73,6 +74,7 @@ async function getOrderWithItems(orderId) {
 function formatOrder(order, items, cafeteria = null) {
   return {
     id: order.id,
+    orderNumber: order.order_number || null,
     organizationId: order.organization_id,
     cafeteriaId: order.cafeteria_id,
     date: order.date || '',

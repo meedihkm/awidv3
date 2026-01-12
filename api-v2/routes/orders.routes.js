@@ -112,10 +112,21 @@ router.post('/', authenticate, validate('createOrder'), async (req, res) => {
       return res.status(400).json({ error: 'Aucun produit valide trouvé' });
     }
     
+    // Générer numéro de commande séquentiel
+    const seqResult = await pool.query(
+      `INSERT INTO order_sequences (organization_id, last_number) 
+       VALUES ($1, 1) 
+       ON CONFLICT (organization_id) 
+       DO UPDATE SET last_number = order_sequences.last_number + 1 
+       RETURNING last_number`,
+      [req.user.organization_id]
+    );
+    const orderNumber = seqResult.rows[0].last_number;
+    
     const orderResult = await pool.query(
-      `INSERT INTO orders (organization_id, cafeteria_id, date, total, status, payment_status, amount_paid) 
-       VALUES ($1, $2, NOW(), $3, 'pending', 'unpaid', 0) RETURNING *`,
-      [req.user.organization_id, clientId, total]
+      `INSERT INTO orders (organization_id, cafeteria_id, date, total, status, payment_status, amount_paid, order_number) 
+       VALUES ($1, $2, NOW(), $3, 'pending', 'unpaid', 0, $4) RETURNING *`,
+      [req.user.organization_id, clientId, total, orderNumber]
     );
     
     const order = orderResult.rows[0];
