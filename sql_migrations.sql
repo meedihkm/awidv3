@@ -87,9 +87,9 @@ CREATE INDEX IF NOT EXISTS idx_location_history_date ON location_history(recorde
 -- 9. Numérotation séquentielle des commandes
 -- =============================================
 
--- Séquence par organisation pour numéros de commande
+-- Séquence par organisation pour numéros de commande (TEXT car organizations.id est TEXT)
 CREATE TABLE IF NOT EXISTS order_sequences (
-    organization_id UUID PRIMARY KEY REFERENCES organizations(id) ON DELETE CASCADE,
+    organization_id TEXT PRIMARY KEY REFERENCES organizations(id) ON DELETE CASCADE,
     last_number INTEGER DEFAULT 0
 );
 
