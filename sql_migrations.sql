@@ -111,3 +111,36 @@ CREATE INDEX IF NOT EXISTS idx_orders_number ON orders(organization_id, order_nu
 
 -- Garder 30 jours d'historique de localisation
 -- DELETE FROM location_history WHERE recorded_at < NOW() - INTERVAL '30 days';
+
+-- =============================================
+-- 10. INDEX POUR PERFORMANCES
+-- =============================================
+
+-- Index sur les commandes (requêtes fréquentes)
+CREATE INDEX IF NOT EXISTS idx_orders_org_status ON orders(organization_id, status);
+CREATE INDEX IF NOT EXISTS idx_orders_org_date ON orders(organization_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_cafeteria ON orders(cafeteria_id);
+CREATE INDEX IF NOT EXISTS idx_orders_payment ON orders(organization_id, payment_status);
+
+-- Index sur les livraisons
+CREATE INDEX IF NOT EXISTS idx_deliveries_org_status ON deliveries(organization_id, status);
+CREATE INDEX IF NOT EXISTS idx_deliveries_deliverer ON deliveries(deliverer_id, status);
+CREATE INDEX IF NOT EXISTS idx_deliveries_order ON deliveries(order_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_date ON deliveries(created_at DESC);
+
+-- Index sur les produits
+CREATE INDEX IF NOT EXISTS idx_products_org_active ON products(organization_id, active);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(organization_id, category);
+CREATE INDEX IF NOT EXISTS idx_products_order ON products(organization_id, display_order);
+
+-- Index sur les utilisateurs
+CREATE INDEX IF NOT EXISTS idx_users_org_role ON users(organization_id, role);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_active ON users(organization_id, active);
+
+-- Index sur order_items
+CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_product ON order_items(product_id);
+
+-- Index sur refresh_tokens
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires ON refresh_tokens(expires_at) WHERE revoked = false;

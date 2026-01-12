@@ -895,13 +895,33 @@ app.put('/api/users/:id/address', authenticate, async (req, res) => {
 
 app.get('/api/orders', authenticate, async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+    const offset = (page - 1) * limit;
+    const status = req.query.status;
+    
+    let whereClause = 'WHERE o.organization_id = $1';
+    const params = [req.user.organization_id];
+    
+    if (status && status !== 'all') {
+      params.push(status);
+      whereClause += ` AND o.status = $${params.length}`;
+    }
+    
+    const countResult = await pool.query(
+      `SELECT COUNT(*) FROM orders o ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult.rows[0].count);
+    
     const result = await pool.query(
-      `SELECT o.*, u.name as cafeteria_name 
+      `SELECT o.*, u.name as cafeteria_name, u.phone as cafeteria_phone
        FROM orders o 
        JOIN users u ON o.cafeteria_id = u.id 
-       WHERE o.organization_id = $1 
-       ORDER BY o.created_at DESC`,
-      [req.user.organization_id]
+       ${whereClause}
+       ORDER BY o.created_at DESC
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
     );
     
     const orders = [];
@@ -909,6 +929,7 @@ app.get('/api/orders', authenticate, async (req, res) => {
       const items = await getOrderItems(order.id);
       orders.push({
         id: order.id,
+        orderNumber: order.order_number || null,
         organizationId: order.organization_id,
         cafeteriaId: order.cafeteria_id,
         date: order.date,
@@ -918,11 +939,15 @@ app.get('/api/orders', authenticate, async (req, res) => {
         amountPaid: safeParseFloat(order.amount_paid),
         createdAt: order.created_at,
         items,
-        cafeteria: { id: order.cafeteria_id, name: order.cafeteria_name }
+        cafeteria: { id: order.cafeteria_id, name: order.cafeteria_name, phone: order.cafeteria_phone }
       });
     }
     
-    res.json({ success: true, data: orders });
+    res.json({ 
+      success: true, 
+      data: orders,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit), hasMore: page * limit < total }
+    });
   } catch (error) {
     console.error('Orders error:', error);
     res.status(500).json({ error: 'Erreur serveur' });

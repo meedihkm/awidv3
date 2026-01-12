@@ -7,16 +7,37 @@ const { validate, validateUUID } = require('../middleware/validate');
 const { logAudit } = require('../services/audit.service');
 const { getOrderWithItems } = require('../services/order.service');
 
-// GET /api/deliveries
+// GET /api/deliveries (avec pagination optionnelle)
 router.get('/', authenticate, async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+    const offset = (page - 1) * limit;
+    const status = req.query.status;
+    
+    let whereClause = 'WHERE d.organization_id = $1';
+    const params = [req.user.organization_id];
+    
+    if (status && status !== 'all') {
+      params.push(status);
+      whereClause += ` AND d.status = $${params.length}`;
+    }
+    
+    // Compter le total
+    const countResult = await pool.query(
+      `SELECT COUNT(*) FROM deliveries d ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult.rows[0].count);
+    
     const result = await pool.query(
       `SELECT d.*, u.name as deliverer_name
        FROM deliveries d
        LEFT JOIN users u ON d.deliverer_id = u.id
-       WHERE d.organization_id = $1
-       ORDER BY d.created_at DESC`,
-      [req.user.organization_id]
+       ${whereClause}
+       ORDER BY d.created_at DESC
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
     );
     
     const deliveries = [];
@@ -41,7 +62,17 @@ router.get('/', authenticate, async (req, res) => {
       });
     }
     
-    res.json({ success: true, data: deliveries });
+    res.json({ 
+      success: true, 
+      data: deliveries,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total
+      }
+    });
   } catch (error) {
     console.error('Deliveries error:', error);
     res.status(500).json({ error: 'Erreur serveur' });

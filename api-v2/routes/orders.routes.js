@@ -7,25 +7,62 @@ const { validate, validateUUID } = require('../middleware/validate');
 const { logAudit } = require('../services/audit.service');
 const { getOrderItems, getOrderWithItems, formatOrder } = require('../services/order.service');
 
-// GET /api/orders
+// GET /api/orders (avec pagination optionnelle)
 router.get('/', authenticate, async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100); // Max 100
+    const offset = (page - 1) * limit;
+    const status = req.query.status; // Filtre optionnel par statut
+    
+    // Construire la requête avec filtres
+    let whereClause = 'WHERE o.organization_id = $1';
+    const params = [req.user.organization_id];
+    
+    if (status && status !== 'all') {
+      params.push(status);
+      whereClause += ` AND o.status = $${params.length}`;
+    }
+    
+    // Compter le total
+    const countResult = await pool.query(
+      `SELECT COUNT(*) FROM orders o ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult.rows[0].count);
+    
+    // Récupérer les commandes avec pagination
     const result = await pool.query(
-      `SELECT o.*, u.name as cafeteria_name 
+      `SELECT o.*, u.name as cafeteria_name, u.phone as cafeteria_phone
        FROM orders o 
        JOIN users u ON o.cafeteria_id = u.id 
-       WHERE o.organization_id = $1 
-       ORDER BY o.created_at DESC`,
-      [req.user.organization_id]
+       ${whereClause}
+       ORDER BY o.created_at DESC
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
     );
     
     const orders = [];
     for (const order of result.rows) {
       const items = await getOrderItems(order.id);
-      orders.push(formatOrder(order, items));
+      orders.push(formatOrder(order, items, { 
+        id: order.cafeteria_id, 
+        name: order.cafeteria_name,
+        phone: order.cafeteria_phone 
+      }));
     }
     
-    res.json({ success: true, data: orders });
+    res.json({ 
+      success: true, 
+      data: orders,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total
+      }
+    });
   } catch (error) {
     console.error('Orders error:', error);
     res.status(500).json({ error: 'Erreur serveur' });

@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Mixin pour optimiser les états des pages
-/// Fournit: debounce, optimistic UI, gestion du loading
+/// Fournit: debounce, optimistic UI, gestion du loading, haptic feedback
 mixin OptimizedStateMixin<T extends StatefulWidget> on State<T> {
   bool _isProcessing = false;
   Timer? _debounceTimer;
@@ -10,21 +11,25 @@ mixin OptimizedStateMixin<T extends StatefulWidget> on State<T> {
   /// Vérifie si une action est en cours (évite les doubles clics)
   bool get isProcessing => _isProcessing;
   
-  /// Exécute une action avec protection contre les doubles clics
+  /// Exécute une action avec protection contre les doubles clics + haptic
   Future<void> safeAction(Future<void> Function() action, {
     VoidCallback? onStart,
     VoidCallback? onComplete,
     Function(dynamic)? onError,
+    bool haptic = true,
   }) async {
     if (_isProcessing) return;
     
     _isProcessing = true;
+    if (haptic) HapticFeedback.lightImpact();
     onStart?.call();
     
     try {
       await action();
+      if (haptic) HapticFeedback.mediumImpact();
       onComplete?.call();
     } catch (e) {
+      if (haptic) HapticFeedback.heavyImpact();
       onError?.call(e);
     } finally {
       if (mounted) {
@@ -48,18 +53,22 @@ mixin OptimizedStateMixin<T extends StatefulWidget> on State<T> {
     required VoidCallback rollback,
     Function(R)? onSuccess,
     Function(dynamic)? onError,
+    bool haptic = true,
   }) async {
     // Mise à jour immédiate de l'UI
+    if (haptic) HapticFeedback.selectionClick();
     updateUI();
     
     try {
       final result = await serverCall();
       if (mounted) {
+        if (haptic) HapticFeedback.mediumImpact();
         onSuccess?.call(result);
       }
     } catch (e) {
       // Rollback en cas d'erreur
       if (mounted) {
+        if (haptic) HapticFeedback.heavyImpact();
         rollback();
         onError?.call(e);
       }
