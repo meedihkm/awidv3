@@ -1,17 +1,22 @@
 // Deliveries Page - Admin
 import 'package:flutter/material.dart';
 import '../../../../core/services/api_service.dart';
+import '../../../../core/services/cache_service.dart';
 import '../../../../core/models/delivery_model.dart';
+import '../../../../core/widgets/skeleton_loader.dart';
+import '../../../../core/mixins/optimized_state.dart';
 
 class DeliveriesPage extends StatefulWidget {
   @override
   _DeliveriesPageState createState() => _DeliveriesPageState();
 }
 
-class _DeliveriesPageState extends State<DeliveriesPage> {
+class _DeliveriesPageState extends State<DeliveriesPage> with OptimizedStateMixin {
   final ApiService _apiService = ApiService();
+  final CacheService _cacheService = CacheService();
   List<Delivery> _deliveries = [];
   bool _isLoading = true;
+  bool _hasData = false; // Pour afficher skeleton vs empty state
   
   // Filtres
   String _periodFilter = 'all';
@@ -24,18 +29,31 @@ class _DeliveriesPageState extends State<DeliveriesPage> {
     _loadDeliveries();
   }
 
-  Future<void> _loadDeliveries() async {
+  Future<void> _loadDeliveries({bool forceRefresh = false}) async {
+    // Afficher les données en cache immédiatement
+    if (!forceRefresh) {
+      final cached = await _cacheService.getCachedDeliveries();
+      if (cached != null && cached.isNotEmpty) {
+        setState(() {
+          _deliveries = cached.map((json) => Delivery.fromJson(json)).toList();
+          _hasData = true;
+          _isLoading = false;
+        });
+      }
+    }
+    
     try {
-      final response = await _apiService.getDeliveries();
-      if (response['success']) {
+      final response = await _apiService.getDeliveries(forceRefresh: forceRefresh);
+      if (response['success'] == true) {
         setState(() {
           _deliveries = (response['data'] as List).map((json) => Delivery.fromJson(json)).toList();
+          _hasData = _deliveries.isNotEmpty;
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
+      showError('Erreur: ${e.toString()}');
     }
   }
 
@@ -101,107 +119,35 @@ class _DeliveriesPageState extends State<DeliveriesPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Center(child: CircularProgressIndicator(color: Colors.blue));
+    // Skeleton loading au premier chargement
+    if (_isLoading && !_hasData) {
+      return Column(
+        children: [
+          _buildFiltersSection(),
+          Expanded(
+            child: SkeletonList(count: 5, itemBuilder: () => const DeliveryCardSkeleton()),
+          ),
+        ],
+      );
     }
 
     final filtered = _getFilteredDeliveries();
 
     return Column(
       children: [
-        // Filtres
-        Container(
-          padding: EdgeInsets.all(10),
-          color: Colors.grey[100],
-          child: Column(
-            children: [
-              // Ligne 1: Période + Statut
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildPeriodChip('Tout', 'all'),
-                    SizedBox(width: 6),
-                    _buildPeriodChip('Jour', 'day'),
-                    SizedBox(width: 6),
-                    _buildPeriodChip('Semaine', 'week'),
-                    SizedBox(width: 6),
-                    _buildPeriodChip('Mois', 'month'),
-                    SizedBox(width: 12),
-                    Container(width: 1, height: 24, color: Colors.grey[400]),
-                    SizedBox(width: 12),
-                    _buildStatusChip('Toutes', 'all'),
-                    SizedBox(width: 6),
-                    _buildStatusChip('En cours', 'assigned'),
-                    SizedBox(width: 6),
-                    _buildStatusChip('Livrées', 'delivered'),
-                    SizedBox(width: 6),
-                    _buildStatusChip('Échouées', 'failed'),
-                    SizedBox(width: 6),
-                    _buildStatusChip('Reportées', 'postponed'),
-                  ],
-                ),
-              ),
-              // Ligne 2: Livreur
-              if (_getUniqueDeliverers().isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          height: 40,
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String?>(
-                              value: _selectedDeliverer,
-                              isExpanded: true,
-                              hint: Text('Tous les livreurs', style: TextStyle(fontSize: 13)),
-                              style: TextStyle(fontSize: 13, color: Colors.black),
-                              items: [
-                                DropdownMenuItem(value: null, child: Text('Tous les livreurs')),
-                                ..._getUniqueDeliverers().map((d) => DropdownMenuItem(value: d, child: Text(d))),
-                              ],
-                              onChanged: (v) => setState(() => _selectedDeliverer = v),
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (_selectedDeliverer != null || _periodFilter != 'all' || _statusFilter != 'all')
-                        Padding(
-                          padding: EdgeInsets.only(left: 8),
-                          child: GestureDetector(
-                            onTap: () => setState(() {
-                              _periodFilter = 'all';
-                              _statusFilter = 'all';
-                              _selectedDeliverer = null;
-                            }),
-                            child: Container(
-                              padding: EdgeInsets.all(8),
-                              decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(20)),
-                              child: Icon(Icons.clear, size: 20, color: Colors.red),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
+        _buildFiltersSection(),
 
         // Stats rapides
         Container(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
               _buildMiniStat('Total', filtered.length.toString(), Colors.blue),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               _buildMiniStat('Livrées', filtered.where((d) => d.status == 'delivered').length.toString(), Colors.green),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               _buildMiniStat('Échouées', filtered.where((d) => d.status == 'failed').length.toString(), Colors.red),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               _buildMiniStat('Reportées', filtered.where((d) => d.status == 'postponed').length.toString(), Colors.purple),
             ],
           ),
@@ -215,21 +161,105 @@ class _DeliveriesPageState extends State<DeliveriesPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.local_shipping_outlined, size: 64, color: Colors.grey[400]),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       Text('Aucune livraison', style: TextStyle(color: Colors.grey[600])),
                     ],
                   ),
                 )
               : RefreshIndicator(
-                  onRefresh: _loadDeliveries,
+                  onRefresh: () => _loadDeliveries(forceRefresh: true),
+                  color: const Color(0xFF2E7D32),
                   child: ListView.builder(
-                    padding: EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(12),
                     itemCount: filtered.length,
                     itemBuilder: (context, index) => _buildDeliveryCard(filtered[index]),
                   ),
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _buildFiltersSection() {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      color: Colors.grey[100],
+      child: Column(
+        children: [
+          // Ligne 1: Période + Statut
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildPeriodChip('Tout', 'all'),
+                const SizedBox(width: 6),
+                _buildPeriodChip('Jour', 'day'),
+                const SizedBox(width: 6),
+                _buildPeriodChip('Semaine', 'week'),
+                const SizedBox(width: 6),
+                _buildPeriodChip('Mois', 'month'),
+                const SizedBox(width: 12),
+                Container(width: 1, height: 24, color: Colors.grey[400]),
+                const SizedBox(width: 12),
+                _buildStatusChip('Toutes', 'all'),
+                const SizedBox(width: 6),
+                _buildStatusChip('En cours', 'assigned'),
+                const SizedBox(width: 6),
+                _buildStatusChip('Livrées', 'delivered'),
+                const SizedBox(width: 6),
+                _buildStatusChip('Échouées', 'failed'),
+                const SizedBox(width: 6),
+                _buildStatusChip('Reportées', 'postponed'),
+              ],
+            ),
+          ),
+          // Ligne 2: Livreur
+          if (_getUniqueDeliverers().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      height: 40,
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String?>(
+                          value: _selectedDeliverer,
+                          isExpanded: true,
+                          hint: const Text('Tous les livreurs', style: TextStyle(fontSize: 13)),
+                          style: const TextStyle(fontSize: 13, color: Colors.black),
+                          items: [
+                            const DropdownMenuItem(value: null, child: Text('Tous les livreurs')),
+                            ..._getUniqueDeliverers().map((d) => DropdownMenuItem(value: d, child: Text(d))),
+                          ],
+                          onChanged: (v) => setState(() => _selectedDeliverer = v),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_selectedDeliverer != null || _periodFilter != 'all' || _statusFilter != 'all')
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: GestureDetector(
+                        onTap: () => setState(() {
+                          _periodFilter = 'all';
+                          _statusFilter = 'all';
+                          _selectedDeliverer = null;
+                        }),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: Colors.red.shade100, borderRadius: BorderRadius.circular(20)),
+                          child: const Icon(Icons.clear, size: 20, color: Colors.red),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 

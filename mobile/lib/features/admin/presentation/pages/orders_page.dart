@@ -1,20 +1,25 @@
 // Orders Page - Admin
 import 'package:flutter/material.dart';
 import '../../../../core/services/api_service.dart';
+import '../../../../core/services/cache_service.dart';
 import '../../../../core/services/settings_service.dart';
 import '../../../../core/models/order_model.dart';
+import '../../../../core/widgets/skeleton_loader.dart';
+import '../../../../core/mixins/optimized_state.dart';
 
 class OrdersPage extends StatefulWidget {
   @override
   _OrdersPageState createState() => _OrdersPageState();
 }
 
-class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateMixin {
+class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateMixin, OptimizedStateMixin {
   final ApiService _apiService = ApiService();
+  final CacheService _cacheService = CacheService();
   final SettingsService _settingsService = SettingsService();
   List<Order> _orders = [];
   List<Map<String, dynamic>> _deliverers = [];
   bool _isLoading = true;
+  bool _hasData = false;
   bool _kitchenMode = false;
   late TabController _tabController;
   
@@ -46,23 +51,41 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadData({bool forceRefresh = false}) async {
+    // Charger depuis le cache d'abord
+    if (!forceRefresh) {
+      final cachedOrders = await _cacheService.getCachedOrders();
+      if (cachedOrders != null && cachedOrders.isNotEmpty) {
+        setState(() {
+          _orders = cachedOrders.map((json) => Order.fromJson(json)).toList();
+          _hasData = true;
+          _isLoading = false;
+        });
+      }
+    }
+    
     try {
-      final ordersResponse = await _apiService.getOrders();
-      final deliverersResponse = await _apiService.getDeliverers();
+      final results = await Future.wait([
+        _apiService.getOrders(forceRefresh: forceRefresh),
+        _apiService.getDeliverers(),
+      ]);
       
-      if (ordersResponse['success']) {
+      final ordersResponse = results[0];
+      final deliverersResponse = results[1];
+      
+      if (ordersResponse['success'] == true) {
         setState(() {
           _orders = (ordersResponse['data'] as List).map((json) => Order.fromJson(json)).toList();
-          if (deliverersResponse['success']) {
+          if (deliverersResponse['success'] == true) {
             _deliverers = List<Map<String, dynamic>>.from(deliverersResponse['data']);
           }
+          _hasData = _orders.isNotEmpty;
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
+      showError('Erreur: ${e.toString()}');
     }
   }
 
@@ -116,12 +139,52 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
   }
 
   Future<void> _lockOrder(Order order) async {
+    // Optimistic UI: mettre à jour immédiatement
+    final originalStatus = order.status;
+    setState(() {
+      final index = _orders.indexWhere((o) => o.id == order.id);
+      if (index != -1) {
+        _orders[index] = Order(
+          id: order.id,
+          organizationId: order.organizationId,
+          cafeteriaId: order.cafeteriaId,
+          date: order.date,
+          total: order.total,
+          status: 'locked',
+          paymentStatus: order.paymentStatus,
+          amountPaid: order.amountPaid,
+          createdAt: order.createdAt,
+          items: order.items,
+          cafeteria: order.cafeteria,
+        );
+      }
+    });
+    
     try {
       await _apiService.lockOrder(order.id);
-      _loadData();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Commande validée!'), backgroundColor: Colors.green));
+      showSuccess('Commande validée!');
+      _loadData(forceRefresh: true);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
+      // Rollback
+      setState(() {
+        final index = _orders.indexWhere((o) => o.id == order.id);
+        if (index != -1) {
+          _orders[index] = Order(
+            id: order.id,
+            organizationId: order.organizationId,
+            cafeteriaId: order.cafeteriaId,
+            date: order.date,
+            total: order.total,
+            status: originalStatus,
+            paymentStatus: order.paymentStatus,
+            amountPaid: order.amountPaid,
+            createdAt: order.createdAt,
+            items: order.items,
+            cafeteria: order.cafeteria,
+          );
+        }
+      });
+      showError('Erreur: ${e.toString()}');
     }
   }
 
@@ -154,13 +217,12 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
     );
 
     if (selected != null) {
-      try {
+      // Protection contre double clic
+      await safeAction(() async {
         await _apiService.assignDeliverer(order.id, selected);
-        _loadData();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Livreur assigné!'), backgroundColor: Colors.green));
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
-      }
+        showSuccess('Livreur assigné!');
+        _loadData(forceRefresh: true);
+      }, onError: (e) => showError('Erreur: ${e.toString()}'));
     }
   }
 
@@ -548,8 +610,20 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Center(child: CircularProgressIndicator(color: Colors.blue));
+    // Skeleton loading au premier chargement
+    if (_isLoading && !_hasData) {
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            color: Colors.grey[100],
+            child: const SkeletonLoader(height: 40),
+          ),
+          Expanded(
+            child: SkeletonList(count: 5, itemBuilder: () => const OrderCardSkeleton()),
+          ),
+        ],
+      );
     }
 
     return Column(
@@ -751,9 +825,10 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
     }
 
     return RefreshIndicator(
-      onRefresh: _loadData,
+      onRefresh: () => _loadData(forceRefresh: true),
+      color: const Color(0xFF2E7D32),
       child: ListView.builder(
-        padding: EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12),
         itemCount: orders.length,
         itemBuilder: (context, index) => _buildOrderCard(orders[index]),
       ),
