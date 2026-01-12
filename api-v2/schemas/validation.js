@@ -63,7 +63,7 @@ const schemas = {
   }),
   
   assignDeliverer: z.object({
-    delivererId: z.string().uuid('ID livreur invalide')
+    delivererId: z.string().min(1, 'ID livreur requis')
   }),
   
   // Deliveries
