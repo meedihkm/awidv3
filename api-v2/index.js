@@ -13,6 +13,7 @@ const ordersRoutes = require('./routes/orders.routes');
 const deliveriesRoutes = require('./routes/deliveries.routes');
 const organizationRoutes = require('./routes/organization.routes');
 const superAdminRoutes = require('./routes/superAdmin.routes');
+const realtimeRoutes = require('./routes/realtime.routes');
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use('/api/deliverers', deliveriesRoutes); // Alias pour compatibilité
 app.use('/api/organization', organizationRoutes);
 app.use('/api/financial', organizationRoutes); // Routes financières dans organization
 app.use('/api/audit-logs', organizationRoutes); // Routes audit dans organization
+app.use('/api/realtime', realtimeRoutes); // Routes temps réel
 app.use('/api/super-admin', superAdminRoutes);
 
 // Page Super Admin HTML (inline pour Vercel serverless)

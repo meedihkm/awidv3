@@ -305,6 +305,21 @@ router.get('/locations', authenticate, requireAdmin, async (req, res) => {
 router.get('/:id/history', authenticate, validateUUID('id'), async (req, res) => {
   try {
     const { date } = req.query;
+    
+    // SÉCURITÉ: Vérifier que le livreur appartient à la même organisation
+    const delivererCheck = await pool.query(
+      'SELECT organization_id FROM users WHERE id = $1 AND role = $2',
+      [req.params.id, 'deliverer']
+    );
+    
+    if (delivererCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Livreur non trouvé' });
+    }
+    
+    if (delivererCheck.rows[0].organization_id !== req.user.organization_id) {
+      return res.status(403).json({ error: 'Accès non autorisé' });
+    }
+    
     const result = await pool.query(
       `SELECT latitude, longitude, recorded_at
        FROM location_history 
