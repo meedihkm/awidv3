@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
-const { validate } = require('../middleware/validate');
 const pool = require('../config/database');
 
 // ============================================
@@ -37,7 +36,7 @@ router.get('/my-favorites', authenticate, async (req, res) => {
 // ============================================
 // Crée un nouveau favori (manuel ou depuis pattern)
 
-router.post('/create', authenticate, validate(createFavorite), async (req, res) => {
+router.post('/create', authenticate, async (req, res) => {
   try {
     const { name, items, fromPattern } = req.body;
     const clientId = req.user.id;
@@ -78,7 +77,7 @@ router.post('/create', authenticate, validate(createFavorite), async (req, res) 
 // ============================================
 // Met à jour un favori existant
 
-router.put('/:id', authenticate, validate(updateFavorite), async (req, res) => {
+router.put('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, items } = req.body;
