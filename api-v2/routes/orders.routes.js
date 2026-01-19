@@ -139,7 +139,11 @@ router.post('/', authenticate, validate('createOrder'), async (req, res) => {
     
     let total = 0;
     for (const item of items) {
-      const product = await pool.query('SELECT price FROM products WHERE id = $1', [item.productId]);
+      // SÉCURITÉ: Vérifier que le produit appartient à la même organisation
+      const product = await pool.query(
+        'SELECT price FROM products WHERE id = $1 AND organization_id = $2',
+        [item.productId, req.user.organization_id]
+      );
       if (product.rows.length > 0) {
         total += product.rows[0].price * item.quantity;
       }
@@ -169,7 +173,11 @@ router.post('/', authenticate, validate('createOrder'), async (req, res) => {
     const order = orderResult.rows[0];
     
     for (const item of items) {
-      const product = await pool.query('SELECT price FROM products WHERE id = $1', [item.productId]);
+      // SÉCURITÉ: Vérifier que le produit appartient à la même organisation
+      const product = await pool.query(
+        'SELECT price FROM products WHERE id = $1 AND organization_id = $2',
+        [item.productId, req.user.organization_id]
+      );
       if (product.rows.length > 0) {
         await pool.query(
           'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4)',
@@ -206,7 +214,11 @@ router.put('/:id', authenticate, validateUUID('id'), validate('updateOrder'), as
     
     let total = 0;
     for (const item of items) {
-      const product = await pool.query('SELECT price FROM products WHERE id = $1', [item.productId]);
+      // SÉCURITÉ: Vérifier que le produit appartient à la même organisation
+      const product = await pool.query(
+        'SELECT price FROM products WHERE id = $1 AND organization_id = $2',
+        [item.productId, req.user.organization_id]
+      );
       if (product.rows.length > 0) {
         const price = product.rows[0].price;
         total += price * item.quantity;

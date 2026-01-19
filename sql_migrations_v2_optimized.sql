@@ -22,13 +22,18 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 CREATE TABLE IF NOT EXISTS audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    organization_id TEXT REFERENCES organizations(id) ON DELETE CASCADE,
+    organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     action VARCHAR(100) NOT NULL,
     details JSONB DEFAULT '{}',
     ip_address VARCHAR(45),
     user_agent VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- IMPORTANT: Ajouter la contrainte CASCADE si la table existe déjà
+ALTER TABLE audit_logs DROP CONSTRAINT IF EXISTS audit_logs_organization_id_fkey;
+ALTER TABLE audit_logs ADD CONSTRAINT audit_logs_organization_id_fkey 
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
 
 -- Table location_history (historique GPS des livreurs)
 CREATE TABLE IF NOT EXISTS location_history (
@@ -44,6 +49,11 @@ CREATE TABLE IF NOT EXISTS order_sequences (
     organization_id TEXT PRIMARY KEY REFERENCES organizations(id) ON DELETE CASCADE,
     last_number INTEGER DEFAULT 0
 );
+
+-- IMPORTANT: Ajouter la contrainte CASCADE si la table existe déjà
+ALTER TABLE order_sequences DROP CONSTRAINT IF EXISTS order_sequences_organization_id_fkey;
+ALTER TABLE order_sequences ADD CONSTRAINT order_sequences_organization_id_fkey 
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
 
 -- =============================================
 -- 2. COLONNES ADDITIONNELLES
@@ -251,7 +261,49 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =============================================
--- 7. CONTRAINTES ET VALIDATIONS
+-- 7. CONTRAINTES CASCADE POUR TOUTES LES TABLES
+-- =============================================
+
+-- S'assurer que TOUTES les tables ont CASCADE DELETE sur organization_id
+-- Ceci garantit que quand une organisation est supprimée, TOUTES ses données sont supprimées
+
+-- Users (déjà devrait avoir CASCADE, mais on force)
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_organization_id_fkey;
+ALTER TABLE users ADD CONSTRAINT users_organization_id_fkey 
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+
+-- Products
+ALTER TABLE products DROP CONSTRAINT IF EXISTS products_organization_id_fkey;
+ALTER TABLE products ADD CONSTRAINT products_organization_id_fkey 
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+
+-- Orders
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_organization_id_fkey;
+ALTER TABLE orders ADD CONSTRAINT orders_organization_id_fkey 
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+
+-- Deliveries
+ALTER TABLE deliveries DROP CONSTRAINT IF EXISTS deliveries_organization_id_fkey;
+ALTER TABLE deliveries ADD CONSTRAINT deliveries_organization_id_fkey 
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+
+-- Order_items (CASCADE via orders)
+ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_order_id_fkey;
+ALTER TABLE order_items ADD CONSTRAINT order_items_order_id_fkey 
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE;
+
+-- Refresh_tokens (CASCADE via users)
+ALTER TABLE refresh_tokens DROP CONSTRAINT IF EXISTS refresh_tokens_user_id_fkey;
+ALTER TABLE refresh_tokens ADD CONSTRAINT refresh_tokens_user_id_fkey 
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+-- Location_history (CASCADE via users/deliverers)
+ALTER TABLE location_history DROP CONSTRAINT IF EXISTS location_history_deliverer_id_fkey;
+ALTER TABLE location_history ADD CONSTRAINT location_history_deliverer_id_fkey 
+    FOREIGN KEY (deliverer_id) REFERENCES users(id) ON DELETE CASCADE;
+
+-- =============================================
+-- 8. CONTRAINTES ET VALIDATIONS
 -- =============================================
 
 -- Contrainte: payment_status valide
@@ -288,7 +340,7 @@ ALTER TABLE users ADD CONSTRAINT users_longitude_check
     CHECK (longitude IS NULL OR (longitude >= -180 AND longitude <= 180));
 
 -- =============================================
--- 8. PERMISSIONS (à adapter selon vos besoins)
+-- 9. PERMISSIONS (à adapter selon vos besoins)
 -- =============================================
 
 -- Exemple: Créer un rôle read-only pour analytics
@@ -298,7 +350,7 @@ ALTER TABLE users ADD CONSTRAINT users_longitude_check
 -- GRANT SELECT ON active_deliveries_view TO analytics_readonly;
 
 -- =============================================
--- 9. COMMANDES DE MAINTENANCE
+-- 10. COMMANDES DE MAINTENANCE
 -- =============================================
 
 -- À exécuter périodiquement (via CRON ou manuellement):
@@ -322,7 +374,7 @@ ALTER TABLE users ADD CONSTRAINT users_longitude_check
 -- VACUUM ANALYZE;
 
 -- =============================================
--- 10. STATISTIQUES ET MONITORING
+-- 11. STATISTIQUES ET MONITORING
 -- =============================================
 
 -- Voir la taille des tables

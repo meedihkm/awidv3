@@ -74,39 +74,22 @@ router.post('/organizations', authenticateSuperAdmin, validate('createOrganizati
 // DELETE /api/super-admin/organizations/:id
 router.delete('/organizations/:id', authenticateSuperAdmin, async (req, res) => {
   try {
-    // Supprimer les refresh tokens des utilisateurs de cette org
-    await pool.query(`
-      DELETE FROM refresh_tokens WHERE user_id IN (
-        SELECT id FROM users WHERE organization_id = $1
-      )
-    `, [req.params.id]);
+    // Grâce aux contraintes CASCADE dans la base de données,
+    // supprimer l'organisation supprimera automatiquement:
+    // - users (et leurs refresh_tokens, location_history via CASCADE)
+    // - products
+    // - orders (et leurs order_items via CASCADE)
+    // - deliveries
+    // - audit_logs
+    // - order_sequences
     
-    // Supprimer les audit logs
-    await pool.query('DELETE FROM audit_logs WHERE organization_id = $1', [req.params.id]);
+    const result = await pool.query('DELETE FROM organizations WHERE id = $1 RETURNING id', [req.params.id]);
     
-    // Supprimer les order_items
-    await pool.query(`
-      DELETE FROM order_items WHERE order_id IN (
-        SELECT id FROM orders WHERE organization_id = $1
-      )
-    `, [req.params.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Organisation non trouvée' });
+    }
     
-    // Supprimer les livraisons
-    await pool.query('DELETE FROM deliveries WHERE organization_id = $1', [req.params.id]);
-    
-    // Supprimer les commandes
-    await pool.query('DELETE FROM orders WHERE organization_id = $1', [req.params.id]);
-    
-    // Supprimer les produits
-    await pool.query('DELETE FROM products WHERE organization_id = $1', [req.params.id]);
-    
-    // Supprimer les utilisateurs
-    await pool.query('DELETE FROM users WHERE organization_id = $1', [req.params.id]);
-    
-    // Supprimer l'organisation
-    await pool.query('DELETE FROM organizations WHERE id = $1', [req.params.id]);
-    
-    res.json({ success: true });
+    res.json({ success: true, message: 'Organisation et toutes ses données supprimées' });
   } catch (error) {
     console.error('Delete org error:', error);
     res.status(500).json({ error: 'Erreur serveur: ' + error.message });
