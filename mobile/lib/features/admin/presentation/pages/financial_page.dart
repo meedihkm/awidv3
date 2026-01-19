@@ -1156,7 +1156,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
         totalDebt: clientData['total_debt'] ?? 0.0,
         unpaidOrders: clientData['unpaid_orders'],
         onSuccess: () {
-          _loadDebts();
+          _loadData(forceRefresh: true);
         },
       ),
     );
