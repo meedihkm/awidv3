@@ -1,20 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
-const { validateRequest } = require('../middleware/validate');
-const { createFavorite, updateFavorite } = require('../schemas/validation');
-const db = require('../config/database');
+const { authenticate } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
+const pool = require('../config/database');
 
 // ============================================
 // 1. GET /api/favorites/my-favorites
 // ============================================
 // Récupère les favoris du client connecté
 
-router.get('/my-favorites', authenticateToken, async (req, res) => {
+router.get('/my-favorites', authenticate, async (req, res) => {
   try {
-    const clientId = req.user.userId;
+    const clientId = req.user.id;
     
-    const result = await db.query(
+    const result = await pool.query(
       'SELECT * FROM get_client_favorites($1)',
       [clientId]
     );
@@ -38,10 +37,10 @@ router.get('/my-favorites', authenticateToken, async (req, res) => {
 // ============================================
 // Crée un nouveau favori (manuel ou depuis pattern)
 
-router.post('/create', authenticateToken, validateRequest(createFavorite), async (req, res) => {
+router.post('/create', authenticate, validate(createFavorite), async (req, res) => {
   try {
     const { name, items, fromPattern } = req.body;
-    const clientId = req.user.userId;
+    const clientId = req.user.id;
     const organizationId = req.user.organizationId;
     
     // Calculer le total
@@ -51,7 +50,7 @@ router.post('/create', authenticateToken, validateRequest(createFavorite), async
     }
     
     // Créer le favori
-    const result = await db.query(
+    const result = await pool.query(
       `INSERT INTO favorite_orders (
         client_id, organization_id, name, items, total, is_auto_detected
       ) VALUES ($1, $2, $3, $4, $5, $6)
@@ -79,14 +78,14 @@ router.post('/create', authenticateToken, validateRequest(createFavorite), async
 // ============================================
 // Met à jour un favori existant
 
-router.put('/:id', authenticateToken, validateRequest(updateFavorite), async (req, res) => {
+router.put('/:id', authenticate, validate(updateFavorite), async (req, res) => {
   try {
     const { id } = req.params;
     const { name, items } = req.body;
-    const clientId = req.user.userId;
+    const clientId = req.user.id;
     
     // Vérifier que le favori appartient au client
-    const checkResult = await db.query(
+    const checkResult = await pool.query(
       'SELECT id FROM favorite_orders WHERE id = $1 AND client_id = $2',
       [id, clientId]
     );
@@ -105,7 +104,7 @@ router.put('/:id', authenticateToken, validateRequest(updateFavorite), async (re
     }
     
     // Mettre à jour
-    const result = await db.query(
+    const result = await pool.query(
       `UPDATE favorite_orders
        SET name = $1, items = $2, total = $3, updated_at = CURRENT_TIMESTAMP
        WHERE id = $4 AND client_id = $5
@@ -133,12 +132,12 @@ router.put('/:id', authenticateToken, validateRequest(updateFavorite), async (re
 // ============================================
 // Supprime (désactive) un favori
 
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const clientId = req.user.userId;
+    const clientId = req.user.id;
     
-    const result = await db.query(
+    const result = await pool.query(
       `UPDATE favorite_orders
        SET is_active = false, updated_at = CURRENT_TIMESTAMP
        WHERE id = $1 AND client_id = $2
@@ -172,13 +171,13 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 // ============================================
 // Enregistre l'utilisation d'un favori
 
-router.post('/:id/use', authenticateToken, async (req, res) => {
+router.post('/:id/use', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const clientId = req.user.userId;
+    const clientId = req.user.id;
     
     // Vérifier que le favori appartient au client
-    const checkResult = await db.query(
+    const checkResult = await pool.query(
       'SELECT id FROM favorite_orders WHERE id = $1 AND client_id = $2 AND is_active = true',
       [id, clientId]
     );
@@ -191,7 +190,7 @@ router.post('/:id/use', authenticateToken, async (req, res) => {
     }
     
     // Mettre à jour les stats
-    await db.query('SELECT update_favorite_usage($1)', [id]);
+    await pool.query('SELECT update_favorite_usage($1)', [id]);
     
     res.json({
       success: true,
@@ -212,10 +211,10 @@ router.post('/:id/use', authenticateToken, async (req, res) => {
 // ============================================
 // Détecte un pattern après création de commande
 
-router.post('/detect-pattern', authenticateToken, async (req, res) => {
+router.post('/detect-pattern', authenticate, async (req, res) => {
   try {
     const { items } = req.body;
-    const clientId = req.user.userId;
+    const clientId = req.user.id;
     const organizationId = req.user.organizationId;
     
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -226,7 +225,7 @@ router.post('/detect-pattern', authenticateToken, async (req, res) => {
     }
     
     // Détecter le pattern
-    const result = await db.query(
+    const result = await pool.query(
       'SELECT * FROM detect_order_pattern($1, $2, $3)',
       [clientId, organizationId, JSON.stringify(items)]
     );
@@ -252,18 +251,18 @@ router.post('/detect-pattern', authenticateToken, async (req, res) => {
 // ============================================
 // Récupère les préférences de l'utilisateur
 
-router.get('/preferences', authenticateToken, async (req, res) => {
+router.get('/preferences', authenticate, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     
-    let result = await db.query(
+    let result = await pool.query(
       'SELECT * FROM user_preferences WHERE user_id = $1',
       [userId]
     );
     
     // Si pas de préférences, créer avec valeurs par défaut
     if (result.rows.length === 0) {
-      result = await db.query(
+      result = await pool.query(
         `INSERT INTO user_preferences (user_id, favorite_orders_enabled, auto_suggest_enabled, min_pattern_count)
          VALUES ($1, true, true, 3)
          RETURNING *`,
@@ -290,12 +289,12 @@ router.get('/preferences', authenticateToken, async (req, res) => {
 // ============================================
 // Met à jour les préférences de l'utilisateur
 
-router.put('/preferences', authenticateToken, async (req, res) => {
+router.put('/preferences', authenticate, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const { favorite_orders_enabled, auto_suggest_enabled, min_pattern_count } = req.body;
     
-    const result = await db.query(
+    const result = await pool.query(
       `INSERT INTO user_preferences (user_id, favorite_orders_enabled, auto_suggest_enabled, min_pattern_count)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (user_id)
@@ -328,7 +327,7 @@ router.put('/preferences', authenticateToken, async (req, res) => {
 // ============================================
 // Statistiques sur l'utilisation des favoris
 
-router.get('/stats', authenticateToken, async (req, res) => {
+router.get('/stats', authenticate, async (req, res) => {
   try {
     // Vérifier que c'est un admin
     if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
@@ -340,7 +339,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
     
     const organizationId = req.user.organizationId;
     
-    const result = await db.query(
+    const result = await pool.query(
       `SELECT
         COUNT(DISTINCT f.client_id) AS clients_with_favorites,
         COUNT(f.id) AS total_favorites,
