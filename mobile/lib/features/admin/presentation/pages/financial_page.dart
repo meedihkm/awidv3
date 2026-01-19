@@ -3,7 +3,9 @@ import 'package:table_calendar/table_calendar.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../core/services/cache_service.dart';
 import '../../../../core/services/report_service.dart';
+import '../../../../core/services/payment_service.dart';
 import 'client_detail_page.dart';
+import '../widgets/record_payment_dialog.dart';
 
 class FinancialPage extends StatefulWidget {
   @override
@@ -14,6 +16,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   final ApiService _apiService = ApiService();
   final CacheService _cacheService = CacheService();
   final ReportService _reportService = ReportService();
+  final PaymentService _paymentService = PaymentService();
   late TabController _tabController;
   
   // Data
@@ -22,6 +25,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   List<Map<String, dynamic>> _debts = [];
   List<dynamic> _deliverers = [];
   Map<String, dynamic> _clients = {};
+  Map<String, dynamic> _paymentStats = {};
   bool _isLoading = true;
   
   // Filtres période
@@ -66,6 +70,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
         _apiService.getDeliveries(),
         _apiService.getDeliverers(),
         _apiService.getUsers(),
+        _paymentService.getPaymentStats(),
       ]);
       
       final orders = results[0]['data'] ?? [];
@@ -73,6 +78,8 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       final deliveries = results[2]['data'] ?? [];
       final deliverers = results[3]['data'] ?? [];
       final users = results[4]['data'] ?? [];
+      final paymentStatsResult = results[5];
+      final paymentStats = paymentStatsResult['success'] ? (paymentStatsResult['data'] ?? {}) : {};
       
       // Créer map des clients
       final clientsMap = <String, dynamic>{};
@@ -92,6 +99,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
         _allDeliveries = deliveries;
         _deliverers = deliverers;
         _clients = clientsMap;
+        _paymentStats = paymentStats;
         _isLoading = false;
       });
     } catch (e) {
@@ -521,6 +529,10 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   }
 
   Widget _buildSummaryTab(Map<String, dynamic> stats, List<dynamic> orders) {
+    final collectedToday = _parseDouble(_paymentStats['collected_today']);
+    final collectedThisMonth = _parseDouble(_paymentStats['collected_this_month']);
+    final clientsPaidToday = (_paymentStats['clients_paid_today'] ?? 0);
+
     return RefreshIndicator(
       onRefresh: () => _loadData(forceRefresh: true),
       color: Color(0xFF2E7D32),
@@ -530,7 +542,58 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Stats paiements (nouvelles)
+            if (_paymentStats.isNotEmpty) ...[
+              Row(
+                children: [
+                  Icon(Icons.payment, color: Color(0xFF2E7D32), size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Collectes',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12),
+              GridView.count(
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.2,
+                children: [
+                  _buildStatCard('Aujourd\'hui', '${collectedToday.toStringAsFixed(0)} DA', 
+                    Icons.today, Colors.teal),
+                  _buildStatCard('Ce mois', '${collectedThisMonth.toStringAsFixed(0)} DA', 
+                    Icons.calendar_month, Colors.indigo),
+                  _buildStatCard('Clients payés', '$clientsPaidToday', 
+                    Icons.people, Colors.cyan),
+                ],
+              ),
+              SizedBox(height: 20),
+            ],
+
             // Stats principales en grille
+            Row(
+              children: [
+                Icon(Icons.analytics, color: Color(0xFF2E7D32), size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Statistiques',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
@@ -1017,22 +1080,37 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                               ),
                             ],
                             SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  final clientData = _clients.values.firstWhere(
-                                    (c) => c['name'] == debt['name'],
-                                    orElse: () => debt,
-                                  );
-                                  Navigator.push(context, MaterialPageRoute(
-                                    builder: (_) => ClientDetailPage(client: clientData),
-                                  ));
-                                },
-                                icon: Icon(Icons.visibility),
-                                label: Text('Voir fiche client'),
-                                style: OutlinedButton.styleFrom(foregroundColor: Color(0xFF2E7D32)),
-                              ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () {
+                                      final clientData = _clients.values.firstWhere(
+                                        (c) => c['name'] == debt['name'],
+                                        orElse: () => debt,
+                                      );
+                                      Navigator.push(context, MaterialPageRoute(
+                                        builder: (_) => ClientDetailPage(client: clientData),
+                                      ));
+                                    },
+                                    icon: Icon(Icons.visibility, size: 18),
+                                    label: Text('Voir fiche'),
+                                    style: OutlinedButton.styleFrom(foregroundColor: Color(0xFF2E7D32)),
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _recordPaymentForClient(debt),
+                                    icon: Icon(Icons.payment, size: 18),
+                                    label: Text('Paiement'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Color(0xFF2E7D32),
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -1053,5 +1131,34 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
     final date = DateTime.tryParse(dateStr);
     if (date == null) return 'N/A';
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Future<void> _recordPaymentForClient(Map<String, dynamic> debt) async {
+    final clientData = _clients.values.firstWhere(
+      (c) => c['name'] == debt['name'],
+      orElse: () => debt,
+    );
+    
+    if (clientData['id'] == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Client introuvable'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => RecordPaymentDialog(
+        clientId: clientData['id'],
+        clientName: clientData['name'] ?? 'Client',
+      ),
+    );
+
+    if (result == true) {
+      _loadData(forceRefresh: true);
+    }
   }
 }

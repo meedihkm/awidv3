@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../../core/services/api_service.dart';
+import '../../../../core/services/favorite_service.dart';
 import '../../../../core/models/product_model.dart';
+import '../../../../core/models/favorite_order_model.dart';
 
 enum ViewMode { grid, list, compact }
 
@@ -12,10 +14,14 @@ class NewOrderPage extends StatefulWidget {
 
 class _NewOrderPageState extends State<NewOrderPage> {
   final ApiService _apiService = ApiService();
+  final FavoriteService _favoriteService = FavoriteService();
   List<Product> _products = [];
   List<Product> _filteredProducts = [];
+  List<FavoriteOrder> _favorites = [];
+  UserPreferences? _preferences;
   Map<String, int> _cart = {};
   bool _isLoading = true;
+  bool _isLoadingFavorites = false;
   String _searchQuery = '';
   final _searchController = TextEditingController();
   ViewMode _viewMode = ViewMode.grid;
@@ -26,6 +32,8 @@ class _NewOrderPageState extends State<NewOrderPage> {
   void initState() {
     super.initState();
     _loadProducts();
+    _loadFavorites();
+    _loadPreferences();
   }
 
   @override
@@ -52,6 +60,43 @@ class _NewOrderPageState extends State<NewOrderPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur: ${e.toString()}')),
       );
+    }
+  }
+
+  Future<void> _loadFavorites() async {
+    setState(() => _isLoadingFavorites = true);
+    try {
+      final response = await _favoriteService.getMyFavorites();
+      if (response['success']) {
+        setState(() {
+          _favorites = (response['data'] as List)
+              .map((json) => FavoriteOrder.fromJson(json))
+              .toList();
+          _isLoadingFavorites = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _isLoadingFavorites = false);
+    }
+  }
+
+  Future<void> _loadPreferences() async {
+    try {
+      final response = await _favoriteService.getPreferences();
+      if (response['success']) {
+        setState(() {
+          _preferences = UserPreferences.fromJson(response['data']);
+        });
+      }
+    } catch (e) {
+      // Utiliser valeurs par défaut
+      setState(() {
+        _preferences = UserPreferences(
+          favoriteOrdersEnabled: true,
+          autoSuggestEnabled: true,
+          minPatternCount: 3,
+        );
+      });
     }
   }
 
@@ -125,7 +170,7 @@ class _NewOrderPageState extends State<NewOrderPage> {
     return _cart.values.fold(0, (sum, qty) => sum + qty);
   }
 
-  Future<void> _submitOrder() async {
+  Future<void> _submitOrder({String? favoriteId}) async {
     if (_cart.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Votre panier est vide')),
@@ -141,6 +186,16 @@ class _NewOrderPageState extends State<NewOrderPage> {
 
       await _apiService.createOrder({'items': items});
       
+      // Si utilisation d'un favori, enregistrer
+      if (favoriteId != null) {
+        await _favoriteService.useFavorite(favoriteId);
+      }
+      
+      // Détecter pattern si préférences activées
+      if (_preferences?.autoSuggestEnabled == true) {
+        _detectPatternAfterOrder();
+      }
+      
       setState(() {
         _cart.clear();
       });
@@ -151,11 +206,146 @@ class _NewOrderPageState extends State<NewOrderPage> {
           backgroundColor: Colors.green,
         ),
       );
+      
+      // Recharger les favoris
+      _loadFavorites();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur: ${e.toString()}')),
       );
     }
+  }
+
+  Future<void> _detectPatternAfterOrder() async {
+    try {
+      final items = _cart.entries.map((entry) {
+        final product = _products.firstWhere((p) => p.id == entry.key);
+        return {
+          'productId': entry.key,
+          'productName': product.name,
+          'quantity': entry.value,
+          'unitPrice': product.price,
+        };
+      }).toList();
+      
+      final response = await _favoriteService.detectPattern(items: items);
+      
+      if (response['success']) {
+        final data = response['data'];
+        final shouldSuggest = data['should_suggest'] ?? false;
+        final patternCount = data['pattern_count'] ?? 0;
+        
+        if (shouldSuggest) {
+          _showPatternSuggestion(items, patternCount);
+        }
+      }
+    } catch (e) {
+      // Silencieux - ne pas déranger l'utilisateur
+    }
+  }
+
+  void _showPatternSuggestion(List<Map<String, dynamic>> items, int count) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.lightbulb, color: Colors.amber, size: 28),
+            SizedBox(width: 12),
+            Expanded(child: Text('Commande habituelle détectée!')),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Vous avez commandé ces articles $count fois.',
+              style: TextStyle(fontSize: 15),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Voulez-vous sauvegarder cette commande comme favori pour commander plus rapidement la prochaine fois?',
+              style: TextStyle(color: Colors.grey[700]),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Non merci'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _createFavoriteFromPattern(items);
+            },
+            icon: Icon(Icons.star, size: 18),
+            label: Text('Sauvegarder'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _createFavoriteFromPattern(List<Map<String, dynamic>> items) async {
+    final nameController = TextEditingController(text: 'Ma commande habituelle');
+    
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Nommer votre favori'),
+        content: TextField(
+          controller: nameController,
+          decoration: InputDecoration(
+            labelText: 'Nom',
+            hintText: 'Ex: Menu du matin',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: Text('Créer', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    
+    if (result == true) {
+      try {
+        await _favoriteService.createFavorite(
+          name: nameController.text.isNotEmpty ? nameController.text : 'Ma commande habituelle',
+          items: items,
+          fromPattern: true,
+        );
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Favori créé!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        _loadFavorites();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: ${e.toString()}')),
+        );
+      }
+    }
+    
+    nameController.dispose();
   }
 
   @override
@@ -217,6 +407,30 @@ class _NewOrderPageState extends State<NewOrderPage> {
               // Options d'affichage
               Row(
                 children: [
+                  // Bouton Favoris
+                  if (_preferences?.favoriteOrdersEnabled == true && _favorites.isNotEmpty)
+                    GestureDetector(
+                      onTap: _showFavoritesSheet,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.amber),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.star, size: 16, color: Colors.amber.shade700),
+                            SizedBox(width: 4),
+                            Text('Favoris (${_favorites.length})', 
+                              style: TextStyle(fontSize: 12, color: Colors.amber.shade700, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (_preferences?.favoriteOrdersEnabled == true && _favorites.isNotEmpty)
+                    SizedBox(width: 8),
                   // Mode d'affichage
                   _buildViewModeButton(ViewMode.grid, Icons.grid_view, 'Grille'),
                   SizedBox(width: 8),
@@ -703,5 +917,256 @@ class _NewOrderPageState extends State<NewOrderPage> {
         ),
       ),
     );
+  }
+
+  void _showFavoritesSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            // Handle
+            Container(
+              margin: EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            
+            // Header
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.star, color: Colors.amber, size: 28),
+                  SizedBox(width: 12),
+                  Text(
+                    'Mes favoris',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            
+            Divider(height: 1),
+            
+            // Liste des favoris
+            Expanded(
+              child: _isLoadingFavorites
+                  ? Center(child: CircularProgressIndicator(color: Colors.green))
+                  : _favorites.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.star_border, size: 64, color: Colors.grey[400]),
+                              SizedBox(height: 16),
+                              Text('Aucun favori', style: TextStyle(color: Colors.grey[600])),
+                              SizedBox(height: 8),
+                              Text(
+                                'Vos commandes répétées seront\nautomatiquement suggérées',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.all(16),
+                          itemCount: _favorites.length,
+                          itemBuilder: (context, index) {
+                            final favorite = _favorites[index];
+                            return Card(
+                              margin: EdgeInsets.only(bottom: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _loadFavoriteToCart(favorite);
+                                },
+                                borderRadius: BorderRadius.circular(16),
+                                child: Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: Colors.amber.shade50,
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: Icon(Icons.star, color: Colors.amber, size: 20),
+                                          ),
+                                          SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  favorite.name,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                                if (favorite.orderCount > 0)
+                                                  Text(
+                                                    'Commandé ${favorite.orderCount} fois',
+                                                    style: TextStyle(
+                                                      color: Colors.grey[600],
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                          Text(
+                                            '${favorite.total.toStringAsFixed(0)} DA',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 18,
+                                              color: Colors.green.shade700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 12),
+                                      ...favorite.items.map((item) => Padding(
+                                        padding: EdgeInsets.only(bottom: 4),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 24,
+                                              height: 24,
+                                              decoration: BoxDecoration(
+                                                color: Colors.green.shade50,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  '${item.quantity}',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.green.shade700,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                item.productName,
+                                                style: TextStyle(fontSize: 14),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )),
+                                      SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: OutlinedButton.icon(
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                                _deleteFavorite(favorite.id);
+                                              },
+                                              icon: Icon(Icons.delete, size: 18),
+                                              label: Text('Supprimer'),
+                                              style: OutlinedButton.styleFrom(
+                                                foregroundColor: Colors.red,
+                                                side: BorderSide(color: Colors.red),
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(width: 8),
+                                          Expanded(
+                                            flex: 2,
+                                            child: ElevatedButton.icon(
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                                _loadFavoriteToCart(favorite);
+                                              },
+                                              icon: Icon(Icons.shopping_cart, size: 18),
+                                              label: Text('Utiliser'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.green,
+                                                foregroundColor: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _loadFavoriteToCart(FavoriteOrder favorite) {
+    setState(() {
+      _cart.clear();
+      for (var item in favorite.items) {
+        _cart[item.productId] = item.quantity;
+      }
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${favorite.name} ajouté au panier'),
+        backgroundColor: Colors.green,
+        action: SnackBarAction(
+          label: 'COMMANDER',
+          textColor: Colors.white,
+          onPressed: () => _submitOrder(favoriteId: favorite.id),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteFavorite(String favoriteId) async {
+    try {
+      await _favoriteService.deleteFavorite(favoriteId);
+      _loadFavorites();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Favori supprimé'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: ${e.toString()}')),
+      );
+    }
   }
 }

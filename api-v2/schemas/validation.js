@@ -106,6 +106,38 @@ const schemas = {
     active: z.boolean()
   }),
   
+  // Payments
+  recordPayment: z.object({
+    clientId: z.string().uuid('ID client invalide'),
+    amount: z.number().positive('Montant doit être positif'),
+    mode: z.enum(['auto', 'manual']).optional(),
+    deliveryId: z.string().uuid('ID livraison invalide').optional().nullable(),
+    targetOrders: z.array(z.string().uuid()).optional().nullable(),
+    notes: z.string().max(500).optional().nullable()
+  }),
+  
+  // Favorites
+  createFavorite: z.object({
+    name: z.string().min(1, 'Nom requis').max(100),
+    items: z.array(z.object({
+      productId: z.string().uuid('ID produit invalide'),
+      productName: z.string().min(1),
+      quantity: z.number().int().positive('Quantité doit être positive'),
+      unitPrice: z.number().positive('Prix doit être positif')
+    })).min(1, 'Au moins un article requis'),
+    fromPattern: z.boolean().optional()
+  }),
+  
+  updateFavorite: z.object({
+    name: z.string().min(1, 'Nom requis').max(100),
+    items: z.array(z.object({
+      productId: z.string().uuid('ID produit invalide'),
+      productName: z.string().min(1),
+      quantity: z.number().int().positive('Quantité doit être positive'),
+      unitPrice: z.number().positive('Prix doit être positif')
+    })).min(1, 'Au moins un article requis')
+  }),
+  
   // UUID param validation
   uuidParam: z.object({
     id: z.string().uuid('ID invalide')

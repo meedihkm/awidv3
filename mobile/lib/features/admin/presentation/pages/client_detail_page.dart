@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/services/api_service.dart';
+import '../../../../core/services/payment_service.dart';
 import '../../../../core/services/cache_service.dart';
 import '../../../../core/services/settings_service.dart';
+import '../widgets/record_payment_dialog.dart';
 
 class ClientDetailPage extends StatefulWidget {
   final Map<String, dynamic> client;
@@ -14,20 +16,24 @@ class ClientDetailPage extends StatefulWidget {
 
 class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
+  final PaymentService _paymentService = PaymentService();
   final CacheService _cacheService = CacheService();
   final SettingsService _settings = SettingsService();
   late TabController _tabController;
   
   List<dynamic> _orders = [];
   List<dynamic> _deliveries = [];
+  List<dynamic> _paymentHistory = [];
+  Map<String, dynamic>? _debtDetails;
   bool _isLoading = true;
+  bool _isLoadingPayments = false;
   final _notesController = TextEditingController();
   final _addressController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this); // 3 tabs maintenant
     _notesController.text = widget.client['notes'] ?? '';
     _addressController.text = widget.client['address'] ?? '';
     _loadData();
@@ -61,10 +67,12 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
       final results = await Future.wait([
         _apiService.getOrders(),
         _apiService.getDeliveries(),
+        _paymentService.getClientDebtDetails(widget.client['id']),
       ]);
       
       final allOrders = results[0]['data'] as List? ?? [];
       final allDeliveries = results[1]['data'] as List? ?? [];
+      final debtData = results[2]['data'];
       
       final clientOrders = allOrders.where((o) => o['cafeteriaId'] == widget.client['id']).toList();
       final clientDeliveries = allDeliveries.where((d) {
@@ -82,6 +90,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
       setState(() {
         _orders = clientOrders;
         _deliveries = clientDeliveries;
+        _debtDetails = debtData;
+        _paymentHistory = debtData['payment_history'] ?? [];
         _isLoading = false;
       });
     } catch (e) {
@@ -90,6 +100,10 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
   }
 
   double get _totalDebt {
+    if (_debtDetails != null) {
+      return (_debtDetails!['total_debt'] ?? 0).toDouble();
+    }
+    // Fallback: calculer depuis les commandes
     double debt = 0;
     for (var o in _orders) {
       final total = _parseDouble(o['total']);
@@ -147,6 +161,33 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
         SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
       );
     }
+  }
+
+  Future<void> _openRecordPaymentDialog() async {
+    if (_debtDetails == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Chargement des données...'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => RecordPaymentDialog(
+        client: _debtDetails!['client'],
+        totalDebt: _totalDebt,
+        unpaidOrders: _debtDetails!['unpaid_orders'],
+        onSuccess: () {
+          _loadClientData();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Paiement enregistré avec succès'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -353,18 +394,41 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
   }
 
   Widget _buildStatsSection() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          _buildStatCard('Commandes', '${_orders.length}', Icons.shopping_bag, Colors.blue),
-          SizedBox(width: 8),
-          _buildStatCard('Total CA', '${_totalOrders.toStringAsFixed(0)} DA', Icons.trending_up, Color(0xFF2E7D32)),
-          SizedBox(width: 8),
-          _buildStatCard('Dette', '${_totalDebt.toStringAsFixed(0)} DA', Icons.warning, 
-            _totalDebt > 0 ? Colors.red : Colors.grey),
+    return Column(
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              _buildStatCard('Commandes', '${_orders.length}', Icons.shopping_bag, Colors.blue),
+              SizedBox(width: 8),
+              _buildStatCard('Total CA', '${_totalOrders.toStringAsFixed(0)} DA', Icons.trending_up, Color(0xFF2E7D32)),
+              SizedBox(width: 8),
+              _buildStatCard('Dette', '${_totalDebt.toStringAsFixed(0)} DA', Icons.warning, 
+                _totalDebt > 0 ? Colors.red : Colors.grey),
+            ],
+          ),
+        ),
+        if (_totalDebt > 0) ...[
+          SizedBox(height: 12),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _openRecordPaymentDialog,
+                icon: Icon(Icons.payment, color: Colors.white),
+                label: Text('Enregistrer un paiement', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF2E7D32),
+                  padding: EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ),
         ],
-      ),
+      ],
     );
   }
 
@@ -438,6 +502,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
             tabs: [
               Tab(text: 'Commandes (${_orders.length})'),
               Tab(text: 'Livraisons (${_deliveries.length})'),
+              Tab(text: 'Paiements (${_paymentHistory.length})'),
             ],
           ),
           SizedBox(
@@ -447,6 +512,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
               children: [
                 _buildOrdersList(),
                 _buildDeliveriesList(),
+                _buildPaymentsList(),
               ],
             ),
           ),
@@ -816,5 +882,174 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
       }
     }
+  }
+
+  Widget _buildPaymentsList() {
+    if (_paymentHistory.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.payment, size: 48, color: Colors.grey[400]),
+            SizedBox(height: 8),
+            Text('Aucun paiement enregistré', style: TextStyle(color: Colors.grey[600])),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.all(8),
+      itemCount: _paymentHistory.length,
+      itemBuilder: (context, index) {
+        final payment = _paymentHistory[index];
+        return _buildPaymentCard(payment);
+      },
+    );
+  }
+
+  Widget _buildPaymentCard(Map<String, dynamic> payment) {
+    final amount = _parseDouble(payment['amount']);
+    final date = DateTime.tryParse(payment['date'] ?? '');
+    final recordedBy = payment['recorded_by'];
+    final recordedByName = recordedBy?['name'] ?? 'Inconnu';
+    final recordedByRole = recordedBy?['role'] ?? '';
+    final paymentType = payment['payment_type'] ?? '';
+    final paymentMode = payment['payment_mode'] ?? 'auto';
+    final ordersAffected = payment['orders_affected'] as List? ?? [];
+    final notes = payment['notes'];
+
+    return Card(
+      margin: EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ExpansionTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.green.withOpacity(0.2),
+          child: Icon(Icons.payment, color: Colors.green),
+        ),
+        title: Row(
+          children: [
+            Text('${amount.toStringAsFixed(0)} DA', 
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Spacer(),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: paymentType == 'delivery' ? Colors.purple.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                paymentType == 'delivery' ? 'Livraison' : 'Dette',
+                style: TextStyle(
+                  color: paymentType == 'delivery' ? Colors.purple : Colors.blue,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.calendar_today, size: 12, color: Colors.grey),
+                SizedBox(width: 4),
+                Text(
+                  date != null 
+                    ? '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}'
+                    : '',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+            SizedBox(height: 2),
+            Row(
+              children: [
+                Icon(Icons.person, size: 12, color: Colors.grey),
+                SizedBox(width: 4),
+                Text(
+                  'Par: $recordedByName (${recordedByRole == 'admin' ? 'Admin' : 'Livreur'})',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ],
+        ),
+        children: [
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Colors.grey),
+                    SizedBox(width: 8),
+                    Text('Mode: ${paymentMode == 'auto' ? 'Automatique' : 'Manuel'}',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[700])),
+                  ],
+                ),
+                SizedBox(height: 12),
+                Text('Répartition:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                SizedBox(height: 8),
+                ...ordersAffected.map((order) => Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green, size: 16),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Commande #${order['order_number']}: ${_parseDouble(order['amount_applied']).toStringAsFixed(0)} DA',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: order['new_status'] == 'paid' ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          order['new_status'] == 'paid' ? 'Payée' : 'Partiel',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: order['new_status'] == 'paid' ? Colors.green : Colors.orange,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )).toList(),
+                if (notes != null && notes.isNotEmpty) ...[
+                  SizedBox(height: 12),
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.note, size: 16, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(notes, style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

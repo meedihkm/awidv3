@@ -308,4 +308,42 @@ class ApiService {
     if (action != null) url += '&action=$action';
     return _request('GET', url);
   }
+
+  // ===== PAYMENTS =====
+  Future<Map<String, dynamic>> recordPayment({
+    required String clientId,
+    required double amount,
+    String mode = 'auto',
+    String? deliveryId,
+    List<String>? targetOrders,
+    String? notes,
+  }) async {
+    final body = {
+      'clientId': clientId,
+      'amount': amount,
+      'mode': mode,
+      if (deliveryId != null) 'deliveryId': deliveryId,
+      if (targetOrders != null) 'targetOrders': targetOrders,
+      if (notes != null) 'notes': notes,
+    };
+    final result = await _request('POST', '${ApiConstants.baseUrl}/payments/record', body: body);
+    await _cache.clearCache('cache_orders');
+    await _cache.clearCache('cache_debts');
+    return result;
+  }
+
+  Future<Map<String, dynamic>> getClientDebtDetails(String clientId) async => 
+    _request('GET', '${ApiConstants.baseUrl}/payments/client/$clientId/details');
+
+  Future<Map<String, dynamic>> getPaymentHistory({int page = 1, int limit = 50}) async => 
+    _request('GET', '${ApiConstants.baseUrl}/payments/history?page=$page&limit=$limit');
+
+  Future<Map<String, dynamic>> getMyCollections() async => 
+    _request('GET', '${ApiConstants.baseUrl}/payments/my-collections');
+
+  Future<Map<String, dynamic>> getMyPayments() async => 
+    _request('GET', '${ApiConstants.baseUrl}/payments/my-payments');
+
+  Future<Map<String, dynamic>> getPaymentStats() async => 
+    _request('GET', '${ApiConstants.baseUrl}/payments/stats');
 }

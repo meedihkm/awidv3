@@ -4,6 +4,7 @@ import '../../../auth/providers/auth_provider.dart';
 import '../../../../core/services/location_service.dart';
 import 'delivery_route_page.dart';
 import 'delivery_history_page.dart';
+import 'debt_collection_page.dart';
 
 class DelivererDashboard extends StatefulWidget {
   @override
@@ -147,6 +148,7 @@ class _DelivererDashboardState extends State<DelivererDashboard> {
               children: [
                 DeliveryRoutePage(),
                 DeliveryHistoryPage(),
+                DebtCollectionPage(),
               ],
             ),
           ),
@@ -165,6 +167,10 @@ class _DelivererDashboardState extends State<DelivererDashboard> {
           BottomNavigationBarItem(
             icon: Icon(Icons.history),
             label: 'Historique',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.payment),
+            label: 'Dettes',
           ),
         ],
       ),

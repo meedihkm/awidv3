@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/services/api_service.dart';
+import '../../../../core/services/payment_service.dart';
 import '../../../../core/models/order_model.dart';
 import '../../../../core/models/product_model.dart';
 
@@ -8,15 +9,43 @@ class OrderHistoryPage extends StatefulWidget {
   _OrderHistoryPageState createState() => _OrderHistoryPageState();
 }
 
-class _OrderHistoryPageState extends State<OrderHistoryPage> {
+class _OrderHistoryPageState extends State<OrderHistoryPage> with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
+  final PaymentService _paymentService = PaymentService();
+  late TabController _tabController;
   List<Order> _orders = [];
+  List<dynamic> _paymentHistory = [];
+  double _totalDebt = 0;
   bool _isLoading = true;
+  bool _isLoadingPayments = false;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadOrders();
+    _loadPayments();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadPayments() async {
+    setState(() => _isLoadingPayments = true);
+    try {
+      final result = await _paymentService.getMyPayments();
+      final data = result['data'];
+      setState(() {
+        _totalDebt = (data['total_debt'] ?? 0).toDouble();
+        _paymentHistory = data['payment_history'] ?? [];
+        _isLoadingPayments = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingPayments = false);
+    }
   }
 
   Future<void> _loadOrders() async {
@@ -107,6 +136,38 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // TabBar
+        Container(
+          color: Colors.white,
+          child: TabBar(
+            controller: _tabController,
+            labelColor: Colors.green.shade700,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: Colors.green.shade700,
+            tabs: [
+              Tab(icon: Icon(Icons.shopping_bag, size: 20), text: 'Commandes'),
+              Tab(icon: Icon(Icons.account_balance_wallet, size: 20), text: 'Finance'),
+            ],
+          ),
+        ),
+        
+        // TabBarView
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildOrdersTab(),
+              _buildFinanceTab(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOrdersTab() {
     if (_isLoading) {
       return Center(child: CircularProgressIndicator(color: Colors.green));
     }
@@ -267,6 +328,293 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildFinanceTab() {
+    if (_isLoadingPayments) {
+      return Center(child: CircularProgressIndicator(color: Colors.green));
+    }
+
+    final unpaidOrders = _orders.where((o) => o.remainingAmount > 0).toList();
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _loadPayments();
+        await _loadOrders();
+      },
+      color: Colors.green,
+      child: SingleChildScrollView(
+        physics: AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Card Dette Actuelle
+            Card(
+              elevation: 4,
+              shadowColor: _totalDebt > 0 ? Colors.red.withOpacity(0.3) : Colors.green.withOpacity(0.3),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Container(
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: _totalDebt > 0 
+                      ? [Colors.red.shade600, Colors.red.shade400]
+                      : [Colors.green.shade600, Colors.green.shade400],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        _totalDebt > 0 ? Icons.warning : Icons.check_circle,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _totalDebt > 0 ? 'Dette actuelle' : 'Aucune dette',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 14,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            '${_totalDebt.toStringAsFixed(0)} DA',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 12),
+
+            // Card Commandes Impayées
+            if (unpaidOrders.isNotEmpty)
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.receipt_long, color: Colors.orange, size: 24),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Commandes impayées',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              '${unpaidOrders.length}',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            SizedBox(height: 20),
+
+            // Historique des Paiements
+            Row(
+              children: [
+                Icon(Icons.history, color: Colors.grey[700], size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Historique des paiements',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+
+            // Liste des paiements
+            if (_paymentHistory.isEmpty)
+              Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.payment, size: 48, color: Colors.grey[400]),
+                        SizedBox(height: 12),
+                        Text(
+                          'Aucun paiement enregistré',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else
+              ..._paymentHistory.map((payment) {
+                final amount = (payment['amount'] ?? 0).toDouble();
+                final date = DateTime.tryParse(payment['payment_date'] ?? '');
+                final recordedBy = payment['recorded_by_name'] ?? 'Admin';
+                final ordersAffected = payment['orders_affected'] as List? ?? [];
+                final notes = payment['notes'] as String?;
+
+                return Card(
+                  margin: EdgeInsets.only(bottom: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: ExpansionTile(
+                    leading: Container(
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Icons.check_circle, color: Colors.green, size: 24),
+                    ),
+                    title: Text(
+                      '${amount.toStringAsFixed(0)} DA',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.green.shade700,
+                      ),
+                    ),
+                    subtitle: Text(
+                      date != null 
+                        ? '${date.day}/${date.month}/${date.year} à ${date.hour}:${date.minute.toString().padLeft(2, '0')}'
+                        : 'Date inconnue',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Enregistré par
+                            Row(
+                              children: [
+                                Icon(Icons.person, size: 18, color: Colors.grey[600]),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Enregistré par: $recordedBy',
+                                  style: TextStyle(color: Colors.grey[700]),
+                                ),
+                              ],
+                            ),
+                            
+                            // Notes
+                            if (notes != null && notes.isNotEmpty) ...[
+                              SizedBox(height: 8),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.note, size: 18, color: Colors.grey[600]),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      notes,
+                                      style: TextStyle(color: Colors.grey[700]),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            
+                            // Commandes affectées
+                            if (ordersAffected.isNotEmpty) ...[
+                              SizedBox(height: 12),
+                              Divider(),
+                              SizedBox(height: 8),
+                              Text(
+                                'Répartition sur ${ordersAffected.length} commande(s):',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              ...ordersAffected.map((order) {
+                                final orderAmount = (order['amount_applied'] ?? 0).toDouble();
+                                final orderId = order['order_id'] ?? '';
+                                return Padding(
+                                  padding: EdgeInsets.only(bottom: 4),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.arrow_right, size: 16, color: Colors.grey),
+                                      SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          'Commande #${orderId.substring(0, 8)}',
+                                          style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                                        ),
+                                      ),
+                                      Text(
+                                        '${orderAmount.toStringAsFixed(0)} DA',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.green.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+          ],
+        ),
       ),
     );
   }

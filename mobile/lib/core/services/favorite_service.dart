@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'secure_storage.dart';
 import '../constants/api_constants.dart';
 
-class NotificationService {
+class FavoriteService {
   final SecureStorage _storage = SecureStorage();
 
   Future<Map<String, String>> _getHeaders() async {
@@ -15,160 +15,43 @@ class NotificationService {
   }
 
   // ============================================
-  // 1. Récupérer notifications
+  // 1. Récupérer mes favoris
   // ============================================
-  Future<Map<String, dynamic>> getNotifications({
-    int limit = 50,
-    bool unreadOnly = false,
+  Future<Map<String, dynamic>> getMyFavorites() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/favorites/my-favorites'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Erreur ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Erreur réseau: $e');
+    }
+  }
+
+  // ============================================
+  // 2. Créer un favori
+  // ============================================
+  Future<Map<String, dynamic>> createFavorite({
+    required String name,
+    required List<Map<String, dynamic>> items,
+    bool fromPattern = false,
   }) async {
     try {
       final headers = await _getHeaders();
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/notifications?limit=$limit&unreadOnly=$unreadOnly'),
-        headers: headers,
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Erreur ${response.statusCode}: ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('Erreur réseau: $e');
-    }
-  }
-
-  // ============================================
-  // 2. Compter notifications non lues
-  // ============================================
-  Future<int> getUnreadCount() async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/notifications/unread-count'),
-        headers: headers,
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data['data']['count'] ?? 0;
-      } else {
-        return 0;
-      }
-    } catch (e) {
-      return 0;
-    }
-  }
-
-  // ============================================
-  // 3. Marquer comme lue
-  // ============================================
-  Future<Map<String, dynamic>> markAsRead(String notificationId) async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.put(
-        Uri.parse('${ApiConstants.baseUrl}/notifications/$notificationId/read'),
-        headers: headers,
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Erreur ${response.statusCode}: ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('Erreur réseau: $e');
-    }
-  }
-
-  // ============================================
-  // 4. Marquer toutes comme lues
-  // ============================================
-  Future<Map<String, dynamic>> markAllAsRead() async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.put(
-        Uri.parse('${ApiConstants.baseUrl}/notifications/read-all'),
-        headers: headers,
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Erreur ${response.statusCode}: ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('Erreur réseau: $e');
-    }
-  }
-
-  // ============================================
-  // 5. Supprimer notification
-  // ============================================
-  Future<Map<String, dynamic>> deleteNotification(String notificationId) async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.delete(
-        Uri.parse('${ApiConstants.baseUrl}/notifications/$notificationId'),
-        headers: headers,
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Erreur ${response.statusCode}: ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('Erreur réseau: $e');
-    }
-  }
-
-  // ============================================
-  // 6. Récupérer préférences
-  // ============================================
-  Future<Map<String, dynamic>> getPreferences() async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/notifications/preferences'),
-        headers: headers,
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Erreur ${response.statusCode}: ${response.body}');
-      }
-    } catch (e) {
-      throw Exception('Erreur réseau: $e');
-    }
-  }
-
-  // ============================================
-  // 7. Mettre à jour préférences
-  // ============================================
-  Future<Map<String, dynamic>> updatePreferences({
-    required bool paymentNotifications,
-    required bool debtNotifications,
-    required bool favoriteNotifications,
-    required bool debtRemindersEnabled,
-    required int debtReminderFrequency,
-    String? quietHoursStart,
-    String? quietHoursEnd,
-  }) async {
-    try {
-      final headers = await _getHeaders();
-      final response = await http.put(
-        Uri.parse('${ApiConstants.baseUrl}/notifications/preferences'),
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/favorites/create'),
         headers: headers,
         body: json.encode({
-          'payment_notifications': paymentNotifications,
-          'debt_notifications': debtNotifications,
-          'favorite_notifications': favoriteNotifications,
-          'debt_reminders_enabled': debtRemindersEnabled,
-          'debt_reminder_frequency': debtReminderFrequency,
-          'quiet_hours_start': quietHoursStart,
-          'quiet_hours_end': quietHoursEnd,
+          'name': name,
+          'items': items,
+          'fromPattern': fromPattern,
         }),
       );
 
@@ -183,14 +66,139 @@ class NotificationService {
   }
 
   // ============================================
-  // 8. Envoyer rappels dette (Admin)
+  // 3. Mettre à jour un favori
   // ============================================
-  Future<Map<String, dynamic>> sendDebtReminders() async {
+  Future<Map<String, dynamic>> updateFavorite({
+    required String favoriteId,
+    required String name,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.put(
+        Uri.parse('${ApiConstants.baseUrl}/favorites/$favoriteId'),
+        headers: headers,
+        body: json.encode({
+          'name': name,
+          'items': items,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Erreur ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Erreur réseau: $e');
+    }
+  }
+
+  // ============================================
+  // 4. Supprimer un favori
+  // ============================================
+  Future<Map<String, dynamic>> deleteFavorite(String favoriteId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse('${ApiConstants.baseUrl}/favorites/$favoriteId'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Erreur ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Erreur réseau: $e');
+    }
+  }
+
+  // ============================================
+  // 5. Enregistrer utilisation d'un favori
+  // ============================================
+  Future<Map<String, dynamic>> useFavorite(String favoriteId) async {
     try {
       final headers = await _getHeaders();
       final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/notifications/send-debt-reminders'),
+        Uri.parse('${ApiConstants.baseUrl}/favorites/$favoriteId/use'),
         headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Erreur ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Erreur réseau: $e');
+    }
+  }
+
+  // ============================================
+  // 6. Détecter un pattern
+  // ============================================
+  Future<Map<String, dynamic>> detectPattern({
+    required List<Map<String, dynamic>> items,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/favorites/detect-pattern'),
+        headers: headers,
+        body: json.encode({'items': items}),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Erreur ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Erreur réseau: $e');
+    }
+  }
+
+  // ============================================
+  // 7. Récupérer préférences
+  // ============================================
+  Future<Map<String, dynamic>> getPreferences() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/favorites/preferences'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Erreur ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Erreur réseau: $e');
+    }
+  }
+
+  // ============================================
+  // 8. Mettre à jour préférences
+  // ============================================
+  Future<Map<String, dynamic>> updatePreferences({
+    required bool favoriteOrdersEnabled,
+    required bool autoSuggestEnabled,
+    required int minPatternCount,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.put(
+        Uri.parse('${ApiConstants.baseUrl}/favorites/preferences'),
+        headers: headers,
+        body: json.encode({
+          'favorite_orders_enabled': favoriteOrdersEnabled,
+          'auto_suggest_enabled': autoSuggestEnabled,
+          'min_pattern_count': minPatternCount,
+        }),
       );
 
       if (response.statusCode == 200) {
@@ -210,7 +218,7 @@ class NotificationService {
     try {
       final headers = await _getHeaders();
       final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/notifications/stats'),
+        Uri.parse('${ApiConstants.baseUrl}/favorites/stats'),
         headers: headers,
       );
 

@@ -14,6 +14,9 @@ const deliveriesRoutes = require('./routes/deliveries.routes');
 const organizationRoutes = require('./routes/organization.routes');
 const superAdminRoutes = require('./routes/superAdmin.routes');
 const realtimeRoutes = require('./routes/realtime.routes');
+const paymentsRoutes = require('./routes/payments.routes');
+const favoritesRoutes = require('./routes/favorites.routes');
+const notificationsRoutes = require('./routes/notifications.routes');
 
 const app = express();
 
@@ -47,7 +50,13 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/deliveries', deliveriesRoutes);
 app.use('/api/deliverers', deliveriesRoutes); // Alias pour compatibilité
 app.use('/api/organization', organizationRoutes);
+app.use('/api/superadmin', superAdminRoutes);
+app.use('/api/realtime', realtimeRoutes);
+app.use('/api/payments', paymentsRoutes);
+app.use('/api/favorites', favoritesRoutes);
+app.use('/api/notifications', notificationsRoutes);
 app.use('/api/financial', organizationRoutes); // Routes financières dans organization
+app.use('/api/payments', paymentsRoutes); // Routes de paiement
 app.use('/api/audit-logs', organizationRoutes); // Routes audit dans organization
 app.use('/api/realtime', realtimeRoutes); // Routes temps réel
 app.use('/api/super-admin', superAdminRoutes);

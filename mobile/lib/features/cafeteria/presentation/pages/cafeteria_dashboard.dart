@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../auth/providers/auth_provider.dart';
+import '../../../../core/widgets/notification_badge.dart';
 import 'order_history_page.dart';
 import 'new_order_page.dart';
+import 'settings_page.dart';
 
 class CafeteriaDashboard extends StatefulWidget {
   @override
@@ -38,6 +40,7 @@ class _CafeteriaDashboardState extends State<CafeteriaDashboard> {
         backgroundColor: Colors.green.shade600,
         foregroundColor: Colors.white,
         actions: [
+          NotificationBadge(),
           Consumer<AuthProvider>(
             builder: (context, authProvider, child) {
               return PopupMenuButton<String>(
@@ -55,6 +58,16 @@ class _CafeteriaDashboardState extends State<CafeteriaDashboard> {
                   ),
                   const PopupMenuDivider(),
                   PopupMenuItem<String>(
+                    value: 'settings',
+                    child: Row(
+                      children: [
+                        Icon(Icons.settings, size: 20),
+                        SizedBox(width: 8),
+                        Text('Paramètres'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
                     value: 'logout',
                     child: Row(
                       children: [
@@ -68,6 +81,11 @@ class _CafeteriaDashboardState extends State<CafeteriaDashboard> {
                 onSelected: (value) {
                   if (value == 'logout') {
                     authProvider.logout();
+                  } else if (value == 'settings') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => SettingsPage()),
+                    );
                   }
                 },
               );
