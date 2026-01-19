@@ -64,7 +64,11 @@ class LocationService {
 
   Future<void> _sendLocationToServer(Position position) async {
     try {
-      await _apiService.updateDelivererLocation(position.latitude, position.longitude);
+      await _apiService.updateDelivererLocation(
+        position.latitude, 
+        position.longitude,
+        position.accuracy
+      );
     } catch (e) {
       // Silently fail
     }

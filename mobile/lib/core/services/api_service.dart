@@ -288,7 +288,12 @@ class ApiService {
   }
 
   // ===== LOCATION =====
-  Future<Map<String, dynamic>> updateDelivererLocation(double lat, double lng) async => _request('POST', '${ApiConstants.baseUrl}/realtime/location', body: {'latitude': lat, 'longitude': lng});
+  Future<Map<String, dynamic>> updateDelivererLocation(double lat, double lng, [double? accuracy]) async => 
+    _request('POST', '${ApiConstants.baseUrl}/realtime/location', body: {
+      'latitude': lat, 
+      'longitude': lng,
+      if (accuracy != null) 'accuracy': accuracy
+    });
   Future<Map<String, dynamic>> getDeliverersLocations() async => _request('GET', '${ApiConstants.baseUrl}/realtime/deliverers');
   Future<Map<String, dynamic>> getDeliveriesMap() async => _request('GET', '${ApiConstants.baseUrl}/realtime/deliveries-map');
   Future<Map<String, dynamic>> getDelivererRoute(String delivererId) async => _request('GET', '${ApiConstants.baseUrl}/realtime/deliverer/$delivererId/route');

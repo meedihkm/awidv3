@@ -8,7 +8,7 @@ const { validate, validateUUID } = require('../middleware/validate');
 // POST /api/realtime/location - Livreur met à jour sa position
 router.post('/location', authenticate, requireDeliverer, validate('updateLocation'), async (req, res) => {
   try {
-    const { latitude, longitude } = req.body;
+    const { latitude, longitude, accuracy } = req.body;
     
     // Mettre à jour la position du livreur
     await pool.query(
@@ -21,9 +21,9 @@ router.post('/location', authenticate, requireDeliverer, validate('updateLocatio
     // Enregistrer dans l'historique
     try {
       await pool.query(
-        `INSERT INTO location_history (deliverer_id, latitude, longitude, recorded_at)
-         VALUES ($1, $2, $3, NOW())`,
-        [req.user.id, latitude, longitude]
+        `INSERT INTO location_history (deliverer_id, organization_id, latitude, longitude, accuracy, recorded_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())`,
+        [req.user.id, req.user.organization_id, latitude, longitude, accuracy || null]
       );
     } catch (historyError) {
       // Silently fail si table n'existe pas encore
@@ -201,7 +201,7 @@ router.get('/deliverer/:id/history', authenticate, requireAdmin, validateUUID('i
     }
     
     const result = await pool.query(
-      `SELECT latitude, longitude, recorded_at
+      `SELECT latitude, longitude, accuracy, recorded_at
        FROM location_history 
        WHERE deliverer_id = $1 AND DATE(recorded_at) = $2
        ORDER BY recorded_at`,
@@ -213,6 +213,60 @@ router.get('/deliverer/:id/history', authenticate, requireAdmin, validateUUID('i
     console.error('Get deliverer history error:', error);
     // Retourner tableau vide si table n'existe pas
     res.json({ success: true, data: [] });
+  }
+});
+
+// GET /api/realtime/deliverer/:id/stats - Statistiques de localisation d'un livreur
+router.get('/deliverer/:id/stats', authenticate, requireAdmin, validateUUID('id'), async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    // Vérifier que le livreur appartient à l'organisation
+    const delivererCheck = await pool.query(
+      'SELECT id FROM users WHERE id = $1 AND organization_id = $2 AND role = $3',
+      [req.params.id, req.user.organization_id, 'deliverer']
+    );
+    
+    if (delivererCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Livreur non trouvé' });
+    }
+    
+    const result = await pool.query(
+      `SELECT * FROM get_deliverer_location_stats($1, $2, $3)`,
+      [
+        req.params.id,
+        startDate || new Date().toISOString().split('T')[0],
+        endDate || new Date().toISOString().split('T')[0]
+      ]
+    );
+    
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Get deliverer stats error:', error);
+    res.json({ success: true, data: [] });
+  }
+});
+
+// POST /api/realtime/cleanup-history - Nettoyer l'historique GPS ancien (Admin)
+router.post('/cleanup-history', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { daysToKeep = 90 } = req.body;
+    
+    const result = await pool.query(
+      'SELECT cleanup_old_location_history($1)',
+      [daysToKeep]
+    );
+    
+    const deletedCount = result.rows[0].cleanup_old_location_history;
+    
+    res.json({ 
+      success: true, 
+      message: `${deletedCount} enregistrements supprimés`,
+      deletedCount 
+    });
+  } catch (error) {
+    console.error('Cleanup history error:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 

@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'secure_storage.dart';
+import '../storage/secure_storage.dart';
 import '../constants/api_constants.dart';
 
 class FavoriteService {
   final SecureStorage _storage = SecureStorage();
 
   Future<Map<String, String>> _getHeaders() async {
-    final token = await _storage.getAccessToken();
+    final token = await _storage.getToken();
     return {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',

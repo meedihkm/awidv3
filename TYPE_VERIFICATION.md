@@ -32,6 +32,12 @@
 - ✅ `user_id` → TEXT
 - ✅ `organization_id` → TEXT
 
+### sql_migrations_v2_optimized.sql (location_history)
+- ✅ `deliverer_id` → TEXT (corrigé de UUID)
+- ✅ `organization_id` → TEXT (ajouté)
+- ✅ `accuracy` → DOUBLE PRECISION (ajouté)
+- ✅ Contraintes GPS ajoutées
+
 ## Règle Générale
 **Toutes les foreign keys vers tables existantes doivent être TEXT**
 **Seulement les nouvelles tables peuvent utiliser UUID pour leur propre id**

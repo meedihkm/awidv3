@@ -1152,8 +1152,12 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => RecordPaymentDialog(
-        clientId: clientData['id'],
-        clientName: clientData['name'] ?? 'Client',
+        client: clientData,
+        totalDebt: clientData['total_debt'] ?? 0.0,
+        unpaidOrders: clientData['unpaid_orders'],
+        onSuccess: () {
+          _loadDebts();
+        },
       ),
     );
 

@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class AppNotification {
   final String id;
   final String type;
@@ -130,6 +132,3 @@ class NotificationPreferences {
     };
   }
 }
-
-// Import nécessaire pour Color
-import 'package:flutter/material.dart';

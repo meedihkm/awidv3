@@ -36,9 +36,11 @@ ALTER TABLE audit_logs ADD CONSTRAINT audit_logs_organization_id_fkey
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
 
 -- Table location_history (historique GPS des livreurs)
+-- NOTE: Si la table existe déjà, utiliser sql_location_history_migration.sql
+-- pour ajouter les colonnes manquantes (organization_id, accuracy)
 CREATE TABLE IF NOT EXISTS location_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    deliverer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    deliverer_id TEXT NOT NULL,
     latitude DECIMAL(10,8) NOT NULL,
     longitude DECIMAL(11,8) NOT NULL,
     recorded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -111,9 +113,11 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 
 -- Index sur location_history
+-- NOTE: Ces index sont créés par sql_location_history_migration.sql
 CREATE INDEX IF NOT EXISTS idx_location_history_deliverer ON location_history(deliverer_id);
 CREATE INDEX IF NOT EXISTS idx_location_history_date ON location_history(recorded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_location_history_deliverer_date ON location_history(deliverer_id, recorded_at DESC);
+-- idx_location_history_org sera créé par la migration
 
 -- Index sur les commandes (requêtes fréquentes)
 CREATE INDEX IF NOT EXISTS idx_orders_org_status ON orders(organization_id, status);
@@ -298,9 +302,14 @@ ALTER TABLE refresh_tokens ADD CONSTRAINT refresh_tokens_user_id_fkey
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 -- Location_history (CASCADE via users/deliverers)
-ALTER TABLE location_history DROP CONSTRAINT IF EXISTS location_history_deliverer_id_fkey;
-ALTER TABLE location_history ADD CONSTRAINT location_history_deliverer_id_fkey 
-    FOREIGN KEY (deliverer_id) REFERENCES users(id) ON DELETE CASCADE;
+-- NOTE: Ces contraintes sont ajoutées par sql_location_history_migration.sql
+-- ALTER TABLE location_history DROP CONSTRAINT IF EXISTS location_history_deliverer_id_fkey;
+-- ALTER TABLE location_history ADD CONSTRAINT location_history_deliverer_id_fkey 
+--     FOREIGN KEY (deliverer_id) REFERENCES users(id) ON DELETE CASCADE;
+
+-- ALTER TABLE location_history DROP CONSTRAINT IF EXISTS location_history_organization_id_fkey;
+-- ALTER TABLE location_history ADD CONSTRAINT location_history_organization_id_fkey 
+--     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
 
 -- =============================================
 -- 8. CONTRAINTES ET VALIDATIONS
