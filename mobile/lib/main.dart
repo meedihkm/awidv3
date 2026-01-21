@@ -12,11 +12,15 @@ import 'features/onboarding/presentation/pages/onboarding_page.dart';
 
 import 'core/services/sentry_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/database/hive_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialisation Hive
+  await HiveService().init();
   
   // Initialisation OneSignal
   await NotificationService.init();

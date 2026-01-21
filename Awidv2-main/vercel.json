@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api-v2/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/super-admin",
+      "dest": "/api-v2/index.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api-v2/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api-v2/index.js"
+    }
+  ]
+}

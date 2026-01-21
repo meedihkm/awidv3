@@ -1,0 +1,823 @@
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
+import '../../../../core/services/api_service.dart';
+import '../../../../core/services/print_service.dart';
+import '../../../../core/services/location_service.dart';
+import '../../../../core/models/delivery_model.dart';
+
+class DeliveryRoutePage extends StatefulWidget {
+  @override
+  _DeliveryRoutePageState createState() => _DeliveryRoutePageState();
+}
+
+class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
+  final ApiService _apiService = ApiService();
+  final PrintService _printService = PrintService();
+  final LocationService _locationService = LocationService();
+  List<Delivery> _deliveries = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDeliveries();
+  }
+
+  Future<void> _loadDeliveries() async {
+    try {
+      final response = await _apiService.getDeliveryRoute();
+      if (response['success']) {
+        setState(() {
+          _deliveries = (response['data'] as List).map((json) => Delivery.fromJson(json)).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
+    }
+  }
+
+  Future<void> _callClient(String phone) async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: phone);
+    try {
+      if (await canLaunchUrl(phoneUri)) await launchUrl(phoneUri);
+      else ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Impossible d\'appeler')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
+    }
+  }
+
+  // Ouvrir la navigation vers le client (OpenStreetMap)
+  Future<void> _navigateToClient(Delivery delivery) async {
+    final cafeteria = delivery.order.cafeteria;
+    if (cafeteria == null) return;
+    
+    // Si pas de coordonnées, demander l'adresse
+    if (!cafeteria.hasLocation) {
+      final address = await _showAddressDialog(cafeteria.name, cafeteria.address);
+      if (address != null && address.isNotEmpty) {
+        try {
+          final response = await _apiService.updateUserAddress(cafeteria.id, address);
+          if (response['success'] && response['data'] != null) {
+            final lat = response['data']['latitude'];
+            final lng = response['data']['longitude'];
+            if (lat != null && lng != null) {
+              _openNavigation(lat, lng, cafeteria.name);
+              _loadDeliveries(); // Recharger pour avoir les nouvelles coordonnées
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Adresse non trouvée sur la carte'), backgroundColor: Colors.orange));
+            }
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
+        }
+      }
+      return;
+    }
+    
+    _openNavigation(cafeteria.latitude!, cafeteria.longitude!, cafeteria.name);
+  }
+
+  void _openNavigation(double lat, double lng, String name) async {
+    // Essayer d'ouvrir avec l'app de navigation par défaut (Google Maps, OsmAnd, etc.)
+    final Uri osmUri = Uri.parse('geo:$lat,$lng?q=$lat,$lng($name)');
+    final Uri googleMapsUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+    
+    try {
+      if (await canLaunchUrl(osmUri)) {
+        await launchUrl(osmUri);
+      } else if (await canLaunchUrl(googleMapsUri)) {
+        await launchUrl(googleMapsUri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: ouvrir OpenStreetMap dans le navigateur
+        final Uri webUri = Uri.parse('https://www.openstreetmap.org/directions?from=&to=$lat,$lng');
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Impossible d\'ouvrir la navigation')));
+    }
+  }
+
+  Future<String?> _showAddressDialog(String clientName, String? currentAddress) async {
+    final controller = TextEditingController(text: currentAddress ?? '');
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(children: [
+          Icon(Icons.location_on, color: Colors.orange),
+          SizedBox(width: 8),
+          Expanded(child: Text('Adresse de $clientName', style: TextStyle(fontSize: 16))),
+        ]),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text('Entrez l\'adresse pour activer la navigation GPS', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+          SizedBox(height: 12),
+          TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              hintText: 'Ex: Rue Didouche Mourad, Alger',
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            maxLines: 2,
+            textCapitalization: TextCapitalization.words,
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmDelivery(Delivery delivery) async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (context) => _DeliveryConfirmSheet(delivery: delivery),
+    );
+    if (result != null) {
+      try {
+        // Confirmer la livraison
+        await _apiService.updateDeliveryStatus(delivery.id, {
+          'status': 'delivered',
+          'paymentStatus': result['paymentStatus'],
+          'amountCollected': result['amountCollected'],
+          'comment': result['comment'],
+        });
+        
+        // Si le client n'a pas d'adresse enregistrée, capturer la position GPS actuelle
+        final cafeteria = delivery.order.cafeteria;
+        if (cafeteria != null && !cafeteria.hasLocation) {
+          try {
+            final position = await _locationService.getCurrentPosition();
+            if (position != null) {
+              // Enregistrer la position comme adresse du client (géocodage inverse côté serveur optionnel)
+              await _apiService.updateUserAddress(
+                cafeteria.id, 
+                'Position GPS capturée',
+                latitude: position.latitude,
+                longitude: position.longitude,
+              );
+            }
+          } catch (e) {
+            // Silently fail - pas grave si on ne peut pas capturer la position
+            print('GPS capture failed: $e');
+          }
+        }
+        
+        _loadDeliveries();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Livraison confirmée!'), backgroundColor: Colors.green));
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
+      }
+    }
+  }
+
+  Future<void> _reportFailure(Delivery delivery) async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (context) => _FailureReportSheet(delivery: delivery),
+    );
+    if (result != null) {
+      try {
+        await _apiService.updateDeliveryStatus(delivery.id, result);
+        _loadDeliveries();
+        final msg = result['status'] == 'failed' ? 'Échec signalé' : 'Livraison reportée';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.orange));
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
+      }
+    }
+  }
+
+  void _showPrintOptions(Delivery delivery) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Imprimer', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 20),
+            ListTile(
+              leading: Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(10)),
+                child: Icon(Icons.description, color: Colors.blue),
+              ),
+              title: Text('Bon de livraison A5'),
+              subtitle: Text('Format standard'),
+              onTap: () {
+                Navigator.pop(context);
+                _printService.printDeliverySlip(delivery);
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(10)),
+                child: Icon(Icons.receipt_long, color: Colors.orange),
+              ),
+              title: Text('Ticket thermique'),
+              subtitle: Text('Format 80mm'),
+              onTap: () {
+                Navigator.pop(context);
+                _printService.printThermalReceipt(delivery);
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(10)),
+                child: Icon(Icons.receipt, color: Colors.green),
+              ),
+              title: Text('Facture client'),
+              subtitle: Text('PDF avec TVA'),
+              onTap: () {
+                Navigator.pop(context);
+                _printService.printInvoice(delivery);
+              },
+            ),
+            SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) return Center(child: CircularProgressIndicator(color: Colors.orange));
+
+    if (_deliveries.isEmpty) {
+      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.local_shipping_outlined, size: 80, color: Colors.grey[400]),
+        SizedBox(height: 16),
+        Text('Aucune livraison', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+        SizedBox(height: 24),
+        ElevatedButton.icon(onPressed: _loadDeliveries, icon: Icon(Icons.refresh), label: Text('Actualiser'), style: ElevatedButton.styleFrom(backgroundColor: Colors.orange)),
+      ]));
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadDeliveries,
+      color: Colors.orange,
+      child: ListView.builder(
+        padding: EdgeInsets.all(12),
+        itemCount: _deliveries.length,
+        itemBuilder: (context, index) {
+          final delivery = _deliveries[index];
+          final order = delivery.order;
+          return Card(
+            margin: EdgeInsets.only(bottom: 16),
+            elevation: 4,
+            shadowColor: Colors.black26,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: Column(children: [
+              // Header
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [Colors.orange.shade600, Colors.orange.shade400]),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Row(children: [
+                  Container(
+                    padding: EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                    child: Icon(Icons.local_shipping, color: Colors.white, size: 28),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Text('Livraison #${index + 1}', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                      if (delivery.attempts > 0) ...[
+                        SizedBox(width: 8),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
+                          child: Text('${delivery.attempts} tentative(s)', style: TextStyle(color: Colors.white, fontSize: 10)),
+                        ),
+                      ],
+                    ]),
+                    if (order.cafeteria != null) Text(order.cafeteria!.name, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14)),
+                  ])),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                    child: Text('${order.total.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.orange.shade700, fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ]),
+              ),
+              // Contenu
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  // Boutons appel et navigation
+                  Row(children: [
+                    // Bouton appel
+                    if (order.cafeteria?.phone != null && order.cafeteria!.phone!.isNotEmpty)
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => _callClient(order.cafeteria!.phone!),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blue.shade200)),
+                            child: Row(children: [
+                              Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(8)), child: Icon(Icons.phone, size: 20, color: Colors.white)),
+                              SizedBox(width: 8),
+                              Expanded(child: Text('Appeler', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.blue.shade700))),
+                            ]),
+                          ),
+                        ),
+                      ),
+                    if (order.cafeteria?.phone != null && order.cafeteria!.phone!.isNotEmpty) SizedBox(width: 8),
+                    // Bouton navigation GPS
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _navigateToClient(delivery),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: order.cafeteria?.hasLocation == true ? Colors.green.shade50 : Colors.orange.shade50, 
+                            borderRadius: BorderRadius.circular(12), 
+                            border: Border.all(color: order.cafeteria?.hasLocation == true ? Colors.green.shade200 : Colors.orange.shade200),
+                          ),
+                          child: Row(children: [
+                            Container(
+                              padding: EdgeInsets.all(8), 
+                              decoration: BoxDecoration(
+                                color: order.cafeteria?.hasLocation == true ? Colors.green : Colors.orange, 
+                                borderRadius: BorderRadius.circular(8),
+                              ), 
+                              child: Icon(Icons.navigation, size: 20, color: Colors.white),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(child: Text(
+                              order.cafeteria?.hasLocation == true ? 'Naviguer' : 'Ajouter GPS', 
+                              style: TextStyle(fontWeight: FontWeight.w600, color: order.cafeteria?.hasLocation == true ? Colors.green.shade700 : Colors.orange.shade700),
+                            )),
+                          ]),
+                        ),
+                      ),
+                    ),
+                  ]),
+                  SizedBox(height: 12),
+                  // Adresse si disponible
+                  if (order.cafeteria?.address != null && order.cafeteria!.address!.isNotEmpty)
+                    Container(
+                      padding: EdgeInsets.all(10),
+                      margin: EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+                      child: Row(children: [
+                        Icon(Icons.location_on, size: 18, color: Colors.grey[600]),
+                        SizedBox(width: 8),
+                        Expanded(child: Text(order.cafeteria!.address!, style: TextStyle(color: Colors.grey[700], fontSize: 13))),
+                      ]),
+                    ),
+                  // Articles
+                  Text('Articles:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[800])),
+                  SizedBox(height: 8),
+                  ...order.items.map((item) => Padding(
+                    padding: EdgeInsets.only(bottom: 6),
+                    child: Row(children: [
+                      Container(width: 28, height: 28, decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(6)),
+                        child: Center(child: Text('${item.quantity}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade700)))),
+                      SizedBox(width: 12),
+                      Expanded(child: Text(item.productName)),
+                      Text('${item.totalPrice.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.grey[600])),
+                    ]),
+                  )),
+                  Divider(height: 24),
+                  // Montant
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(12)),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Row(children: [Icon(Icons.payments, color: Colors.green.shade700), SizedBox(width: 8), Text('À collecter:', style: TextStyle(fontWeight: FontWeight.w500))]),
+                      Text('${order.remainingAmount.toStringAsFixed(0)} DA', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
+                    ]),
+                  ),
+                  SizedBox(height: 16),
+                  // Boutons actions
+                  Row(children: [
+                    // Bouton imprimer
+                    SizedBox(height: 48, child: ElevatedButton(
+                      onPressed: () => _showPrintOptions(delivery),
+                      child: Icon(Icons.print, size: 24),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: EdgeInsets.symmetric(horizontal: 16)),
+                    )),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: SizedBox(height: 48, child: ElevatedButton.icon(
+                        onPressed: () => _confirmDelivery(delivery),
+                        icon: Icon(Icons.check_circle, size: 20),
+                        label: Text('LIVRÉ', style: TextStyle(fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                      )),
+                    ),
+                    SizedBox(width: 8),
+                    SizedBox(height: 48, child: ElevatedButton(
+                      onPressed: () => _reportFailure(delivery),
+                      child: Icon(Icons.warning_amber, size: 24),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade400, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: EdgeInsets.symmetric(horizontal: 16)),
+                    )),
+                  ]),
+                ]),
+              ),
+            ]),
+          );
+        },
+      ),
+    );
+  }
+}
+
+
+// Sheet de confirmation de livraison
+class _DeliveryConfirmSheet extends StatefulWidget {
+  final Delivery delivery;
+  const _DeliveryConfirmSheet({required this.delivery});
+
+  @override
+  State<_DeliveryConfirmSheet> createState() => _DeliveryConfirmSheetState();
+}
+
+class _DeliveryConfirmSheetState extends State<_DeliveryConfirmSheet> {
+  String _paymentStatus = 'paid';
+  final _amountController = TextEditingController();
+  final _commentController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController.text = widget.delivery.order.remainingAmount.toStringAsFixed(0);
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      margin: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16 + bottomPadding),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Header
+            Row(children: [
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(12)),
+                child: Icon(Icons.check_circle, color: Colors.green, size: 28),
+              ),
+              SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Confirmer la livraison', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(widget.delivery.order.cafeteria?.name ?? '', style: TextStyle(color: Colors.grey[600])),
+              ])),
+              IconButton(icon: Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+            ]),
+            SizedBox(height: 20),
+            
+            // Statut paiement
+            Text('Statut du paiement', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            Row(children: [
+              Expanded(child: _PaymentOption(
+                label: 'Payé', icon: Icons.check_circle, color: Colors.green,
+                selected: _paymentStatus == 'paid',
+                onTap: () => setState(() => _paymentStatus = 'paid'),
+              )),
+              SizedBox(width: 12),
+              Expanded(child: _PaymentOption(
+                label: 'Partiel', icon: Icons.pie_chart, color: Colors.orange,
+                selected: _paymentStatus == 'partial',
+                onTap: () => setState(() => _paymentStatus = 'partial'),
+              )),
+              SizedBox(width: 12),
+              Expanded(child: _PaymentOption(
+                label: 'Crédit', icon: Icons.schedule, color: Colors.red,
+                selected: _paymentStatus == 'unpaid',
+                onTap: () => setState(() => _paymentStatus = 'unpaid'),
+              )),
+            ]),
+            SizedBox(height: 16),
+            
+            // Montant collecté
+            Text('Montant collecté (DA)', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: '0',
+                prefixIcon: Icon(Icons.payments, color: Colors.green),
+                suffixText: 'DA',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.green, width: 2)),
+              ),
+            ),
+            SizedBox(height: 16),
+            
+            // Commentaire
+            Text('Commentaire (optionnel)', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            TextField(
+              controller: _commentController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: 'Ajouter une note...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            SizedBox(height: 20),
+            
+            // Bouton confirmer
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context, {
+                    'paymentStatus': _paymentStatus,
+                    'amountCollected': double.tryParse(_amountController.text) ?? 0,
+                    'comment': _commentController.text.isEmpty ? null : _commentController.text,
+                  });
+                },
+                icon: Icon(Icons.check),
+                label: Text('CONFIRMER LA LIVRAISON', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentOption extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _PaymentOption({required this.label, required this.icon, required this.color, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? color.withOpacity(0.1) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: selected ? color : Colors.transparent, width: 2),
+        ),
+        child: Column(children: [
+          Icon(icon, color: selected ? color : Colors.grey, size: 24),
+          SizedBox(height: 4),
+          Text(label, style: TextStyle(fontSize: 12, fontWeight: selected ? FontWeight.bold : FontWeight.normal, color: selected ? color : Colors.grey)),
+        ]),
+      ),
+    );
+  }
+}
+
+// Sheet de rapport d'échec/report
+class _FailureReportSheet extends StatefulWidget {
+  final Delivery delivery;
+  const _FailureReportSheet({required this.delivery});
+
+  @override
+  State<_FailureReportSheet> createState() => _FailureReportSheetState();
+}
+
+class _FailureReportSheetState extends State<_FailureReportSheet> {
+  String _action = 'failed'; // 'failed' ou 'postponed'
+  String _failureReason = 'closed';
+  DateTime? _postponedDate;
+  final _commentController = TextEditingController();
+
+  final List<Map<String, dynamic>> _reasons = [
+    {'value': 'closed', 'label': 'Client fermé', 'icon': Icons.store_outlined},
+    {'value': 'absent', 'label': 'Client absent', 'icon': Icons.person_off},
+    {'value': 'address_not_found', 'label': 'Adresse introuvable', 'icon': Icons.location_off},
+    {'value': 'refused', 'label': 'Commande refusée', 'icon': Icons.cancel_outlined},
+    {'value': 'other', 'label': 'Autre raison', 'icon': Icons.help_outline},
+  ];
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(Duration(days: 30)),
+      builder: (context, child) => Theme(data: ThemeData.light().copyWith(colorScheme: ColorScheme.light(primary: Colors.orange)), child: child!),
+    );
+    if (date != null) setState(() => _postponedDate = date);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      margin: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16 + bottomPadding),
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Header
+            Row(children: [
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12)),
+                child: Icon(Icons.warning_amber, color: Colors.red, size: 28),
+              ),
+              SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Signaler un problème', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(widget.delivery.order.cafeteria?.name ?? '', style: TextStyle(color: Colors.grey[600])),
+              ])),
+              IconButton(icon: Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+            ]),
+            SizedBox(height: 20),
+            
+            // Type d'action
+            Text('Action', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            Row(children: [
+              Expanded(child: _ActionOption(
+                label: 'Échec', icon: Icons.cancel, color: Colors.red,
+                selected: _action == 'failed',
+                onTap: () => setState(() => _action = 'failed'),
+              )),
+              SizedBox(width: 12),
+              Expanded(child: _ActionOption(
+                label: 'Reporter', icon: Icons.schedule, color: Colors.orange,
+                selected: _action == 'postponed',
+                onTap: () => setState(() => _action = 'postponed'),
+              )),
+            ]),
+            SizedBox(height: 16),
+            
+            // Raison
+            Text('Raison', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _reasons.map((r) => GestureDetector(
+                onTap: () => setState(() => _failureReason = r['value']),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _failureReason == r['value'] ? Colors.red.shade50 : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _failureReason == r['value'] ? Colors.red : Colors.transparent),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(r['icon'], size: 18, color: _failureReason == r['value'] ? Colors.red : Colors.grey),
+                    SizedBox(width: 6),
+                    Text(r['label'], style: TextStyle(fontSize: 13, color: _failureReason == r['value'] ? Colors.red : Colors.grey[700])),
+                  ]),
+                ),
+              )).toList(),
+            ),
+            
+            // Date de report (si action = postponed)
+            if (_action == 'postponed') ...[
+              SizedBox(height: 16),
+              Text('Reporter à', style: TextStyle(fontWeight: FontWeight.w600)),
+              SizedBox(height: 8),
+              GestureDetector(
+                onTap: _selectDate,
+                child: Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(children: [
+                    Icon(Icons.calendar_today, color: Colors.orange),
+                    SizedBox(width: 12),
+                    Text(
+                      _postponedDate != null 
+                        ? '${_postponedDate!.day}/${_postponedDate!.month}/${_postponedDate!.year}'
+                        : 'Sélectionner une date',
+                      style: TextStyle(fontSize: 16, color: _postponedDate != null ? Colors.black : Colors.grey),
+                    ),
+                  ]),
+                ),
+              ),
+            ],
+            SizedBox(height: 16),
+            
+            // Commentaire
+            Text('Commentaire', style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 8),
+            TextField(
+              controller: _commentController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: 'Détails supplémentaires...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            SizedBox(height: 20),
+            
+            // Bouton envoyer
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  if (_action == 'postponed' && _postponedDate == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner une date'), backgroundColor: Colors.orange));
+                    return;
+                  }
+                  // Format date as YYYY-MM-DD for API
+                  String? postponedDateStr;
+                  if (_postponedDate != null) {
+                    postponedDateStr = '${_postponedDate!.year}-${_postponedDate!.month.toString().padLeft(2, '0')}-${_postponedDate!.day.toString().padLeft(2, '0')}';
+                  }
+                  Navigator.pop(context, {
+                    'status': _action,
+                    'failureReason': _failureReason,
+                    'postponedTo': postponedDateStr,
+                    'comment': _commentController.text.isEmpty ? null : _commentController.text,
+                  });
+                },
+                icon: Icon(_action == 'failed' ? Icons.report : Icons.schedule),
+                label: Text(_action == 'failed' ? 'SIGNALER L\'ÉCHEC' : 'REPORTER LA LIVRAISON', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _action == 'failed' ? Colors.red : Colors.orange,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionOption extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ActionOption({required this.label, required this.icon, required this.color, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: selected ? color.withOpacity(0.1) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: selected ? color : Colors.transparent, width: 2),
+        ),
+        child: Column(children: [
+          Icon(icon, color: selected ? color : Colors.grey, size: 28),
+          SizedBox(height: 6),
+          Text(label, style: TextStyle(fontWeight: selected ? FontWeight.bold : FontWeight.normal, color: selected ? color : Colors.grey)),
+        ]),
+      ),
+    );
+  }
+}

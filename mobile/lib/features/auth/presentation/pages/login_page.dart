@@ -63,6 +63,7 @@ class _LoginPageState extends State<LoginPage> {
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
+              physics: ClampingScrollPhysics(),
               padding: EdgeInsets.all(24.0),
               child: Card(
                 elevation: 8,

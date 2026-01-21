@@ -9,6 +9,7 @@ import 'products_page.dart';
 import 'users_page.dart';
 import 'deliveries_page.dart';
 import 'financial_page.dart';
+import 'deliverers_map_page.dart';
 import 'settings_page.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -58,6 +59,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: Icon(Icons.map),
+            tooltip: 'Carte des livreurs',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DeliverersMapPage())),
+          ),
           IconButton(
             icon: Icon(Icons.settings),
             tooltip: 'Paramètres',
@@ -123,6 +129,7 @@ class _DashboardHomePage extends StatefulWidget {
 class _DashboardHomePageState extends State<_DashboardHomePage> {
   final ApiService _apiService = ApiService();
   bool _isLoading = true;
+  String? _errorMessage;
   List<dynamic> _allOrders = [];
   List<dynamic> _debts = [];
   
@@ -150,7 +157,12 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
         setState(() => _isLoading = false);
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = e.toString();
+        });
+      }
     }
   }
 
@@ -235,6 +247,35 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Center(child: CircularProgressIndicator(color: Colors.blue));
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 60, color: Colors.red),
+            SizedBox(height: 16),
+            Text('Erreur de chargement', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+              child: Text(_errorMessage!, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[600])),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _isLoading = true;
+                  _errorMessage = null;
+                });
+                _loadDashboardData();
+              },
+              icon: Icon(Icons.refresh),
+              label: Text('Réessayer'),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+            )
+          ],
+        ),
+      );
     }
 
     return RefreshIndicator(

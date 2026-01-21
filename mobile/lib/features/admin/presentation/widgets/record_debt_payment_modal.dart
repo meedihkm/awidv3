@@ -83,85 +83,87 @@ class _RecordDebtPaymentModalState extends State<RecordDebtPaymentModal> {
         ),
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Recouvrer une dette', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.close)),
-                ],
-              ),
-              SizedBox(height: 8),
-              Text('Client: ${widget.debt.customerName}', style: TextStyle(fontWeight: FontWeight.w500)),
-              Text('Dette actuelle: ${widget.debt.totalDebt.toStringAsFixed(0)} DA', 
-                   style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-              SizedBox(height: 20),
-              
-              TextFormField(
-                controller: _amountController,
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: 'Montant (DA)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  prefixIcon: Icon(Icons.monetization_on),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Recouvrer une dette', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.close)),
+                  ],
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Requis';
-                  final v = double.tryParse(value);
-                  if (v == null || v <= 0) return 'Montant invalide';
-                  if (v > widget.debt.totalDebt) return 'Supérieur à la dette';
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-              
-              DropdownButtonFormField<String>(
-                value: _paymentType,
-                decoration: InputDecoration(
-                  labelText: 'Type de paiement',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  prefixIcon: Icon(Icons.payment),
-                ),
-                items: [
-                  DropdownMenuItem(value: 'cash', child: Text('Espèces')),
-                  DropdownMenuItem(value: 'check', child: Text('Chèque')),
-                  DropdownMenuItem(value: 'transfer', child: Text('Virement')),
-                  DropdownMenuItem(value: 'other', child: Text('Autre')),
-                ],
-                onChanged: (v) => setState(() => _paymentType = v!),
-              ),
-              SizedBox(height: 16),
-              
-              TextFormField(
-                controller: _noteController,
-                decoration: InputDecoration(
-                  labelText: 'Note (optionnel)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  prefixIcon: Icon(Icons.note),
-                ),
-                maxLines: 2,
-              ),
-              SizedBox(height: 24),
-              
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF2E7D32),
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                SizedBox(height: 8),
+                Text('Client: ${widget.debt.customerName}', style: TextStyle(fontWeight: FontWeight.w500)),
+                Text('Dette actuelle: ${widget.debt.totalDebt.toStringAsFixed(0)} DA', 
+                     style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                SizedBox(height: 20),
+                
+                TextFormField(
+                  controller: _amountController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'Montant (DA)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    prefixIcon: Icon(Icons.monetization_on),
                   ),
-                  child: _isLoading 
-                    ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Text('Enregistrer le paiement', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return 'Requis';
+                    final v = double.tryParse(value);
+                    if (v == null || v <= 0) return 'Montant invalide';
+                    if (v > widget.debt.totalDebt) return 'Supérieur à la dette';
+                    return null;
+                  },
                 ),
-              ),
-            ],
+                SizedBox(height: 16),
+                
+                DropdownButtonFormField<String>(
+                  value: _paymentType,
+                  decoration: InputDecoration(
+                    labelText: 'Type de paiement',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    prefixIcon: Icon(Icons.payment),
+                  ),
+                  items: [
+                    DropdownMenuItem(value: 'cash', child: Text('Espèces')),
+                    DropdownMenuItem(value: 'check', child: Text('Chèque')),
+                    DropdownMenuItem(value: 'transfer', child: Text('Virement')),
+                    DropdownMenuItem(value: 'other', child: Text('Autre')),
+                  ],
+                  onChanged: (v) => setState(() => _paymentType = v!),
+                ),
+                SizedBox(height: 16),
+                
+                TextFormField(
+                  controller: _noteController,
+                  decoration: InputDecoration(
+                    labelText: 'Note (optionnel)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    prefixIcon: Icon(Icons.note),
+                  ),
+                  maxLines: 2,
+                ),
+                SizedBox(height: 24),
+                
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF2E7D32),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: _isLoading 
+                      ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text('Enregistrer le paiement', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

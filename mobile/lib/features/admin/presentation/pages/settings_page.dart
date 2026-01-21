@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/services/settings_service.dart';
+import '../../../../core/providers/theme_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   @override
@@ -105,6 +106,43 @@ class _SettingsPageState extends State<SettingsPage> {
                   style: TextStyle(color: Colors.grey[600], fontSize: 12, fontStyle: FontStyle.italic),
                 ),
               ],
+            ]),
+
+            SizedBox(height: 24),
+
+            SizedBox(height: 24),
+
+            // Section Apparence
+            _buildSectionHeader('Apparence', Icons.palette, Colors.blue),
+            SizedBox(height: 12),
+            _buildSettingCard([
+              Consumer<ThemeProvider>(
+                builder: (context, themeProvider, _) {
+                  return Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Text('Thème de l\'application', style: TextStyle(fontWeight: FontWeight.w600)),
+                       SizedBox(height: 8),
+                       SegmentedButton<ThemeMode>(
+                         segments: [
+                           ButtonSegment(value: ThemeMode.light, label: Text('Clair'), icon: Icon(Icons.light_mode)),
+                           ButtonSegment(value: ThemeMode.dark, label: Text('Sombre'), icon: Icon(Icons.dark_mode)),
+                           ButtonSegment(value: ThemeMode.system, label: Text('Système'), icon: Icon(Icons.brightness_auto)),
+                         ],
+                         selected: {themeProvider.themeMode},
+                         onSelectionChanged: (Set<ThemeMode> newSelection) {
+                           final mode = newSelection.first;
+                           if (mode == ThemeMode.system) {
+                             themeProvider.setSystemTheme();
+                           } else {
+                             themeProvider.toggleTheme(mode == ThemeMode.dark);
+                           }
+                         },
+                       ),
+                     ],
+                  );
+                },
+              ),
             ]),
 
             SizedBox(height: 24),

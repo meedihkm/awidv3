@@ -178,8 +178,8 @@ router.get('/', authenticate, async (req, res) => {
 router.get('/my', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT * FROM orders WHERE cafeteria_id = $1 ORDER BY created_at DESC`,
-      [req.user.id]
+      `SELECT * FROM orders WHERE cafeteria_id = $1 AND organization_id = $2 ORDER BY created_at DESC`,
+      [req.user.id, req.user.organization_id]
     );
 
     const orders = [];
@@ -300,7 +300,7 @@ router.post('/', authenticate, validate('createOrder'), async (req, res) => {
 
     let total = 0;
     for (const item of items) {
-      const product = await pool.query('SELECT price FROM products WHERE id = $1', [item.productId]);
+      const product = await pool.query('SELECT price FROM products WHERE id = $1 AND organization_id = $2', [item.productId, req.user.organization_id]);
       if (product.rows.length > 0) {
         total += product.rows[0].price * item.quantity;
       }
@@ -312,9 +312,9 @@ router.post('/', authenticate, validate('createOrder'), async (req, res) => {
 
     // Générer numéro de commande séquentiel
     const seqResult = await pool.query(
-      `INSERT INTO order_sequences (organization_id, last_number) 
-       VALUES ($1, 1) 
-       ON CONFLICT (organization_id) 
+      `INSERT INTO order_sequences(organization_id, last_number) 
+       VALUES($1, 1) 
+       ON CONFLICT(organization_id) 
        DO UPDATE SET last_number = order_sequences.last_number + 1 
        RETURNING last_number`,
       [req.user.organization_id]
@@ -322,15 +322,15 @@ router.post('/', authenticate, validate('createOrder'), async (req, res) => {
     const orderNumber = seqResult.rows[0].last_number;
 
     const orderResult = await pool.query(
-      `INSERT INTO orders (organization_id, cafeteria_id, date, total, status, payment_status, amount_paid, order_number) 
-       VALUES ($1, $2, NOW(), $3, 'pending', 'unpaid', 0, $4) RETURNING *`,
+      `INSERT INTO orders(organization_id, cafeteria_id, date, total, status, payment_status, amount_paid, order_number) 
+       VALUES($1, $2, NOW(), $3, 'pending', 'unpaid', 0, $4) RETURNING * `,
       [req.user.organization_id, clientId, total, orderNumber]
     );
 
     const order = orderResult.rows[0];
 
     for (const item of items) {
-      const product = await pool.query('SELECT price FROM products WHERE id = $1', [item.productId]);
+      const product = await pool.query('SELECT price FROM products WHERE id = $1 AND organization_id = $2', [item.productId, req.user.organization_id]);
       if (product.rows.length > 0) {
         await pool.query(
           'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4)',
@@ -358,8 +358,8 @@ router.put('/:id', authenticate, validateUUID('id'), validate('updateOrder'), as
     const { items } = req.body;
 
     const orderCheck = await pool.query(
-      `SELECT * FROM orders WHERE id = $1 AND cafeteria_id = $2 AND status = 'pending'`,
-      [req.params.id, req.user.id]
+      `SELECT * FROM orders WHERE id = $1 AND cafeteria_id = $2 AND organization_id = $3 AND status = 'pending'`,
+      [req.params.id, req.user.id, req.user.organization_id]
     );
 
     if (orderCheck.rows.length === 0) {
@@ -370,7 +370,7 @@ router.put('/:id', authenticate, validateUUID('id'), validate('updateOrder'), as
 
     let total = 0;
     for (const item of items) {
-      const product = await pool.query('SELECT price FROM products WHERE id = $1', [item.productId]);
+      const product = await pool.query('SELECT price FROM products WHERE id = $1 AND organization_id = $2', [item.productId, req.user.organization_id]);
       if (product.rows.length > 0) {
         const price = product.rows[0].price;
         total += price * item.quantity;
@@ -427,7 +427,7 @@ router.post('/:id/assign', authenticate, requireAdmin, validateUUID('id'), valid
     const { delivererId } = req.body;
 
     const orderCheck = await pool.query(
-      `SELECT * FROM orders WHERE id = $1 AND organization_id = $2 AND status IN ('locked', 'ready')`,
+      `SELECT * FROM orders WHERE id = $1 AND organization_id = $2 AND status IN('locked', 'ready')`,
       [req.params.id, req.user.organization_id]
     );
 
@@ -436,8 +436,8 @@ router.post('/:id/assign', authenticate, requireAdmin, validateUUID('id'), valid
     }
 
     const deliveryResult = await pool.query(
-      `INSERT INTO deliveries (organization_id, order_id, deliverer_id, status) 
-       VALUES ($1, $2, $3, 'assigned') RETURNING *`,
+      `INSERT INTO deliveries(organization_id, order_id, deliverer_id, status) 
+       VALUES($1, $2, $3, 'assigned') RETURNING * `,
       [req.user.organization_id, req.params.id, delivererId]
     );
 
@@ -476,8 +476,8 @@ router.put('/:id/kitchen-status', authenticate, requireKitchen, validateUUID('id
     }
 
     await pool.query(
-      `UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`,
-      [status, req.params.id]
+      `UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2 AND organization_id = $3`,
+      [status, req.params.id, req.user.organization_id]
     );
 
     await logAudit('ORDER_KITCHEN_STATUS', req.user.id, req.user.organization_id, { orderId: req.params.id, status }, req);

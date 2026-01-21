@@ -1,0 +1,371 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/services/api_service.dart';
+import '../../../../features/auth/providers/auth_provider.dart';
+
+class DeliverersMapPage extends StatefulWidget {
+  @override
+  _DeliverersMapPageState createState() => _DeliverersMapPageState();
+}
+
+class _DeliverersMapPageState extends State<DeliverersMapPage> {
+  final ApiService _apiService = ApiService();
+  final MapController _mapController = MapController();
+  
+  // Data
+  List<Map<String, dynamic>> _deliverers = [];
+  List<Map<String, dynamic>> _clients = [];
+  List<Map<String, dynamic>> _routePoints = []; // For deliverers
+  
+  // State
+  bool _isLoading = true;
+  Timer? _refreshTimer;
+  bool _showClients = true;
+  bool _showDeliverers = true;
+  String? _userRole;
+
+  // Defaults
+  final LatLng _defaultCenter = LatLng(36.7538, 3.0588); // Algiers
+
+  @override
+  void initState() {
+    super.initState();
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    _userRole = authProvider.user?['role'];
+    
+    // Initial configuration based on role
+    if (_userRole == 'deliverer') {
+      _showClients = false; // Deliverer sees route points, not generic clients
+      _showDeliverers = false; // Deliverer usually sees their own route
+    }
+
+    _loadData();
+    // Refresh every 30s
+    _refreshTimer = Timer.periodic(Duration(seconds: 30), (_) => _refreshData());
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshData() async {
+    if (!mounted) return;
+    await _loadData(isRefresh: true);
+  }
+
+  Future<void> _loadData({bool isRefresh = false}) async {
+    if (!isRefresh) setState(() => _isLoading = true);
+
+    try {
+      if (_userRole == 'admin' || _userRole == 'super_admin') {
+        await Future.wait([
+          if (_showDeliverers) _loadDeliverers(),
+          if (_showClients) _loadClients(),
+        ]);
+      } else if (_userRole == 'deliverer') {
+        await _loadRoute();
+      }
+    } catch (e) {
+      debugPrint('Error loading map data: $e');
+    } finally {
+      if (mounted && !isRefresh) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadDeliverers() async {
+    final response = await _apiService.getDeliverersLocations();
+    if (response['success'] == true && mounted) {
+      setState(() {
+        _deliverers = List<Map<String, dynamic>>.from(response['data']);
+      });
+    }
+  }
+
+  Future<void> _loadClients() async {
+    final response = await _apiService.getClientsLocations();
+    if (response['success'] == true && mounted) {
+      setState(() {
+        _clients = List<Map<String, dynamic>>.from(response['data']);
+      });
+    }
+  }
+
+  Future<void> _loadRoute() async {
+    // For deliverers, load their assigned route
+    final response = await _apiService.getDeliveryRoute();
+    if (response['success'] == true && mounted) {
+      final deliveries = List<Map<String, dynamic>>.from(response['data']);
+      
+      List<Map<String, dynamic>> points = [];
+      for (var d in deliveries) {
+        final order = d['order'];
+        if (order != null && order['cafeteria'] != null) {
+          final cafeteria = order['cafeteria'];
+          final lat = double.tryParse(cafeteria['latitude']?.toString() ?? '0') ?? 0;
+          final lng = double.tryParse(cafeteria['longitude']?.toString() ?? '0') ?? 0;
+          
+          if (lat != 0 && lng != 0) {
+            points.add({
+              ...cafeteria, // name, phone, etc.
+              'latitude': lat,
+              'longitude': lng,
+              'delivery_id': d['id'],
+              'status': d['status'],
+              'order_total': order['total'],
+            });
+          }
+        }
+      }
+      setState(() {
+        _routePoints = points;
+        // Also update _clients list for the map markers logic if we are in Deliverer mode
+        // For Deliverer mode, markers logic uses _clients if !isAdmin.
+        _clients = points; 
+      });    }
+  }
+
+  // --- Helpers ---
+
+  String _getTimeAgo(String? dateStr) {
+    if (dateStr == null) return '';
+    final date = DateTime.tryParse(dateStr);
+    if (date == null) return '';
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 1) return 'à l\'instant';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    return '${diff.inDays}j';
+  }
+
+  Future<void> _launchMaps(double lat, double lng) async {
+    final uri = Uri.parse('google.navigation:q=$lat,$lng');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      final webUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+      if (await canLaunchUrl(webUri)) await launchUrl(webUri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isAdmin = _userRole == 'admin' || _userRole == 'super_admin';
+
+    // Collect markers
+    List<Marker> markers = [];
+
+    // 1. Deliverers Markers (Admin only)
+    if (_showDeliverers && isAdmin) {
+      markers.addAll(_deliverers.map((d) {
+        final lat = double.tryParse(d['latitude']?.toString() ?? '0') ?? 0;
+        final lng = double.tryParse(d['longitude']?.toString() ?? '0') ?? 0;
+        if (lat == 0 && lng == 0) return null;
+
+        return Marker(
+          point: LatLng(lat, lng),
+          width: 80,
+          height: 80,
+          child: GestureDetector(
+            onTap: () => _showDelivererInfo(d),
+            child: Column(
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(4)),
+                  child: Text(d['name'] ?? 'Livreur', style: TextStyle(color: Colors.white, fontSize: 10), overflow: TextOverflow.ellipsis),
+                ),
+                Icon(Icons.local_shipping, color: Colors.orange, size: 30),
+              ],
+            ),
+          ),
+        );
+      }).whereType<Marker>());
+    }
+
+    // 2. Clients Markers
+    if (_showClients || !isAdmin) { 
+      // If deliverer, we might want to show assigned clients effectively using _routePoints logic later
+      // For now using _clients list which Admin loads.
+      // If Deliverer, we need to load relevant clients.
+      
+      markers.addAll(_clients.map((c) {
+        final lat = double.tryParse(c['latitude']?.toString() ?? '0') ?? 0;
+        final lng = double.tryParse(c['longitude']?.toString() ?? '0') ?? 0;
+        if (lat == 0 && lng == 0) return null;
+
+        return Marker(
+          point: LatLng(lat, lng),
+          width: 80,
+          height: 80,
+          child: GestureDetector(
+            onTap: () => _showClientInfo(c),
+            child: Column(
+              children: [
+                if (!isAdmin) // Deliverer might need names always visible? Or small dot?
+                 Container(
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(4)),
+                    child: Text(c['name'] ?? 'Client', style: TextStyle(color: Colors.white, fontSize: 10), overflow: TextOverflow.ellipsis),
+                  ),
+                Icon(Icons.store, color: Colors.green, size: 30),
+              ],
+            ),
+          ),
+        );
+      }).whereType<Marker>());
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(isAdmin ? 'Carte Globale' : 'Mon Itinéraire'),
+        actions: [
+          IconButton(icon: Icon(Icons.refresh), onPressed: () => _refreshData()),
+        ],
+      ),
+      body: Stack(
+        children: [
+          // MAP
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _defaultCenter,
+              initialZoom: 12,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.awid.delivery',
+              ),
+              MarkerLayer(markers: markers),
+            ],
+          ),
+
+          // LOADING OVERLAY
+          if (_isLoading)
+            Positioned(
+              top: 0, left: 0, right: 0,
+              child: LinearProgressIndicator(color: theme.primaryColor),
+            ),
+
+          // ADMIN CONTROLS (Bottom Sheet inside Stack or Floating Card)
+          if (isAdmin)
+            Positioned(
+              bottom: 20,
+              left: 16,
+              right: 16,
+              child: Card(
+                elevation: 8,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildFilterChip('Clients', _showClients, Colors.green, (v) {
+                        setState(() => _showClients = v);
+                        if(v && _clients.isEmpty) _loadClients();
+                      }),
+                      _buildFilterChip('Livreurs', _showDeliverers, Colors.orange, (v) {
+                        setState(() => _showDeliverers = v);
+                        if(v && _deliverers.isEmpty) _loadDeliverers();
+                      }),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            
+           // DELIVERER CONTROLS (Navigation Button)
+           if (!isAdmin && _routePoints.isNotEmpty) 
+             Positioned(
+               bottom: 20, right: 20,
+               child: FloatingActionButton.extended(
+                 onPressed: () {
+                    // Start navigation to first point
+                 },
+                 label: Text('Démarrer'),
+                 icon: Icon(Icons.navigation),
+               ),
+             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, bool value, Color color, Function(bool) onChanged) {
+    return FilterChip(
+      label: Text(label),
+      selected: value,
+      onSelected: onChanged,
+      selectedColor: color.withValues(alpha: 0.2),
+      checkmarkColor: color,
+      labelStyle: TextStyle(color: value ? color : Colors.grey, fontWeight: FontWeight.bold),
+    );
+  }
+
+  void _showDelivererInfo(Map<String, dynamic> data) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(data['name'] ?? 'Livreur', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Dernière MAJ: ${_getTimeAgo(data['location_updated_at'])}', style: TextStyle(color: Colors.grey)),
+            SizedBox(height: 16),
+            ElevatedButton.icon(
+              icon: Icon(Icons.phone),
+              label: Text('Appeler'),
+              onPressed: () => launchUrl(Uri.parse('tel:${data['phone']}')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showClientInfo(Map<String, dynamic> data) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(data['name'] ?? 'Client', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            if (data['address'] != null) Text(data['address'], style: TextStyle(color: Colors.grey), textAlign: TextAlign.center),
+            SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton.icon(
+                  icon: Icon(Icons.phone),
+                  label: Text('Appeler'),
+                  onPressed: () => launchUrl(Uri.parse('tel:${data['phone']}')),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black),
+                ),
+                ElevatedButton.icon(
+                  icon: Icon(Icons.directions),
+                  label: Text('Naviguer'),
+                  onPressed: () {
+                    final lat = double.tryParse(data['latitude']?.toString() ?? '0') ?? 0;
+                    final lng = double.tryParse(data['longitude']?.toString() ?? '0') ?? 0;
+                    if (lat != 0 && lng != 0) _launchMaps(lat, lng);
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

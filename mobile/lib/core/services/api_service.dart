@@ -318,16 +318,22 @@ class ApiService {
         return {'success': true, 'data': cached, 'fromCache': true};
       }
     }
-    final result = await _request('GET', ApiConstants.debts);
-    if (result['success'] == true && result['data'] != null) {
-      await _cache.cacheDebts(result['data']);
+    try {
+      final result = await _request('GET', ApiConstants.debts);
+      if (result['success'] == true && result['data'] != null) {
+        await _cache.cacheDebts(result['data']);
+      }
+      return result;
+    } catch (e) {
+      print('Error getting debts: $e');
+      return {'success': false, 'data': [], 'error': e.toString()};
     }
-    return result;
   }
 
   // ===== LOCATION =====
   Future<Map<String, dynamic>> updateDelivererLocation(double lat, double lng) async => _request('POST', '${ApiConstants.baseUrl}/deliverers/location', body: {'latitude': lat, 'longitude': lng});
   Future<Map<String, dynamic>> getDeliverersLocations() async => _request('GET', '${ApiConstants.baseUrl}/deliverers/locations');
+  Future<Map<String, dynamic>> getClientsLocations() async => _request('GET', '${ApiConstants.baseUrl}/users/clients-locations');
   Future<Map<String, dynamic>> getDelivererHistory(String delivererId, String date) async => _request('GET', '${ApiConstants.baseUrl}/deliverers/$delivererId/history?date=$date');
 
   // ===== ORGANIZATION =====
@@ -367,7 +373,9 @@ class ApiService {
     int page = 1,
     int limit = 50,
   }) async {
-    return _request('GET', '${ApiConstants.debtBase}/debts?sort=$sort&min_debt=$minDebt&page=$page&limit=$limit');
+    // Use the financial endpoint which is more reliably deployed
+    String url = '${ApiConstants.debts}?sort=$sort&min_debt=$minDebt&page=$page&limit=$limit';
+    return _request('GET', url);
   }
 
   Future<Map<String, dynamic>> recordDebtPayment(Map<String, dynamic> paymentData) async {

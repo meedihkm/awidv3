@@ -264,8 +264,8 @@ router.get('/:id', authenticate, validateUUID('id'), async (req, res) => {
       `SELECT d.*, u.name as deliverer_name
        FROM deliveries d
        LEFT JOIN users u ON d.deliverer_id = u.id
-       WHERE d.id = $1`,
-      [req.params.id]
+       WHERE d.id = $1 AND d.organization_id = $2`,
+      [req.params.id, req.user.organization_id]
     );
 
     if (result.rows.length === 0) {

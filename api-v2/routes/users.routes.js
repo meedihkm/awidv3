@@ -76,6 +76,23 @@ router.get('/deliverers', authenticate, cacheMiddleware(300), async (req, res) =
   }
 });
 
+// GET /api/users/clients-locations
+router.get('/clients-locations', authenticate, cacheMiddleware(300), async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, phone, address, address_lat as latitude, address_lng as longitude
+       FROM users 
+       WHERE organization_id = $1 AND role = 'cafeteria' AND active = true
+       AND address_lat IS NOT NULL AND address_lng IS NOT NULL`,
+      [req.user.organization_id]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Get clients locations error:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 /**
  * @swagger
  * /users:
