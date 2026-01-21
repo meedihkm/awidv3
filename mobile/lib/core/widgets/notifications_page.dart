@@ -76,7 +76,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   Future<void> _deleteNotification(String notificationId) async {
     try {
-      await _notificationService.deleteNotification(notificationId);
+      _notificationService.deleteNotification(notificationId);
       _loadNotifications();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -48,7 +48,7 @@ void main() async {
   await HiveService().init();
   
   // Initialisation OneSignal
-  await NotificationService.init();
+  await NotificationService().init();
 
   // Check Onboarding status
   final prefs = await SharedPreferences.getInstance();
@@ -65,7 +65,7 @@ class MyApp extends StatelessWidget {
   final bool showOnboarding;
 
   MyApp({Key? key, required this.showOnboarding}) : super(key: key) {
-    NotificationService.setNotificationHandler(navigatorKey);
+    NotificationService().setNotificationHandler(navigatorKey);
   }
 
   @override

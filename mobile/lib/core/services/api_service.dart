@@ -453,5 +453,8 @@ class ApiService {
   Future<Map<String, dynamic>> getMyCollections() async => {'success': true, 'data': []};
   Future<Map<String, dynamic>> getMyPayments() async => {'success': true, 'data': []};
   Future<Map<String, dynamic>> getPaymentStats() async => {'success': true, 'data': {}};
+  
+  // Alias for legacy or mismatched calls
+  Future<Map<String, dynamic>> recordPayment(Map<String, dynamic> data) async => recordDebtPayment(data);
 }
 

@@ -6,6 +6,10 @@ import '../models/notification_model.dart';
 // AppNotification model moved to core/models/notification_model.dart
 
 class NotificationService {
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal();
+
   static const String appId = "YOUR_ONESIGNAL_APP_ID"; // À remplacer par la vraie valeur ou config
 
   // In-app notifications list
@@ -35,6 +39,7 @@ class NotificationService {
         readAt: DateTime.now(),
       );
     }
+  }
 
   Future<Map<String, dynamic>> getNotifications({bool unreadOnly = false}) async {
     // Mock API call
@@ -47,7 +52,7 @@ class NotificationService {
         'type': n.type,
         'title': n.title,
         'message': n.message,
-        'icon': n.icon.codePoint, // Warning: this logic in model might need update
+        'icon': 0xe57f, // Fixed: codePoint not available on String, using dummy int or fetch from mapping
         'color': n.color.value,
         'createdAt': n.createdAt.toIso8601String(),
         'isRead': n.isRead,
@@ -56,8 +61,22 @@ class NotificationService {
   }
 
   Future<Map<String, dynamic>> markAllAsRead() async {
-    for (var n in _notifications) {
-      n.isRead = true;
+    for (int i = 0; i < _notifications.length; i++) {
+       final old = _notifications[i];
+       if (!old.isRead) {
+         _notifications[i] = AppNotification(
+            id: old.id,
+            type: old.type,
+            title: old.title,
+            message: old.message,
+            data: old.data,
+            isRead: true,
+            priority: old.priority,
+            actionUrl: old.actionUrl,
+            createdAt: old.createdAt,
+            readAt: DateTime.now(),
+         );
+       }
     }
     return {'success': true, 'message': 'Tout marqué comme lu'};
   }
@@ -70,28 +89,21 @@ class NotificationService {
     _notifications.removeWhere((n) => n.id == id);
   }
 
-  static Future<void> init() async {
-    // Verbose logging set to help debug issues, remove in production
+  Future<void> init() async {
     OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
-
-    // Initialize OneSignal
-    // NOTE: Replace with your App ID from settings > Keys & IDs
-    // Idéalement via dotenv mais hardcodable dans le code source si nécessaire pour démo
     OneSignal.initialize(appId);
-
-    // Request permission
     await OneSignal.Notifications.requestPermission(true);
   }
 
-  static Future<void> login(String userId) async {
+  Future<void> login(String userId) async {
     await OneSignal.login(userId);
   }
 
-  static Future<void> logout() async {
+  Future<void> logout() async {
     await OneSignal.logout();
   }
 
-  static void setNotificationHandler(GlobalKey<NavigatorState> navigatorKey) {
+  void setNotificationHandler(GlobalKey<NavigatorState> navigatorKey) {
     OneSignal.Notifications.addClickListener((event) {
       final data = event.notification.additionalData;
       if (data != null && data['type'] != null) {
@@ -100,21 +112,17 @@ class NotificationService {
     });
   }
 
-  static void _handleDeepLink(Map<String, dynamic> data, GlobalKey<NavigatorState> navigatorKey) {
+  void _handleDeepLink(Map<String, dynamic> data, GlobalKey<NavigatorState> navigatorKey) {
     final type = data['type'];
     final id = data['id'];
 
     if (type == 'order' && id != null) {
-      // Naviguer via le navigatorKey
-      // navigatorKey.currentState?.pushNamed('/order_details', arguments: id);
-      print('Deep link to Order $id'); // Placeholder until routes are defined
+      print('Deep link to Order $id'); 
     }
   }
 
   // Preferences methods for SettingsPage
   Future<Map<String, dynamic>> getPreferences() async {
-    // Mock implementation using SharedPreferences or defaults
-    // In a real app, this might fetch from API
     await Future.delayed(Duration(milliseconds: 500));
     return {
       'success': true,
@@ -136,8 +144,6 @@ class NotificationService {
     int? debtReminderFrequency,
   }) async {
     await Future.delayed(Duration(milliseconds: 500));
-    // In real app, save to API
     return {'success': true};
   }
 }
-

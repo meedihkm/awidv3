@@ -25,6 +25,7 @@ class Order {
   final DateTime? createdAt;
   final List<OrderItem> items;
   final Cafeteria? cafeteria;
+  final String? delivererId;
 
   Order({
     required this.id,
@@ -38,6 +39,7 @@ class Order {
     this.createdAt,
     required this.items,
     this.cafeteria,
+    this.delivererId,
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -55,6 +57,7 @@ class Order {
           ? (json['items'] as List).map((item) => OrderItem.fromJson(item)).toList()
           : [],
       cafeteria: json['cafeteria'] != null ? Cafeteria.fromJson(json['cafeteria']) : null,
+      delivererId: json['delivererId']?.toString(),
     );
   }
 

@@ -127,8 +127,152 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
     return orders;
   }
 
-// ... (methods in between are unchanged, skipping to build/tabs)
+  Map<String, List<Order>> _groupOrders(List<Order> orders) {
+    Map<String, List<Order>> grouped = {};
+    for (var order in orders) {
+      String key;
+      if (_groupBy == 'client') {
+        key = order.cafeteria?.name ?? 'Inconnu';
+      } else if (_groupBy == 'deliverer') {
+        key = order.delivererId ?? 'Non assigné';
+      } else {
+        key = 'Toutes';
+      }
+      if (!grouped.containsKey(key)) grouped[key] = [];
+      grouped[key]!.add(order);
+    }
+    return grouped;
+  }
 
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'pending': return Colors.grey;
+      case 'validated': return Colors.blue;
+      case 'preparing': return Colors.orange;
+      case 'ready': return Colors.green;
+      case 'in_delivery': return Colors.purple;
+      case 'delivered': return Colors.teal;
+      case 'cancelled': return Colors.red;
+      case 'locked': return Colors.amber;
+      default: return Colors.grey;
+    }
+  }
+
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'pending': return 'En attente';
+      case 'validated': return 'Validée';
+      case 'preparing': return 'En préparation';
+      case 'ready': return 'Prête';
+      case 'in_delivery': return 'En livraison';
+      case 'delivered': return 'Livrée';
+      case 'cancelled': return 'Annulée';
+      case 'locked': return 'Verrouillée';
+      default: return status;
+    }
+  }
+
+  Color _getPaymentColor(String status) {
+    switch (status) {
+      case 'paid': return Colors.green;
+      case 'unpaid': return Colors.red;
+      case 'partially_paid': return Colors.orange;
+      default: return Colors.grey;
+    }
+  }
+
+  String _getPaymentText(String status) {
+    switch (status) {
+      case 'paid': return 'Payé';
+      case 'unpaid': return 'Non payé';
+      case 'partially_paid': return 'Partiel';
+      default: return 'Inconnu';
+    }
+  }
+
+  Future<void> _lockOrder(Order order) async {
+    try {
+      final res = await _apiService.lockOrder(order.id);
+      if (res['success']) {
+        _loadData(forceRefresh: true);
+      } else {
+        showError(res['error'] ?? 'Erreur lors du verrouillage');
+      }
+    } catch (e) {
+      showError('Erreur: $e');
+    }
+  }
+
+  Future<void> _assignDeliverer(Order order) async {
+    // Show dialog to pick deliverer
+    showDialog(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text('Assigner un livreur'),
+        children: _deliverers.map((d) => SimpleDialogOption(
+          child: Text(d['name'] ?? 'Livreur'),
+          onPressed: () async {
+            Navigator.pop(context);
+            try {
+              final res = await _apiService.assignDeliverer(order.id, d['id']);
+              if (res['success']) {
+                _loadData(forceRefresh: true);
+              } else {
+                 showError(res['error'] ?? 'Erreur d\'assignation');
+              }
+            } catch (e) {
+              showError('Erreur: $e');
+            }
+          },
+        )).toList(),
+      ),
+    );
+  }
+
+  void _showOrderDetails(Order order) {
+     Navigator.pushNamed(context, '/order_details', arguments: order);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Commandes'),
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(60),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                ActionChip(
+                  label: Text('Filtrer: ${_periodFilter == 'all' ? 'Toute période' : _periodFilter}'),
+                  onPressed: () {
+                    // Cycle filters
+                    setState(() {
+                       if (_periodFilter == 'all') _periodFilter = 'day';
+                       else if (_periodFilter == 'day') _periodFilter = 'week';
+                       else if (_periodFilter == 'week') _periodFilter = 'month';
+                       else _periodFilter = 'all';
+                    });
+                  },
+                ),
+                SizedBox(width: 8),
+                ActionChip(
+                  label: Text('Grouper: ${_groupBy == 'none' ? 'Aucun' : _groupBy}'),
+                  onPressed: () {
+                    setState(() {
+                      _groupBy = _groupBy == 'none' ? 'client' : (_groupBy == 'client' ? 'deliverer' : 'none');
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      body: Column(
+        children: [
         // Tabs
         Container(
           color: Theme.of(context).cardColor,
@@ -178,6 +322,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
           ),
         ),
       ],
+     ),
     );
   }
 
@@ -201,7 +346,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
     if (_groupBy != 'none') {
       final grouped = _groupOrders(orders);
       return RefreshIndicator(
-        onRefresh: _loadData,
+        onRefresh: () => _loadData(forceRefresh: true),
         child: ListView(
           padding: EdgeInsets.all(12),
           children: grouped.entries.map((entry) {

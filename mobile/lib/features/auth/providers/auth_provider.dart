@@ -44,7 +44,7 @@ class AuthProvider with ChangeNotifier {
         
         // Connecter OneSignal
         if (userData != null && userData['id'] != null) {
-          NotificationService.login(userData['id']);
+          NotificationService().login(userData['id']);
         }
         
         notifyListeners();
