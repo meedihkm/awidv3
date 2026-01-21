@@ -18,6 +18,31 @@ import 'core/providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Show errors on screen instead of grey/white screen
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return MaterialApp(
+      home: Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, color: Colors.red, size: 48),
+                SizedBox(height: 16),
+                Text('Une erreur est survenue', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                SizedBox(height: 8),
+                Text(details.exception.toString(), textAlign: TextAlign.center, style: TextStyle(color: Colors.red)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  };
+
   
   // Initialisation Hive
   await HiveService().init();

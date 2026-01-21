@@ -182,7 +182,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     },
                     title: Text('Activer les favoris'),
                     subtitle: Text('Permet de sauvegarder vos commandes habituelles'),
-                    activeColor: Colors.green,
+                    activeTrackColor: Colors.green,
                     contentPadding: EdgeInsets.zero,
                   ),
                   
@@ -204,7 +204,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         : null,
                     title: Text('Suggestions automatiques'),
                     subtitle: Text('Suggère de sauvegarder les commandes répétées'),
-                    activeColor: Colors.green,
+                    activeTrackColor: Colors.green,
                     contentPadding: EdgeInsets.zero,
                   ),
                   
@@ -301,7 +301,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     },
                     title: Text('Paiements'),
                     subtitle: Text('Notifications lors des paiements'),
-                    activeColor: Colors.green,
+                    activeTrackColor: Colors.green,
                     contentPadding: EdgeInsets.zero,
                   ),
                   
@@ -323,7 +323,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     },
                     title: Text('Dettes'),
                     subtitle: Text('Notifications dette soldée'),
-                    activeColor: Colors.green,
+                    activeTrackColor: Colors.green,
                     contentPadding: EdgeInsets.zero,
                   ),
                   
@@ -345,7 +345,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     },
                     title: Text('Suggestions favoris'),
                     subtitle: Text('Notifications commande habituelle'),
-                    activeColor: Colors.green,
+                    activeTrackColor: Colors.green,
                     contentPadding: EdgeInsets.zero,
                   ),
                   
@@ -367,7 +367,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     },
                     title: Text('Rappels de dette'),
                     subtitle: Text('Recevoir des rappels périodiques'),
-                    activeColor: Colors.green,
+                    activeTrackColor: Colors.green,
                     contentPadding: EdgeInsets.zero,
                   ),
                   

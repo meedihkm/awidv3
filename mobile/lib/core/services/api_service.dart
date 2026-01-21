@@ -447,5 +447,11 @@ class ApiService {
     if (active != null) query = '?active=$active';
     return _request('GET', '${ApiConstants.baseUrl}/recurring/admin/all$query');
   }
+
+  // ===== PAYMENT SERVICE STUBS =====
+  Future<Map<String, dynamic>> getClientDebtDetails(String clientId) async => {'success': true, 'data': {}};
+  Future<Map<String, dynamic>> getMyCollections() async => {'success': true, 'data': []};
+  Future<Map<String, dynamic>> getMyPayments() async => {'success': true, 'data': []};
+  Future<Map<String, dynamic>> getPaymentStats() async => {'success': true, 'data': {}};
 }
 

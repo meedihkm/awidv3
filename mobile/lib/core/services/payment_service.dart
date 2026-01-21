@@ -12,14 +12,14 @@ class PaymentService {
     List<String>? targetOrders,
     String? notes,
   }) async {
-    return await _apiService.recordPayment(
-      clientId: clientId,
-      amount: amount,
-      mode: mode,
-      deliveryId: deliveryId,
-      targetOrders: targetOrders,
-      notes: notes,
-    );
+    return await _apiService.recordPayment({
+      'clientId': clientId,
+      'amount': amount,
+      'mode': mode,
+      'deliveryId': deliveryId,
+      'targetOrders': targetOrders,
+      'notes': notes,
+    });
   }
 
   // Obtenir les détails de dette d'un client
