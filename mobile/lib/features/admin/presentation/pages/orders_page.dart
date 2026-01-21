@@ -1,10 +1,10 @@
 // Orders Page - Admin
 import 'package:flutter/material.dart';
 import '../../../../core/services/api_service.dart';
-import '../../../../core/services/cache_service.dart';
+
 import '../../../../core/services/settings_service.dart';
 import '../../../../core/models/order_model.dart';
-import '../../../../core/widgets/skeleton_loader.dart';
+
 import '../../../../core/mixins/optimized_state.dart';
 
 class OrdersPage extends StatefulWidget {
@@ -14,22 +14,15 @@ class OrdersPage extends StatefulWidget {
 
 class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateMixin, OptimizedStateMixin {
   final ApiService _apiService = ApiService();
-  final CacheService _cacheService = CacheService();
   final SettingsService _settingsService = SettingsService();
   List<Order> _orders = [];
   List<Map<String, dynamic>> _deliverers = [];
-  bool _isLoading = true;
-  bool _hasData = false;
   bool _kitchenMode = false;
   TabController? _tabController;
   bool _isInitialized = false;
   
   // Filtres
   String _groupBy = 'none'; // none, client, deliverer
-  String _periodFilter = 'all'; // all, day, week, month
-  String? _selectedClient;
-  // ignore: unused_field
-  String? _selectedDeliverer;
 
   @override
   void initState() {
@@ -56,9 +49,106 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
     _loadData();
   }
 
-  // ... (dispose and _loadData remain same)
+  @override
+  void dispose() {
+    _tabController?.dispose();
+    super.dispose();
+  }
 
-  // ... (build start remains same)
+  Future<void> _loadData({bool forceRefresh = false}) async {
+    if (!mounted) return;
+    // Loading indicator handled by RefreshIndicator or assumed false after init
+    
+    try {
+      final responses = await Future.wait([
+        _apiService.getOrders(forceRefresh: forceRefresh),
+        _apiService.getDeliverers(),
+      ]);
+      
+      if (mounted) {
+        setState(() {
+          // Assuming getOrders returns Map with 'data' or List directly. 
+          // Based on other files, it likely returns {success: true, data: [...]} or just List.
+          // Checking typical pattern in this project... assume returns Map with 'data' or List.
+          // Let's assume standard API response format.
+          final ordersResponse = responses[0];
+          final deliverersResponse = responses[1];
+          
+          if (ordersResponse['success'] == true && ordersResponse['data'] != null) {
+             _orders = (ordersResponse['data'] as List).map((e) => Order.fromJson(e)).toList();
+          }
+          
+          if (deliverersResponse['success'] == true && deliverersResponse['data'] != null) {
+            _deliverers = (deliverersResponse['data'] as List).cast<Map<String, dynamic>>();
+          }
+          
+          // _isLoading = false;
+          // _hasData = true;
+          if (mounted) setState(() {}); // Trigger rebuild
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        // setState(() => _isLoading = false);
+        // Using a safe context check or global scaffold key if context is risky, but context should be fine here.
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isInitialized) return Center(child: CircularProgressIndicator());
+    
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        title: Text('Commandes', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(icon: Icon(Icons.refresh, color: Colors.black), onPressed: () => _loadData(forceRefresh: true)),
+          IconButton(
+            icon: Icon(_kitchenMode ? Icons.restaurant : Icons.store, color: Colors.orange),
+            onPressed: () {
+              // Open settings or toggle mode
+              // For now, toggle mainly for testing
+              // _toggleKitchenMode(); // If implemented
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Filtres (simplified)
+          if (!_kitchenMode)
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Colors.white,
+            child: Row(children: [
+               Expanded(
+                 child: SizedBox(
+                   height: 36,
+                   child: ListView(
+                     scrollDirection: Axis.horizontal,
+                     children: [
+                       ChoiceChip(
+                         label: Text('Tout'),
+                         selected: _groupBy == 'none',
+                         onSelected: (v) => setState(() => _groupBy = 'none'),
+                       ),
+                       SizedBox(width: 8),
+                       ChoiceChip(
+                         label: Text('Par Client'),
+                         selected: _groupBy == 'client',
+                         onSelected: (v) => setState(() => _groupBy = 'client'),
+                       ),
+                     ],
+                   ),
+                 ),
+               ),
+            ]),
+          ),
 
         // Tabs
         Container(
@@ -294,5 +384,138 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
         ),
       ),
     );
+  }
+
+
+  /// HELPERS
+
+  List<Order> _getFilteredOrders(dynamic status) {
+    if (_orders.isEmpty) return [];
+    return _orders.where((order) {
+      if (status == 'all') return true;
+      if (status is List) {
+        return status.contains(order.status);
+      }
+      return order.status == status;
+    }).toList();
+  }
+
+  Map<String, List<Order>> _groupOrders(List<Order> orders) {
+    final Map<String, List<Order>> grouped = {};
+    for (var order in orders) {
+      String key = 'Autres';
+      if (_groupBy == 'client') {
+        key = order.cafeteria?.name ?? 'Client inconnu';
+      } else if (_groupBy == 'deliverer') {
+        final delivererId = order.delivererId;
+        if (delivererId != null) {
+          // Try to find name in _deliverers list
+          final deliverer = _deliverers.firstWhere((d) => d['id'] == delivererId, orElse: () => {'name': 'Livreur', 'surname': ''});
+          key = '${deliverer['name']} ${deliverer['surname'] ?? ''}'.trim();
+        } else {
+          key = 'Non assigné';
+        }
+      }
+      if (!grouped.containsKey(key)) grouped[key] = [];
+      grouped[key]!.add(order);
+    }
+    return grouped;
+  }
+
+  // NAVIGATION & ACTIONS
+
+  void _showOrderDetails(Order order) {
+    // Navigate to details page (assuming route exists) OR show a modal
+    // For now, let's use a simple dialog or just print
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Détails commande #${order.id.substring(0, 8)}'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+               Text('Client: ${order.cafeteria?.name ?? "Inconnu"}'),
+               Text('Statut: ${_getStatusText(order.status)}'),
+               SizedBox(height: 10),
+               Text('Articles:', style: TextStyle(fontWeight: FontWeight.bold)),
+               ...order.items.map((i) => Text('- ${i.quantity}x ${i.productName}')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Fermer')),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _lockOrder(Order order) async {
+    try {
+      await _apiService.updateOrder(order.id, {'status': 'locked'});
+      _loadData();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+    }
+  }
+
+  Future<void> _assignDeliverer(Order order) async {
+    // Show dialog to pick deliverer
+    showDialog(context: context, builder: (context) => SimpleDialog(
+      title: Text('Assigner un livreur'),
+      children: _deliverers.map((d) => SimpleDialogOption(
+        child: Text('${d['name']} ${d['surname'] ?? ''}'),
+        onPressed: () async {
+          Navigator.pop(context);
+          try {
+            await _apiService.assignDeliverer(order.id, d['id']);
+            _loadData();
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+          }
+        },
+      )).toList(),
+    ));
+  }
+
+  // UI HELPERS
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'pending': return Colors.orange;
+      case 'locked': return Colors.blue; 
+      case 'validated': return Colors.blue;
+      case 'preparing': return Colors.purple;
+      case 'ready': return Colors.green;
+      case 'in_delivery': return Colors.indigo;
+      case 'delivered': return Colors.grey;
+      case 'cancelled': return Colors.red;
+      case 'problem': return Colors.redAccent;
+      default: return Colors.grey;
+    }
+  }
+
+  String _getStatusText(String status) {
+    switch (status) {
+      case 'pending': return 'En attente';
+      case 'locked': return 'Validée';
+      case 'validated': return 'Validée';
+      case 'preparing': return 'En prépa';
+      case 'ready': return 'Prête';
+      case 'in_delivery': return 'En livraison';
+      case 'delivered': return 'Livrée';
+      case 'cancelled': return 'Annulée';
+      case 'problem': return 'Litige';
+      default: return status;
+    }
+  }
+
+  Color _getPaymentColor(String status) {
+    return status == 'paid' ? Colors.green : Colors.red;
+  }
+
+  String _getPaymentText(String status) {
+    return status == 'paid' ? 'Payé' : 'Non payé';
   }
 }

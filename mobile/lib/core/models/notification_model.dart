@@ -56,18 +56,18 @@ class AppNotification {
   }
 
   // Helpers pour les icônes et couleurs
-  String get icon {
+  IconData get icon {
     switch (type) {
       case 'payment_recorded':
-        return '💰';
+        return Icons.attach_money;
       case 'debt_cleared':
-        return '🎉';
+        return Icons.check_circle;
       case 'favorite_suggested':
-        return '💡';
+        return Icons.lightbulb;
       case 'debt_reminder':
-        return '⏰';
+        return Icons.access_time;
       default:
-        return '📢';
+        return Icons.notifications;
     }
   }
 
