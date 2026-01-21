@@ -9,7 +9,6 @@ import 'products_page.dart';
 import 'users_page.dart';
 import 'deliveries_page.dart';
 import 'financial_page.dart';
-import 'deliverers_map_page.dart';
 import 'settings_page.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -59,11 +58,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: Icon(Icons.map),
-            tooltip: 'Carte des livreurs',
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DeliverersMapPage())),
-          ),
           IconButton(
             icon: Icon(Icons.settings),
             tooltip: 'Paramètres',
