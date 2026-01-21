@@ -468,7 +468,11 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
                 ],
               ),
             ),
-            if (order.isPending || order.isLocked || order.status == 'ready')
+            // Conditions d'affichage des boutons d'action
+            if (order.isPending || 
+                order.isLocked || 
+                order.status == 'ready' || 
+                (!_kitchenMode && (order.status == 'validated' || order.status == 'preparing')))
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 child: Row(
@@ -482,7 +486,10 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: EdgeInsets.symmetric(vertical: 8)),
                         ),
                       ),
-                    if (order.isLocked || order.status == 'ready')
+                    // Afficher le bouton assigner pour : locked, ready, ou (validated/preparing si PAS mode cuisine)
+                    if (order.isLocked || 
+                        order.status == 'ready' || 
+                        (!_kitchenMode && (order.status == 'validated' || order.status == 'preparing')))
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () => _assignDeliverer(order),
