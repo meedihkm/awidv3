@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-// import 'package:geolocator/geolocator.dart'; // unused
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../core/services/print_service.dart';
 import '../../../../core/services/location_service.dart';
 import '../../../../core/database/sync_service.dart';
 import '../../../../core/models/delivery_model.dart';
+
 class DeliveryRoutePage extends StatefulWidget {
   @override
   _DeliveryRoutePageState createState() => _DeliveryRoutePageState();
@@ -17,6 +19,8 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
   final LocationService _locationService = LocationService();
   List<Delivery> _deliveries = [];
   bool _isLoading = true;
+  bool _showMap = false; // Toggle state
+  final MapController _mapController = MapController();
 
   @override
   void initState() {
@@ -47,6 +51,252 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) return Center(child: CircularProgressIndicator(color: Colors.orange));
+
+    return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => setState(() => _showMap = !_showMap),
+        icon: Icon(_showMap ? Icons.list : Icons.map),
+        label: Text(_showMap ? 'Liste' : 'Carte'),
+        backgroundColor: Colors.orange,
+      ),
+      body: _showMap ? _buildMap() : _buildList(),
+    );
+  }
+
+  Widget _buildMap() {
+    if (_deliveries.isEmpty) return Center(child: Text("Aucune livraison à afficher"));
+
+    // Filter valid locations
+    final validDeliveries = _deliveries.where((d) => 
+      d.order.cafeteria != null && d.order.cafeteria!.hasLocation
+    ).toList();
+
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: validDeliveries.isNotEmpty 
+          ? LatLng(validDeliveries.first.order.cafeteria!.latitude!, validDeliveries.first.order.cafeteria!.longitude!)
+          : LatLng(36.75, 3.05), // Default Algiers
+        initialZoom: 13.0,
+      ),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.awid.delivery',
+        ),
+        MarkerLayer(
+          markers: validDeliveries.map((d) {
+             return Marker(
+               point: LatLng(d.order.cafeteria!.latitude!, d.order.cafeteria!.longitude!),
+               width: 40,
+               height: 40,
+               child: GestureDetector(
+                 onTap: () => _confirmDelivery(d), // Quick access to action
+                 child: Icon(Icons.location_on, color: Colors.orange, size: 40),
+               ),
+             );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildList() {
+    if (_deliveries.isEmpty) {
+      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.local_shipping_outlined, size: 80, color: Colors.grey[400]),
+        SizedBox(height: 16),
+        Text('Aucune livraison', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+        SizedBox(height: 24),
+        ElevatedButton.icon(onPressed: _loadDeliveries, icon: Icon(Icons.refresh), label: Text('Actualiser'), style: ElevatedButton.styleFrom(backgroundColor: Colors.orange)),
+      ]));
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadDeliveries,
+      color: Colors.orange,
+      child: ListView.builder(
+        padding: EdgeInsets.all(12),
+        itemCount: _deliveries.length,
+        itemBuilder: (context, index) {
+          final delivery = _deliveries[index];
+          // ... (existing card build logic stays here or extracted)
+          return _buildDeliveryCard(delivery, index); // Refactored for cleanliness
+        },
+      ),
+    );
+  }
+
+  Widget _buildDeliveryCard(Delivery delivery, int index) {
+     final order = delivery.order;
+     return Card(
+      margin: EdgeInsets.only(bottom: 16),
+      elevation: 4,
+      shadowColor: Theme.of(context).shadowColor.withValues(alpha: 0.3),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Column(children: [
+        // Header
+        Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [Colors.orange.shade600, Colors.orange.shade400]),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Row(children: [
+            Container(
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12)),
+              child: Icon(Icons.local_shipping, color: Colors.white, size: 28),
+            ),
+            SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Text('Livraison #${index + 1}', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                if (delivery.attempts > 0) ...[
+                  SizedBox(width: 8),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
+                    child: Text('${delivery.attempts} tentative(s)', style: TextStyle(color: Colors.white, fontSize: 10)),
+                  ),
+                ],
+              ]),
+              if (order.cafeteria != null) Text(order.cafeteria!.name, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14)),
+            ])),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(20)),
+              child: Text('${order.total.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.orange.shade700, fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+          ]),
+        ),
+        // Contenu
+        Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Boutons appel et navigation
+            Row(children: [
+              // Bouton appel
+              if (order.cafeteria?.phone != null && order.cafeteria!.phone!.isNotEmpty)
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _callClient(order.cafeteria!.phone!),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.1), 
+                        borderRadius: BorderRadius.circular(12), 
+                        border: Border.all(color: Colors.blue.withValues(alpha: 0.3))
+                      ),
+                      child: Row(children: [
+                        Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(8)), child: Icon(Icons.phone, size: 20, color: Colors.white)),
+                        SizedBox(width: 8),
+                        Expanded(child: Text('Appeler', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.blue.shade700))),
+                      ]),
+                    ),
+                  ),
+                ),
+              if (order.cafeteria?.phone != null && order.cafeteria!.phone!.isNotEmpty) SizedBox(width: 8),
+              // Bouton navigation GPS
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _navigateToClient(delivery),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: order.cafeteria?.hasLocation == true ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1), 
+                      borderRadius: BorderRadius.circular(12), 
+                      border: Border.all(color: order.cafeteria?.hasLocation == true ? Colors.green.withValues(alpha: 0.3) : Colors.orange.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(children: [
+                      Container(
+                        padding: EdgeInsets.all(8), 
+                        decoration: BoxDecoration(
+                          color: order.cafeteria?.hasLocation == true ? Colors.green : Colors.orange, 
+                          borderRadius: BorderRadius.circular(8),
+                        ), 
+                        child: Icon(Icons.navigation, size: 20, color: Colors.white),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(child: Text(
+                        order.cafeteria?.hasLocation == true ? 'Naviguer' : 'Ajouter GPS', 
+                        style: TextStyle(fontWeight: FontWeight.w600, color: order.cafeteria?.hasLocation == true ? Colors.green.shade700 : Colors.orange.shade700),
+                      )),
+                    ]),
+                  ),
+                ),
+              ),
+            ]),
+            SizedBox(height: 12),
+            // Adresse si disponible
+            if (order.cafeteria?.address != null && order.cafeteria!.address!.isNotEmpty)
+              Container(
+                padding: EdgeInsets.all(10),
+                margin: EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)),
+                child: Row(children: [
+                  Icon(Icons.location_on, size: 18, color: Colors.grey[600]),
+                  SizedBox(width: 8),
+                  Expanded(child: Text(order.cafeteria!.address!, style: TextStyle(color: Colors.grey[700], fontSize: 13))),
+                ]),
+              ),
+            // Articles
+            Text('Articles:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[800])),
+            SizedBox(height: 8),
+            ...order.items.map((item) => Padding(
+              padding: EdgeInsets.only(bottom: 6),
+              child: Row(children: [
+                Container(width: 28, height: 28, decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                  child: Center(child: Text('${item.quantity}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade700)))),
+                SizedBox(width: 12),
+                Expanded(child: Text(item.productName)),
+                Text('${item.totalPrice.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.grey[600])),
+              ]),
+            )),
+            Divider(height: 24),
+            // Montant
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Row(children: [Icon(Icons.payments, color: Colors.green.shade700), SizedBox(width: 8), Text('À collecter:', style: TextStyle(fontWeight: FontWeight.w500))]),
+                Text('${order.remainingAmount.toStringAsFixed(0)} DA', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
+              ]),
+            ),
+            SizedBox(height: 16),
+            // Boutons actions
+            Row(children: [
+              // Bouton imprimer
+              SizedBox(height: 48, child: ElevatedButton(
+                onPressed: () => _showPrintOptions(delivery),
+                child: Icon(Icons.print, size: 24),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: EdgeInsets.symmetric(horizontal: 16)),
+              )),
+              SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(height: 48, child: ElevatedButton.icon(
+                  onPressed: () => _confirmDelivery(delivery),
+                  icon: Icon(Icons.check_circle, size: 20),
+                  label: Text('LIVRÉ', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                )),
+              ),
+              SizedBox(width: 8),
+              SizedBox(height: 48, child: ElevatedButton(
+                onPressed: () => _reportFailure(delivery),
+                child: Icon(Icons.warning_amber, size: 24),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade400, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: EdgeInsets.symmetric(horizontal: 16)),
+              )),
+            ]),
+          ]),
+        ),
+      ]),
+    );
   }
 
   // Ouvrir la navigation vers le client (OpenStreetMap)
@@ -265,196 +515,7 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) return Center(child: CircularProgressIndicator(color: Colors.orange));
 
-    if (_deliveries.isEmpty) {
-      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.local_shipping_outlined, size: 80, color: Colors.grey[400]),
-        SizedBox(height: 16),
-        Text('Aucune livraison', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
-        SizedBox(height: 24),
-        ElevatedButton.icon(onPressed: _loadDeliveries, icon: Icon(Icons.refresh), label: Text('Actualiser'), style: ElevatedButton.styleFrom(backgroundColor: Colors.orange)),
-      ]));
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadDeliveries,
-      color: Colors.orange,
-      child: ListView.builder(
-        padding: EdgeInsets.all(12),
-        itemCount: _deliveries.length,
-        itemBuilder: (context, index) {
-          final delivery = _deliveries[index];
-          final order = delivery.order;
-          return Card(
-            margin: EdgeInsets.only(bottom: 16),
-            elevation: 4,
-            shadowColor: Theme.of(context).shadowColor.withValues(alpha: 0.3),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Column(children: [
-              // Header
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.orange.shade600, Colors.orange.shade400]),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                child: Row(children: [
-                  Container(
-                    padding: EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12)),
-                    child: Icon(Icons.local_shipping, color: Colors.white, size: 28),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Text('Livraison #${index + 1}', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                      if (delivery.attempts > 0) ...[
-                        SizedBox(width: 8),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
-                          child: Text('${delivery.attempts} tentative(s)', style: TextStyle(color: Colors.white, fontSize: 10)),
-                        ),
-                      ],
-                    ]),
-                    if (order.cafeteria != null) Text(order.cafeteria!.name, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14)),
-                  ])),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(20)),
-                    child: Text('${order.total.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.orange.shade700, fontWeight: FontWeight.bold, fontSize: 16)),
-                  ),
-                ]),
-              ),
-              // Contenu
-              Padding(
-                padding: EdgeInsets.all(16),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  // Boutons appel et navigation
-                  Row(children: [
-                    // Bouton appel
-                    if (order.cafeteria?.phone != null && order.cafeteria!.phone!.isNotEmpty)
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => _callClient(order.cafeteria!.phone!),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withValues(alpha: 0.1), 
-                              borderRadius: BorderRadius.circular(12), 
-                              border: Border.all(color: Colors.blue.withValues(alpha: 0.3))
-                            ),
-                            child: Row(children: [
-                              Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(8)), child: Icon(Icons.phone, size: 20, color: Colors.white)),
-                              SizedBox(width: 8),
-                              Expanded(child: Text('Appeler', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.blue.shade700))),
-                            ]),
-                          ),
-                        ),
-                      ),
-                    if (order.cafeteria?.phone != null && order.cafeteria!.phone!.isNotEmpty) SizedBox(width: 8),
-                    // Bouton navigation GPS
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _navigateToClient(delivery),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: order.cafeteria?.hasLocation == true ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1), 
-                            borderRadius: BorderRadius.circular(12), 
-                            border: Border.all(color: order.cafeteria?.hasLocation == true ? Colors.green.withValues(alpha: 0.3) : Colors.orange.withValues(alpha: 0.3)),
-                          ),
-                          child: Row(children: [
-                            Container(
-                              padding: EdgeInsets.all(8), 
-                              decoration: BoxDecoration(
-                                color: order.cafeteria?.hasLocation == true ? Colors.green : Colors.orange, 
-                                borderRadius: BorderRadius.circular(8),
-                              ), 
-                              child: Icon(Icons.navigation, size: 20, color: Colors.white),
-                            ),
-                            SizedBox(width: 8),
-                            Expanded(child: Text(
-                              order.cafeteria?.hasLocation == true ? 'Naviguer' : 'Ajouter GPS', 
-                              style: TextStyle(fontWeight: FontWeight.w600, color: order.cafeteria?.hasLocation == true ? Colors.green.shade700 : Colors.orange.shade700),
-                            )),
-                          ]),
-                        ),
-                      ),
-                    ),
-                  ]),
-                  SizedBox(height: 12),
-                  // Adresse si disponible
-                  if (order.cafeteria?.address != null && order.cafeteria!.address!.isNotEmpty)
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      margin: EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)),
-                      child: Row(children: [
-                        Icon(Icons.location_on, size: 18, color: Colors.grey[600]),
-                        SizedBox(width: 8),
-                        Expanded(child: Text(order.cafeteria!.address!, style: TextStyle(color: Colors.grey[700], fontSize: 13))),
-                      ]),
-                    ),
-                  // Articles
-                  Text('Articles:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[800])),
-                  SizedBox(height: 8),
-                  ...order.items.map((item) => Padding(
-                    padding: EdgeInsets.only(bottom: 6),
-                    child: Row(children: [
-                      Container(width: 28, height: 28, decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                        child: Center(child: Text('${item.quantity}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade700)))),
-                      SizedBox(width: 12),
-                      Expanded(child: Text(item.productName)),
-                      Text('${item.totalPrice.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.grey[600])),
-                    ]),
-                  )),
-                  Divider(height: 24),
-                  // Montant
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Row(children: [Icon(Icons.payments, color: Colors.green.shade700), SizedBox(width: 8), Text('À collecter:', style: TextStyle(fontWeight: FontWeight.w500))]),
-                      Text('${order.remainingAmount.toStringAsFixed(0)} DA', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
-                    ]),
-                  ),
-                  SizedBox(height: 16),
-                  // Boutons actions
-                  Row(children: [
-                    // Bouton imprimer
-                    SizedBox(height: 48, child: ElevatedButton(
-                      onPressed: () => _showPrintOptions(delivery),
-                      child: Icon(Icons.print, size: 24),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: EdgeInsets.symmetric(horizontal: 16)),
-                    )),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: SizedBox(height: 48, child: ElevatedButton.icon(
-                        onPressed: () => _confirmDelivery(delivery),
-                        icon: Icon(Icons.check_circle, size: 20),
-                        label: Text('LIVRÉ', style: TextStyle(fontWeight: FontWeight.bold)),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                      )),
-                    ),
-                    SizedBox(width: 8),
-                    SizedBox(height: 48, child: ElevatedButton(
-                      onPressed: () => _reportFailure(delivery),
-                      child: Icon(Icons.warning_amber, size: 24),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade400, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: EdgeInsets.symmetric(horizontal: 16)),
-                    )),
-                  ]),
-                ]),
-              ),
-            ]),
-          );
-        },
-      ),
-    );
-  }
 }
 
 

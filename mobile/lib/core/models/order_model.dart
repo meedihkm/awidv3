@@ -82,6 +82,7 @@ class Order {
   bool get isInDelivery => status == 'in_delivery';
   bool get isDelivered => status == 'delivered';
   bool get isPaid => paymentStatus == 'paid';
+  bool get isProblem => status == 'problem';
   double get remainingAmount => total - amountPaid;
 }
 

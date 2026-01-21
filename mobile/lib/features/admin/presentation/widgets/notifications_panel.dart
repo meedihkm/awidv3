@@ -63,7 +63,7 @@ class NotificationsPanel extends StatelessWidget {
                             color: notif.color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Text(notif.icon, style: TextStyle(fontSize: 20)),
+                          child: Icon(notif.icon, color: notif.color, size: 20),
                         ),
                         title: Text(
                           notif.title,
