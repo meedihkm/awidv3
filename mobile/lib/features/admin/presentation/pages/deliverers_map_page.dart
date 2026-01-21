@@ -342,7 +342,25 @@ class _DeliverersMapPageState extends State<DeliverersMapPage> {
           children: [
             Text(data['name'] ?? 'Client', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             if (data['address'] != null) Text(data['address'], style: TextStyle(color: Colors.grey), textAlign: TextAlign.center),
-            SizedBox(height: 16),
+            SizedBox(height: 12),
+            if ((data['active_orders_count'] ?? 0) > 0)
+              Container(
+                margin: EdgeInsets.only(bottom: 12),
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.shopping_cart, color: Colors.blue, size: 20),
+                    SizedBox(width: 8),
+                    Text('${data['active_orders_count']} commande(s) en cours', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w600)),
+                    SizedBox(width: 8),
+                    Text('•', style: TextStyle(color: Colors.grey)),
+                    SizedBox(width: 8),
+                    Text('${data['active_orders_total']} DA', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [

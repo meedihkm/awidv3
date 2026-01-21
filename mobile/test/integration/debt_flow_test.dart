@@ -279,7 +279,7 @@ void main() {
       expect(tabs, findsNWidgets(3));
       
       // Verify Debt History tab text exists
-      expect(find.text('Historique Dette'), findsOneWidget);
+      expect(find.text('Dette'), findsOneWidget);
     });
 
     testWidgets('Debt history shows empty state when no payments', (WidgetTester tester) async {
@@ -307,7 +307,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap on Debt History tab
-      await tester.tap(find.text('Historique Dette'));
+      await tester.tap(find.text('Dette'));
       await tester.pumpAndSettle();
       
       // Verify empty state message

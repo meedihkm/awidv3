@@ -80,10 +80,12 @@ router.get('/deliverers', authenticate, cacheMiddleware(300), async (req, res) =
 router.get('/clients-locations', authenticate, cacheMiddleware(300), async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, phone, address, address_lat as latitude, address_lng as longitude
-       FROM users 
-       WHERE organization_id = $1 AND role = 'cafeteria' AND active = true
-       AND address_lat IS NOT NULL AND address_lng IS NOT NULL`,
+      `SELECT u.id, u.name, u.phone, u.address, u.address_lat as latitude, u.address_lng as longitude,
+              (SELECT COUNT(*) FROM orders o WHERE o.cafeteria_id = u.id AND o.status IN ('pending', 'validated', 'preparing', 'ready', 'in_delivery'))::int as active_orders_count,
+              (SELECT COALESCE(SUM(total), 0) FROM orders o WHERE o.cafeteria_id = u.id AND o.status IN ('pending', 'validated', 'preparing', 'ready', 'in_delivery'))::float as active_orders_total
+       FROM users u
+       WHERE u.organization_id = $1 AND u.role = 'cafeteria' AND u.active = true
+       AND u.address_lat IS NOT NULL AND u.address_lng IS NOT NULL`,
       [req.user.organization_id]
     );
     res.json({ success: true, data: result.rows });
