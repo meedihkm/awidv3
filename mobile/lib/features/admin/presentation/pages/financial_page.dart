@@ -20,6 +20,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   List<dynamic> _allOrders = [];
   List<dynamic> _allDeliveries = [];
   List<Map<String, dynamic>> _debts = [];
+  // ignore: unused_field
   List<dynamic> _deliverers = [];
   Map<String, dynamic> _clients = {};
   bool _isLoading = true;
@@ -62,7 +63,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       // Charger depuis le serveur
       final results = await Future.wait([
         _apiService.getOrders(),
-        _apiService.getDebts(),
+        _apiService.getDebtsList(limit: 100),
         _apiService.getDeliveries(),
         _apiService.getDeliverers(),
         _apiService.getUsers(),
@@ -104,7 +105,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
 
   List<dynamic> _getFilteredOrders() {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    // final today = DateTime(now.year, now.month, now.day);
     final selected = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
     
     return _allOrders.where((order) {
@@ -318,7 +319,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     if (_isLoading && _allOrders.isEmpty) {
-      return Center(child: CircularProgressIndicator(color: Color(0xFF2E7D32)));
+      return Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor));
     }
 
     final filteredOrders = _getFilteredOrders();
@@ -334,12 +335,12 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
 
         // Tabs
         Container(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           child: TabBar(
             controller: _tabController,
-            labelColor: Color(0xFF2E7D32),
+            labelColor: Theme.of(context).primaryColor,
             unselectedLabelColor: Colors.grey,
-            indicatorColor: Color(0xFF2E7D32),
+            indicatorColor: Theme.of(context).primaryColor,
             tabs: [
               Tab(icon: Icon(Icons.dashboard, size: 20), text: 'Résumé'),
               Tab(icon: Icon(Icons.people, size: 20), text: 'Clients'),
@@ -368,7 +369,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   Widget _buildPeriodSelector() {
     return Container(
       padding: EdgeInsets.all(12),
-      color: Colors.grey[100],
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: Column(
         children: [
           Row(
@@ -409,9 +410,9 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
           // Label période sélectionnée
           Row(
             children: [
-              Icon(Icons.date_range, color: Color(0xFF2E7D32), size: 18),
+              Icon(Icons.date_range, color: Theme.of(context).primaryColor, size: 18),
               SizedBox(width: 8),
-              Text(_getPeriodLabel(), style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF2E7D32))),
+              Text(_getPeriodLabel(), style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor)),
               Spacer(),
               // Navigation rapide
               IconButton(
@@ -452,7 +453,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
 
   Widget _buildCalendar() {
     return Container(
-      color: Colors.white,
+      color: Theme.of(context).cardColor,
       child: TableCalendar(
         firstDay: DateTime(2024),
         lastDay: DateTime.now().add(Duration(days: 1)),
@@ -465,8 +466,8 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
           titleTextStyle: TextStyle(fontWeight: FontWeight.bold),
         ),
         calendarStyle: CalendarStyle(
-          selectedDecoration: BoxDecoration(color: Color(0xFF2E7D32), shape: BoxShape.circle),
-          todayDecoration: BoxDecoration(color: Color(0xFF2E7D32).withOpacity(0.3), shape: BoxShape.circle),
+          selectedDecoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
+          todayDecoration: BoxDecoration(color: Theme.of(context).primaryColor.withValues(alpha: 0.3), shape: BoxShape.circle),
         ),
         onDaySelected: (selectedDay, focusedDay) {
           setState(() {
@@ -508,12 +509,12 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Color(0xFF2E7D32) : Colors.white,
+          color: isSelected ? Theme.of(context).primaryColor : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Color(0xFF2E7D32)),
+          border: Border.all(color: Theme.of(context).primaryColor),
         ),
         child: Text(label, style: TextStyle(
-          color: isSelected ? Colors.white : Color(0xFF2E7D32), 
+          color: isSelected ? Colors.white : Theme.of(context).primaryColor, 
           fontWeight: FontWeight.w500,
         )),
       ),
@@ -523,7 +524,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   Widget _buildSummaryTab(Map<String, dynamic> stats, List<dynamic> orders) {
     return RefreshIndicator(
       onRefresh: () => _loadData(forceRefresh: true),
-      color: Color(0xFF2E7D32),
+      color: Theme.of(context).primaryColor,
       child: SingleChildScrollView(
         physics: AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.all(16),
@@ -540,7 +541,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
               childAspectRatio: 1.5,
               children: [
                 _buildStatCard('Chiffre d\'affaires', '${stats['totalCA'].toStringAsFixed(0)} DA', 
-                  Icons.trending_up, Color(0xFF2E7D32)),
+                  Icons.trending_up, Theme.of(context).primaryColor),
                 _buildStatCard('Collecté', '${stats['totalCollected'].toStringAsFixed(0)} DA', 
                   Icons.payments, Colors.blue),
                 _buildStatCard('Non payé', '${stats['totalUnpaid'].toStringAsFixed(0)} DA', 
@@ -555,9 +556,9 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
+                boxShadow: [BoxShadow(color: Theme.of(context).shadowColor.withValues(alpha: 0.05), blurRadius: 8)],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -597,7 +598,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -614,18 +615,18 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [color, color.withOpacity(0.7)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.7)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 8, offset: Offset(0, 4))],
+        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8, offset: Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: Colors.white.withOpacity(0.9), size: 24),
+          Icon(icon, color: Colors.white.withValues(alpha: 0.9), size: 24),
           SizedBox(height: 8),
           Text(value, style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-          Text(title, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 11)),
+          Text(title, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 11)),
         ],
       ),
     );
@@ -655,15 +656,15 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
           margin: EdgeInsets.only(bottom: 8),
           padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4)],
+            boxShadow: [BoxShadow(color: Theme.of(context).shadowColor.withValues(alpha: 0.05), blurRadius: 4)],
           ),
           child: Row(
             children: [
               Container(
                 width: 28, height: 28,
-                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                 child: Center(child: Text('${index + 1}', style: TextStyle(color: color, fontWeight: FontWeight.bold))),
               ),
               SizedBox(width: 12),
@@ -699,7 +700,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -769,7 +770,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: Color(0xFF2E7D32).withOpacity(0.1),
+                backgroundColor: Color(0xFF2E7D32).withValues(alpha: 0.1),
                 child: Text(client.key[0].toUpperCase(), 
                   style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold)),
               ),
@@ -849,7 +850,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                   Row(
                     children: [
                       CircleAvatar(
-                        backgroundColor: Colors.blue.withOpacity(0.1),
+                        backgroundColor: Colors.blue.withValues(alpha: 0.1),
                         child: Icon(Icons.delivery_dining, color: Colors.blue),
                       ),
                       SizedBox(width: 12),
@@ -897,7 +898,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -925,7 +926,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       );
     }
 
-    final totalDebt = _debts.fold<double>(0, (sum, d) => sum + _parseDouble(d['debt']));
+    final totalDebt = _debts.fold<double>(0, (sum, d) => sum + _parseDouble(d['total_debt']));
 
     return RefreshIndicator(
       onRefresh: () => _loadData(forceRefresh: true),
@@ -948,14 +949,14 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Total des dettes', style: TextStyle(color: Colors.white.withOpacity(0.9))),
+                      Text('Total des dettes', style: TextStyle(color: Colors.white.withValues(alpha: 0.9))),
                       Text('${totalDebt.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
                   child: Text('${_debts.length} clients', style: TextStyle(color: Colors.white)),
                 ),
               ],
@@ -979,8 +980,8 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                         style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold)),
                     ),
                     title: Text(debt['name'] ?? 'Client', style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('${debt['order_count'] ?? 0} commande(s) impayée(s)'),
-                    trailing: Text('${_parseDouble(debt['debt']).toStringAsFixed(0)} DA', 
+                    subtitle: Text('${debt['unpaid_orders'] ?? 0} commande(s) impayée(s)'),
+                    trailing: Text('${_parseDouble(debt['total_debt']).toStringAsFixed(0)} DA', 
                       style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
                     children: [
                       Padding(
@@ -1005,13 +1006,13 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                                 ],
                               ),
                             ],
-                            if (debt['last_order'] != null) ...[
+                            if (debt['last_order_date'] != null) ...[
                               SizedBox(height: 8),
                               Row(
                                 children: [
                                   Icon(Icons.access_time, size: 18, color: Colors.grey),
                                   SizedBox(width: 8),
-                                  Text('Dernière: ${_formatDate(debt['last_order'])}', 
+                                  Text('Dernière: ${_formatDate(debt['last_order_date'])}', 
                                     style: TextStyle(color: Colors.grey[700])),
                                 ],
                               ),

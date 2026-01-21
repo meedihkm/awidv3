@@ -29,6 +29,9 @@ class ApiConstants {
   static const String dailyFinancial = '$baseUrl/financial/daily';
   static const String debts = '$baseUrl/financial/debts';
   
+  // Debt endpoints (Feature 1)
+  static const String debtBase = '$baseUrl/debt';
+  
   // Super admin endpoints
   static const String superAdminTest = '$baseUrl/super-admin/test';
   static const String superAdminStats = '$baseUrl/super-admin/stats';

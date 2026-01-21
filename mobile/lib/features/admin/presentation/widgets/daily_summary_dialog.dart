@@ -102,9 +102,9 @@ class DailySummaryDialog extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
@@ -120,8 +120,8 @@ class DailySummaryDialog extends StatelessWidget {
 
   String _formatNumber(dynamic value) {
     if (value == null) return '0';
-    final num = value is double ? value : (value as num).toDouble();
-    return num.toStringAsFixed(0);
+    final n = value is double ? value : (value is int ? value.toDouble() : 0.0);
+    return n.toStringAsFixed(0);
   }
 
   Color _getRateColor(dynamic rate) {

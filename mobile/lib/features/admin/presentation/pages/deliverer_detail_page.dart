@@ -101,7 +101,7 @@ class _DelivererDetailPageState extends State<DelivererDetailPage> {
                       children: [
                         CircleAvatar(
                           radius: 30,
-                          backgroundColor: Colors.white.withOpacity(0.2),
+                          backgroundColor: Colors.white.withValues(alpha: 0.2),
                           child: Icon(Icons.delivery_dining, color: Colors.white, size: 32),
                         ),
                         SizedBox(width: 16),
@@ -190,7 +190,7 @@ class _DelivererDetailPageState extends State<DelivererDetailPage> {
       child: Container(
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -216,7 +216,7 @@ class _DelivererDetailPageState extends State<DelivererDetailPage> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _getStatusColor(status).withOpacity(0.2),
+          backgroundColor: _getStatusColor(status).withValues(alpha: 0.2),
           child: Icon(_getStatusIcon(status), color: _getStatusColor(status), size: 20),
         ),
         title: Text('$orderCount commande${orderCount > 1 ? 's' : ''}'),

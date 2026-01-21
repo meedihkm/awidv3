@@ -3,6 +3,9 @@ import '../../../../core/services/api_service.dart';
 import '../../../../core/models/order_model.dart';
 import '../../../../core/models/product_model.dart';
 
+import '../../../../core/widgets/infinite_scroll_list.dart';
+import '../../../../core/widgets/skeleton_loader.dart';
+
 class OrderHistoryPage extends StatefulWidget {
   @override
   _OrderHistoryPageState createState() => _OrderHistoryPageState();
@@ -10,31 +13,58 @@ class OrderHistoryPage extends StatefulWidget {
 
 class _OrderHistoryPageState extends State<OrderHistoryPage> {
   final ApiService _apiService = ApiService();
-  List<Order> _orders = [];
+  final List<Order> _orders = [];
   bool _isLoading = true;
+  int _currentPage = 1;
+  static const int _limit = 20;
+  bool _hasMore = true;
 
   @override
   void initState() {
     super.initState();
-    _loadOrders();
+    _loadOrders(refresh: true);
   }
 
-  Future<void> _loadOrders() async {
+  Future<void> _loadOrders({bool refresh = false}) async {
+    if (refresh) {
+      setState(() {
+        _currentPage = 1;
+        _hasMore = true;
+        _orders.clear();
+        _isLoading = true;
+      });
+    }
+
     try {
-      final response = await _apiService.getMyOrders();
+      final response = await _apiService.getMyOrders(page: _currentPage, limit: _limit);
+      
       if (response['success']) {
+        final List<Order> newOrders = (response['data'] as List)
+            .map((json) => Order.fromJson(json))
+            .toList();
+            
         setState(() {
-          _orders = (response['data'] as List)
-              .map((json) => Order.fromJson(json))
-              .toList();
+          if (refresh) _orders.clear();
+          _orders.addAll(newOrders);
           _isLoading = false;
+          
+          // Check pagination metadata if available, otherwise check list length
+          if (response['pagination'] != null) {
+            _hasMore = response['pagination']['hasMore'] ?? false;
+          } else {
+            _hasMore = newOrders.length >= _limit;
+          }
+          
+          if (_hasMore) _currentPage++;
         });
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: ${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -83,6 +113,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
         cart[item.productId] = item.quantity;
       }
 
+      if (!mounted) return;
       final result = await showModalBottomSheet<Map<String, int>>(
         context: context,
         isScrollControlled: true,
@@ -93,26 +124,40 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       if (result != null && result.isNotEmpty) {
         final items = result.entries.map((e) => {'productId': e.key, 'quantity': e.value}).toList();
         await _apiService.updateOrder(order.id, {'items': items});
-        _loadOrders();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Commande modifiée!'), backgroundColor: Colors.green),
-        );
+        _loadOrders(refresh: true);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Commande modifiée!'), backgroundColor: Colors.green),
+          );
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: ${e.toString()}')),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Center(child: CircularProgressIndicator(color: Colors.green));
+    if (_isLoading && _orders.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: List.generate(5, (_) => const OrderCardSkeleton()),
+        ),
+      );
     }
 
-    if (_orders.isEmpty) {
-      return Center(
+    return InfiniteScrollList<Order>(
+      items: _orders,
+      isLoading: _isLoading,
+      hasMore: _hasMore,
+      onRefresh: () async => _loadOrders(refresh: true),
+      onLoadMore: () => _loadOrders(refresh: false),
+      emptyState: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -123,150 +168,138 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
             Text('Vos commandes apparaîtront ici', style: TextStyle(color: Colors.grey[500])),
           ],
         ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadOrders,
-      color: Colors.green,
-      child: ListView.builder(
-        padding: EdgeInsets.all(12),
-        itemCount: _orders.length,
-        itemBuilder: (context, index) {
-          final order = _orders[index];
-          return Card(
-            margin: EdgeInsets.only(bottom: 12),
-            elevation: 3,
-            shadowColor: Colors.black26,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: Column(
-              children: [
-                // Header avec statut
-                Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(order.status).withOpacity(0.1),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      itemBuilder: (context, order) => Card(
+        margin: EdgeInsets.only(bottom: 12),
+        elevation: 3,
+        shadowColor: Colors.black26,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Column(
+          children: [
+            // Header avec statut
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _getStatusColor(order.status).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(order.status),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(_getStatusIcon(order.status), color: Colors.white, size: 24),
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: _getStatusColor(order.status),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(_getStatusIcon(order.status), color: Colors.white, size: 24),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _getStatusText(order.status),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: _getStatusColor(order.status),
-                              ),
-                            ),
-                            Text(
-                              'Commande #${order.id.substring(0, 8)}',
-                              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        '${order.total.toStringAsFixed(0)} DA',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.green.shade700),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Liste des articles
-                Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ...order.items.map((item) => Padding(
-                        padding: EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade50,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '${item.quantity}',
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade700),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(child: Text(item.productName)),
-                            Text('${item.totalPrice.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.grey[600])),
-                          ],
-                        ),
-                      )),
-                      
-                      // Paiement
-                      if (order.amountPaid > 0 || order.remainingAmount > 0) ...[
-                        Divider(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Payé', style: TextStyle(color: Colors.grey[600])),
-                            Text('${order.amountPaid.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.green)),
-                          ],
-                        ),
-                        if (order.remainingAmount > 0)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Reste à payer', style: TextStyle(color: Colors.grey[600])),
-                              Text(
-                                '${order.remainingAmount.toStringAsFixed(0)} DA',
-                                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                              ),
-                            ],
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _getStatusText(order.status),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: _getStatusColor(order.status),
                           ),
-                      ],
-                      
-                      // Boutons d'action si commande en attente
-                      if (order.isPending) ...[
-                        SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => _editOrder(order),
-                                icon: Icon(Icons.edit, size: 18),
-                                label: Text('Modifier'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.blue,
-                                  side: BorderSide(color: Colors.blue),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                ),
-                              ),
-                            ),
-                          ],
+                        ),
+                        Text(
+                          'Commande #${order.id.substring(0, 8)}',
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
                         ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                  Text(
+                    '${order.total.toStringAsFixed(0)} DA',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.green.shade700),
+                  ),
+                ],
+              ),
             ),
-          );
-        },
+            
+            // Liste des articles
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ...order.items.map((item) => Padding(
+                    padding: EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${item.quantity}',
+                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade700),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(child: Text(item.productName)),
+                        Text('${item.totalPrice.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.grey[600])),
+                      ],
+                    ),
+                  )),
+                  
+                  // Paiement
+                  if (order.amountPaid > 0 || order.remainingAmount > 0) ...[
+                    Divider(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Payé', style: TextStyle(color: Colors.grey[600])),
+                        Text('${order.amountPaid.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.green)),
+                      ],
+                    ),
+                    if (order.remainingAmount > 0)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Reste à payer', style: TextStyle(color: Colors.grey[600])),
+                          Text(
+                            '${order.remainingAmount.toStringAsFixed(0)} DA',
+                            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                  ],
+                  
+                  // Boutons d'action si commande en attente
+                  if (order.isPending) ...[
+                    SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _editOrder(order),
+                            icon: Icon(Icons.edit, size: 18),
+                            label: Text('Modifier'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.blue,
+                              side: BorderSide(color: Colors.blue),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

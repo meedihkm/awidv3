@@ -60,7 +60,7 @@ class NotificationsPanel extends StatelessWidget {
                         leading: Container(
                           padding: EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: notif.color.withOpacity(0.1),
+                            color: notif.color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(notif.icon, color: notif.color, size: 20),
@@ -77,7 +77,7 @@ class NotificationsPanel extends StatelessWidget {
                           style: TextStyle(color: Colors.grey, fontSize: 11),
                         ),
                         onTap: () => notificationService.markAsRead(notif.id),
-                        tileColor: notif.isRead ? null : Colors.blue.withOpacity(0.05),
+                        tileColor: notif.isRead ? null : Colors.blue.withValues(alpha: 0.05),
                       );
                     },
                   ),

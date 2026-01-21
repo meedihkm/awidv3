@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../auth/providers/auth_provider.dart';
 import 'order_history_page.dart';
 import 'new_order_page.dart';
+import '../../../../core/widgets/sync_indicator.dart';
 
 class CafeteriaDashboard extends StatefulWidget {
   @override
@@ -28,7 +29,7 @@ class _CafeteriaDashboardState extends State<CafeteriaDashboard> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text('Client', style: TextStyle(fontSize: 12)),
@@ -38,6 +39,7 @@ class _CafeteriaDashboardState extends State<CafeteriaDashboard> {
         backgroundColor: Colors.green.shade600,
         foregroundColor: Colors.white,
         actions: [
+          SyncIndicator(),
           Consumer<AuthProvider>(
             builder: (context, authProvider, child) {
               return PopupMenuButton<String>(

@@ -9,19 +9,110 @@ const { authenticate } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { loginLimiter } = require('../middleware/rateLimit');
 const { logAudit } = require('../services/audit.service');
-const { 
-  generateRefreshToken, 
-  saveRefreshToken, 
-  validateRefreshToken, 
+const {
+  generateRefreshToken,
+  saveRefreshToken,
+  validateRefreshToken,
   revokeRefreshToken,
-  revokeAllUserTokens 
+  revokeAllUserTokens
 } = require('../services/token.service');
 
+/**
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: Authentification et gestion des sessions
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     User:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         email:
+ *           type: string
+ *           format: email
+ *         name:
+ *           type: string
+ *         role:
+ *           type: string
+ *           enum: [admin, user, deliverer, cafeteria]
+ *         organizationId:
+ *           type: string
+ *           format: uuid
+ *         organization:
+ *           type: object
+ *           properties:
+ *             id: 
+ *               type: string
+ *               format: uuid
+ *             name: 
+ *               type: string
+ *             type: 
+ *               type: string
+ *     AuthResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *         accessToken:
+ *           type: string
+ *         refreshToken:
+ *           type: string
+ *         expiresIn:
+ *           type: integer
+ *         user:
+ *           $ref: '#/components/schemas/User'
+ */
+
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Connecter un utilisateur
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: admin@example.com
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: password123
+ *     responses:
+ *       200:
+ *         description: Connexion réussie
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Données invalides
+ *       401:
+ *         description: Identifiants incorrects
+ *       403:
+ *         description: Compte ou organisation désactivée
+ */
 // POST /api/auth/login
 router.post('/login', loginLimiter, validate('login'), async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     const result = await pool.query(
       `SELECT u.*, o.name as org_name, o.type as org_type, o.active as org_active 
        FROM users u 
@@ -29,42 +120,42 @@ router.post('/login', loginLimiter, validate('login'), async (req, res) => {
        WHERE LOWER(u.email) = LOWER($1)`,
       [email.trim()]
     );
-    
+
     if (result.rows.length === 0) {
       await bcrypt.hash('dummy', 10); // Timing attack protection
       await logAudit('LOGIN_FAILED', null, null, { email, reason: 'user_not_found' }, req);
       return res.status(401).json({ error: 'Identifiants incorrects' });
     }
-    
+
     const user = result.rows[0];
-    
+
     if (!user.org_active) {
       await logAudit('LOGIN_FAILED', user.id, user.organization_id, { reason: 'org_disabled' }, req);
       return res.status(403).json({ error: 'Organisation désactivée' });
     }
-    
+
     if (!user.active) {
       await logAudit('LOGIN_FAILED', user.id, user.organization_id, { reason: 'user_disabled' }, req);
       return res.status(403).json({ error: 'Compte désactivé' });
     }
-    
+
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
       await logAudit('LOGIN_FAILED', user.id, user.organization_id, { reason: 'wrong_password' }, req);
       return res.status(401).json({ error: 'Identifiants incorrects' });
     }
-    
+
     const accessToken = jwt.sign(
       { id: user.id, organizationId: user.organization_id, role: user.role },
       jwtSecret,
       { expiresIn: accessTokenExpiry }
     );
-    
+
     const refreshToken = generateRefreshToken();
     await saveRefreshToken(user.id, refreshToken);
-    
+
     await logAudit('LOGIN_SUCCESS', user.id, user.organization_id, {}, req);
-    
+
     res.json({
       success: true,
       accessToken,
@@ -85,34 +176,72 @@ router.post('/login', loginLimiter, validate('login'), async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Rafraîchir le token d'accès
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Token rafraîchi avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 accessToken:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
+ *                 expiresIn:
+ *                   type: integer
+ *       401:
+ *         description: Refresh token invalide ou expiré
+ *       403:
+ *         description: Compte désactivé
+ */
 // POST /api/auth/refresh
 router.post('/refresh', validate('refreshToken'), async (req, res) => {
   try {
     const { refreshToken } = req.body;
-    
+
     const tokenData = await validateRefreshToken(refreshToken);
     if (!tokenData) {
       return res.status(401).json({ error: 'Refresh token invalide ou expiré' });
     }
-    
+
     if (!tokenData.active) {
       await revokeRefreshToken(refreshToken);
       return res.status(403).json({ error: 'Compte désactivé' });
     }
-    
+
     await revokeRefreshToken(refreshToken);
-    
+
     const accessToken = jwt.sign(
       { id: tokenData.user_id, organizationId: tokenData.organization_id, role: tokenData.role },
       jwtSecret,
       { expiresIn: accessTokenExpiry }
     );
-    
+
     const newRefreshToken = generateRefreshToken();
     await saveRefreshToken(tokenData.user_id, newRefreshToken);
-    
+
     await logAudit('TOKEN_REFRESH', tokenData.user_id, tokenData.organization_id, {}, req);
-    
+
     res.json({
       success: true,
       accessToken,
@@ -125,6 +254,36 @@ router.post('/refresh', validate('refreshToken'), async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Déconnecter l'utilisateur (révoquer le refresh token)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Déconnexion réussie
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *       401:
+ *         description: Non authentifié
+ */
 // POST /api/auth/logout
 router.post('/logout', authenticate, async (req, res) => {
   try {
@@ -152,6 +311,29 @@ router.post('/logout-all', authenticate, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Obtenir les informations de l'utilisateur connecté
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Informations utilisateur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Non authentifié
+ */
 // GET /api/auth/me
 router.get('/me', authenticate, async (req, res) => {
   try {
@@ -162,7 +344,7 @@ router.get('/me', authenticate, async (req, res) => {
        WHERE u.id = $1`,
       [req.user.id]
     );
-    
+
     const user = result.rows[0];
     res.json({
       success: true,

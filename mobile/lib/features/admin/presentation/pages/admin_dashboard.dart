@@ -46,7 +46,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text('Admin', style: TextStyle(fontSize: 11)),
@@ -312,7 +312,7 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
       children: [
         Container(
           padding: EdgeInsets.all(8),
-          decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
           child: Icon(icon, color: color, size: 20),
         ),
         SizedBox(width: 10),
@@ -325,17 +325,17 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [color, color.withOpacity(0.7)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.7)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 8, offset: Offset(0, 4))],
+        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8, offset: Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.white.withOpacity(0.9), size: 24),
+          Icon(icon, color: Colors.white.withValues(alpha: 0.9), size: 24),
           SizedBox(height: 8),
           Text(value, style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-          Text(title, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12)),
+          Text(title, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12)),
         ],
       ),
     );
@@ -359,7 +359,7 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
       ),
       child: BarChart(
         BarChartData(
@@ -405,7 +405,7 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
               barRods: [
                 BarChartRodData(
                   toY: data['ca'],
-                  color: isToday ? Colors.blue : Colors.blue.withOpacity(0.5),
+                  color: isToday ? Colors.blue : Colors.blue.withValues(alpha: 0.5),
                   width: 28,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(6)),
                 ),
@@ -433,8 +433,8 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8)],
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -466,11 +466,11 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
     return Expanded(
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
         child: Column(
           children: [
             Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
-            Text(label, style: TextStyle(color: color.withOpacity(0.8), fontSize: 9)),
+            Text(label, style: TextStyle(color: color.withValues(alpha: 0.8), fontSize: 9)),
           ],
         ),
       ),
@@ -540,14 +540,14 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Total des dettes', style: TextStyle(color: Colors.white.withOpacity(0.9))),
+                    Text('Total des dettes', style: TextStyle(color: Colors.white.withValues(alpha: 0.9))),
                     Text('${totalDebt.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
                 child: Text('${_debts.length} clients', style: TextStyle(color: Colors.white)),
               ),
             ],
@@ -556,11 +556,11 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
           ...(_debts.take(2).map((d) => Container(
             margin: EdgeInsets.only(top: 8),
             padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: Colors.white.withOpacity(0.3),
+                  backgroundColor: Colors.white.withValues(alpha: 0.3),
                   radius: 16,
                   child: Text((d['name'] ?? 'C')[0], style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),

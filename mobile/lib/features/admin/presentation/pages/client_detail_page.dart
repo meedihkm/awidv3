@@ -3,33 +3,59 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../core/services/cache_service.dart';
 import '../../../../core/services/settings_service.dart';
+import '../../../../core/models/debt_model.dart';
+import '../../../../core/models/packaging_model.dart';
+import '../widgets/record_debt_payment_modal.dart';
 
 class ClientDetailPage extends StatefulWidget {
   final Map<String, dynamic> client;
-  const ClientDetailPage({required this.client});
+  final ApiService? apiService;
+  final CacheService? cacheService;
+  final SettingsService? settingsService;
+  
+  const ClientDetailPage({
+    required this.client, 
+    this.apiService,
+    this.cacheService,
+    this.settingsService,
+    Key? key,
+  }) : super(key: key);
 
   @override
   _ClientDetailPageState createState() => _ClientDetailPageState();
 }
 
 class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerProviderStateMixin {
-  final ApiService _apiService = ApiService();
-  final CacheService _cacheService = CacheService();
-  final SettingsService _settings = SettingsService();
+  late final ApiService _apiService;
+  late final CacheService _cacheService;
+  late final SettingsService _settings;
   late TabController _tabController;
   
   List<dynamic> _orders = [];
   List<dynamic> _deliveries = [];
+  List<dynamic> _debtHistory = [];
   bool _isLoading = true;
   final _notesController = TextEditingController();
   final _addressController = TextEditingController();
+  final _creditLimitController = TextEditingController();
+  CustomerDebt? _customerDebt;
+  double? _creditLimit;
+  List<PackagingBalance> _packagingBalance = [];
+  List<PackagingTransaction> _packagingHistory = [];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _apiService = widget.apiService ?? ApiService();
+    _cacheService = widget.cacheService ?? CacheService();
+    _settings = widget.settingsService ?? SettingsService();
+    _tabController = TabController(length: 4, vsync: this);
     _notesController.text = widget.client['notes'] ?? '';
     _addressController.text = widget.client['address'] ?? '';
+    if (widget.client['credit_limit'] != null) {
+      _creditLimit = (widget.client['credit_limit'] as num).toDouble();
+      _creditLimitController.text = _creditLimit!.toStringAsFixed(0);
+    }
     _loadData();
   }
 
@@ -38,6 +64,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
     _tabController.dispose();
     _notesController.dispose();
     _addressController.dispose();
+    _creditLimitController.dispose();
     super.dispose();
   }
 
@@ -61,10 +88,14 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
       final results = await Future.wait([
         _apiService.getOrders(),
         _apiService.getDeliveries(),
+        _apiService.getCustomerDebt(widget.client['id']),
+        _apiService.getPaymentHistory(customerId: widget.client['id']),
       ]);
       
-      final allOrders = results[0]['data'] as List? ?? [];
-      final allDeliveries = results[1]['data'] as List? ?? [];
+      final allOrders = (results[0] as Map<String, dynamic>)['data'] as List? ?? [];
+      final allDeliveries = (results[1] as Map<String, dynamic>)['data'] as List? ?? [];
+      final debtInfo = results[2] as CustomerDebt?;
+      final paymentHistory = (results[3] as Map<String, dynamic>)['data'] as List? ?? [];
       
       final clientOrders = allOrders.where((o) => o['cafeteriaId'] == widget.client['id']).toList();
       final clientDeliveries = allDeliveries.where((d) {
@@ -82,10 +113,37 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
       setState(() {
         _orders = clientOrders;
         _deliveries = clientDeliveries;
+        _customerDebt = debtInfo;
+        _debtHistory = paymentHistory;
         _isLoading = false;
       });
+      _loadPackaging();
     } catch (e) {
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadPackaging() async {
+    try {
+      final balanceResult = await _apiService.getCustomerPackagingBalance(widget.client['id']);
+      final historyResult = await _apiService.getCustomerPackagingHistory(widget.client['id']);
+      
+      if (mounted) {
+        setState(() {
+          if (balanceResult['success'] == true && balanceResult['data'] != null) {
+            _packagingBalance = (balanceResult['data'] as List)
+                .map((e) => PackagingBalance.fromJson(e))
+                .toList();
+          }
+          if (historyResult['success'] == true && historyResult['data'] != null) {
+            _packagingHistory = (historyResult['data'] as List)
+                .map((e) => PackagingTransaction.fromJson(e))
+                .toList();
+          }
+        });
+      }
+    } catch (e) {
+      // Ignore packaging errors
     }
   }
 
@@ -101,7 +159,9 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
 
   double get _totalOrders => _orders.fold(0.0, (sum, o) => sum + _parseDouble(o['total']));
   
+  // ignore: unused_element
   int get _deliveredCount => _deliveries.where((d) => d['status'] == 'delivered').length;
+  // ignore: unused_element
   int get _failedCount => _deliveries.where((d) => d['status'] == 'failed').length;
 
   double _parseDouble(dynamic v) {
@@ -149,6 +209,68 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
     }
   }
 
+  Future<void> _updateCreditLimit() async {
+    final text = _creditLimitController.text.trim();
+    if (text.isEmpty) {
+      if (_creditLimit != null) {
+        // Supprimer la limite
+        await _performLimitUpdate(null);
+      }
+      return;
+    }
+
+    final limit = double.tryParse(text);
+    if (limit == null || limit < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Montant invalide'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    await _performLimitUpdate(limit);
+  }
+
+  Future<void> _performLimitUpdate(double? limit) async {
+    try {
+      await _apiService.updateCreditLimit(widget.client['id'], limit);
+      setState(() {
+        _creditLimit = limit;
+        widget.client['credit_limit'] = limit; // Update local reference
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Limite de crédit mise à jour'), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  void _showPaymentModal() {
+    if (_customerDebt == null || !_customerDebt!.hasDebt) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ce client n\'a pas de dette'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => RecordDebtPaymentModal(
+        debt: _customerDebt!,
+        onSuccess: () {
+          _loadClientData();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Paiement enregistré'), backgroundColor: Colors.green),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final client = widget.client;
@@ -188,6 +310,9 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
                     // Stats
                     _buildStatsSection(),
                     
+                    // Credit Limit
+                    _buildCreditLimitCard(),
+                    
                     // Alerte dette
                     if (_totalDebt > _settings.debtAlertThreshold)
                       _buildDebtAlert(isBlocked),
@@ -198,6 +323,14 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
                 ),
               ),
             ),
+      floatingActionButton: (_customerDebt?.hasDebt ?? false)
+        ? FloatingActionButton.extended(
+            onPressed: _showPaymentModal,
+            label: Text('Recouvrer'),
+            icon: Icon(Icons.attach_money),
+            backgroundColor: Color(0xFF2E7D32),
+          )
+        : null,
     );
   }
 
@@ -216,7 +349,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
         children: [
           CircleAvatar(
             radius: 40,
-            backgroundColor: Colors.white.withOpacity(0.2),
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
             child: Text(
               (client['name'] ?? 'C')[0].toUpperCase(),
               style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
@@ -257,7 +390,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -352,6 +485,72 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
     );
   }
 
+
+
+  Widget _buildCreditLimitCard() {
+    return Container(
+      margin: EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+               Icon(Icons.credit_card, color: Color(0xFF2E7D32), size: 20),
+               SizedBox(width: 8),
+               Text('Plafond de crédit', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ),
+          SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _creditLimitController,
+                  decoration: InputDecoration(
+                    labelText: 'Limite (DA)',
+                    hintText: 'Vide = Illimité',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    suffixText: 'DA',
+                    isDense: true,
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: _updateCreditLimit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF2E7D32),
+                  foregroundColor: Colors.white,
+                ),
+                child: Text('OK'),
+              ),
+            ],
+          ),
+          if (_creditLimit != null) ...[
+             SizedBox(height: 8),
+             LinearProgressIndicator(
+               value: (_totalDebt / _creditLimit!).clamp(0.0, 1.0),
+               backgroundColor: Colors.grey[200],
+               color: _totalDebt > _creditLimit! ? Colors.red : (_totalDebt > (_creditLimit! * 0.8) ? Colors.orange : Colors.green),
+             ),
+             SizedBox(height: 4),
+             Text(
+               'Utilisé: ${_totalDebt.toStringAsFixed(0)} / ${_creditLimit!.toStringAsFixed(0)} DA (${((_totalDebt/_creditLimit!)*100).toStringAsFixed(1)}%)',
+               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+             ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatsSection() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16),
@@ -373,7 +572,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
       child: Container(
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -426,7 +625,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
       ),
       child: Column(
         children: [
@@ -438,6 +637,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
             tabs: [
               Tab(text: 'Commandes (${_orders.length})'),
               Tab(text: 'Livraisons (${_deliveries.length})'),
+              Tab(text: 'Dette'),
+              Tab(text: 'Consignes'),
             ],
           ),
           SizedBox(
@@ -447,6 +648,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
               children: [
                 _buildOrdersList(),
                 _buildDeliveriesList(),
+                _buildDebtHistoryTab(),
+                _buildPackagingTab(),
               ],
             ),
           ),
@@ -496,7 +699,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
         leading: CircleAvatar(
-          backgroundColor: _getStatusColor(status).withOpacity(0.2),
+          backgroundColor: _getStatusColor(status).withValues(alpha: 0.2),
           child: Text(
             orderNumber != null ? '#$orderNumber' : '#$index',
             style: TextStyle(color: _getStatusColor(status), fontWeight: FontWeight.bold, fontSize: 12),
@@ -627,7 +830,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: _getDeliveryStatusColor(status).withOpacity(0.2),
+                  backgroundColor: _getDeliveryStatusColor(status).withValues(alpha: 0.2),
                   child: Icon(_getDeliveryStatusIcon(status), 
                     color: _getDeliveryStatusColor(status), size: 18),
                 ),
@@ -646,7 +849,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
+                      color: Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text('${collected.toStringAsFixed(0)} DA', 
@@ -680,7 +883,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
               Container(
                 padding: EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -697,7 +900,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
               Container(
                 padding: EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -816,5 +1019,178 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
       }
     }
+  }
+  Widget _buildDebtHistoryTab() {
+    if (_debtHistory.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.history, size: 48, color: Colors.grey[400]),
+            SizedBox(height: 8),
+            Text('Aucun historique de paiement', style: TextStyle(color: Colors.grey[600])),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.all(8),
+      itemCount: _debtHistory.length,
+      itemBuilder: (context, index) {
+        final payment = _debtHistory[index];
+        final date = DateTime.tryParse(payment['created_at'] ?? '');
+        final amount = _parseDouble(payment['amount']);
+        final collectorName = payment['collector_name'] ?? 'Inconnu';
+        final type = payment['payment_type'] ?? 'cash';
+
+        return Card(
+          margin: EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Colors.green.shade50,
+              child: Icon(Icons.payment, color: Colors.green),
+            ),
+            title: Text('${amount.toStringAsFixed(0)} DA', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Par $collectorName le ${_dateFormat(date)}'),
+                if (payment['note'] != null) Text('Note: ${payment['note']}', style: TextStyle(fontStyle: FontStyle.italic)),
+              ],
+            ),
+            trailing: Chip(
+              label: Text(_paymentTypeLabel(type)),
+              backgroundColor: Colors.grey[100],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _dateFormat(DateTime? d) {
+    if (d == null) return '';
+    return '${d.day}/${d.month}/${d.year}';
+  }
+
+  String _paymentTypeLabel(String type) {
+    switch (type) {
+      case 'cash': return 'Espèces';
+      case 'check': return 'Chèque';
+      case 'transfer': return 'Virement';
+      default: return 'Autre';
+    }
+  }
+
+  Widget _buildPackagingTab() {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Balance Summary
+          if (_packagingBalance.isNotEmpty) ...[
+            Card(
+              color: Colors.orange.shade50,
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.inventory_2, color: Colors.orange),
+                        SizedBox(width: 8),
+                        Text('Solde Consignes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    ..._packagingBalance.map((balance) => Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(child: Text(balance.typeName)),
+                          Row(
+                            children: [
+                              Text('Donné: ${balance.totalGiven}', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              SizedBox(width: 8),
+                              Text('Retour: ${balance.totalReturned}', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              SizedBox(width: 12),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: balance.outstanding > 0 ? Colors.orange : Colors.green,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${balance.outstanding}',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 16),
+          ],
+          
+          // History
+          Text('Historique', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          if (_packagingHistory.isEmpty)
+            Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Column(
+                  children: [
+                    Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey[400]),
+                    SizedBox(height: 8),
+                    Text('Aucune transaction', style: TextStyle(color: Colors.grey[600])),
+                  ],
+                ),
+              ),
+            )
+          else
+            ..._packagingHistory.map((tx) => Card(
+              margin: EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: tx.isReturned ? Colors.green.shade50 : Colors.orange.shade50,
+                  child: Icon(
+                    tx.isReturned ? Icons.arrow_downward : Icons.arrow_upward,
+                    color: tx.isReturned ? Colors.green : Colors.orange,
+                  ),
+                ),
+                title: Text(
+                  '${tx.absoluteQuantity} x ${tx.typeName ?? "Consigne"}',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      tx.isReturned ? 'Retourné' : 'Donné',
+                      style: TextStyle(
+                        color: tx.isReturned ? Colors.green : Colors.orange,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(_dateFormat(tx.createdAt), style: TextStyle(fontSize: 12)),
+                    if (tx.note != null && tx.note!.isNotEmpty)
+                      Text('Note: ${tx.note}', style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12)),
+                  ],
+                ),
+              ),
+            )),
+        ],
+      ),
+    );
   }
 }

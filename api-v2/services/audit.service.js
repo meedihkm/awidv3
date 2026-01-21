@@ -5,13 +5,13 @@ const pool = require('../config/database');
  */
 async function logAudit(action, userId, organizationId, details = {}, req = null) {
   try {
-    const ip = req 
-      ? (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown') 
+    const ip = req
+      ? (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown')
       : 'system';
-    const userAgent = req 
-      ? (req.headers['user-agent'] || 'unknown') 
+    const userAgent = req
+      ? (req.headers['user-agent'] || 'unknown')
       : 'system';
-    
+
     await pool.query(
       `INSERT INTO audit_logs (user_id, organization_id, action, details, ip_address, user_agent)
        VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -34,24 +34,45 @@ async function getAuditLogs(organizationId, { limit = 100, offset = 0, action, u
   `;
   const params = [organizationId];
   let paramIndex = 2;
-  
+
   if (action) {
     query += ` AND al.action = $${paramIndex}`;
     params.push(action);
     paramIndex++;
   }
-  
+
   if (userId) {
     query += ` AND al.user_id = $${paramIndex}`;
     params.push(userId);
     paramIndex++;
   }
-  
+
+  /* Count Query */
+  let countQuery = `SELECT COUNT(*) FROM audit_logs al WHERE al.organization_id = $1`;
+  const countParams = [organizationId];
+  let countParamIndex = 2;
+
+  if (action) {
+    countQuery += ` AND al.action = $${countParamIndex}`;
+    countParams.push(action);
+    countParamIndex++;
+  }
+
+  if (userId) {
+    countQuery += ` AND al.user_id = $${countParamIndex}`;
+    countParams.push(userId);
+    countParamIndex++;
+  }
+
+  const countResult = await pool.query(countQuery, countParams);
+  const total = parseInt(countResult.rows[0].count);
+
+  /* Data Query */
   query += ` ORDER BY al.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
   params.push(parseInt(limit), parseInt(offset));
-  
+
   const result = await pool.query(query, params);
-  return result.rows;
+  return { data: result.rows, total };
 }
 
 /**

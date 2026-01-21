@@ -299,7 +299,7 @@ class _DeliveriesPageState extends State<DeliveriesPage> with OptimizedStateMixi
     return Expanded(
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
         child: Column(
           children: [
             Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: color)),
@@ -323,7 +323,7 @@ class _DeliveriesPageState extends State<DeliveriesPage> with OptimizedStateMixi
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _getStatusColor(delivery.status).withOpacity(0.1),
+              color: _getStatusColor(delivery.status).withValues(alpha: 0.1),
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(

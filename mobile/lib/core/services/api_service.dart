@@ -3,13 +3,28 @@ import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
 import '../storage/secure_storage.dart';
 import 'cache_service.dart';
+import '../database/hive_service.dart';
+import '../database/sync_service.dart';
+import '../models/debt_model.dart';
+
+class ApiException implements Exception {
+  final int statusCode;
+  final String message;
+  
+  ApiException(this.statusCode, this.message);
+  
+  @override
+  String toString() => 'ApiException: [$statusCode] $message';
+}
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
+  ApiService.forTesting();
 
   final SecureStorage _storage = SecureStorage();
+  final HiveService _hive = HiveService();
   final CacheService _cache = CacheService();
   bool _isRefreshing = false;
 
@@ -23,6 +38,8 @@ class ApiService {
     }
     return headers;
   }
+
+
 
   // Méthode générique avec auto-refresh du token
   Future<Map<String, dynamic>> _request(
@@ -58,7 +75,7 @@ class ApiService {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return data;
     } else {
-      throw Exception(data['error'] ?? 'Erreur serveur');
+      throw ApiException(response.statusCode, data['error'] ?? 'Erreur serveur');
     }
   }
 
@@ -210,21 +227,42 @@ class ApiService {
   Future<Map<String, dynamic>> updateUserAddress(String userId, String address, {double? latitude, double? longitude}) async => 
     _request('PUT', '${ApiConstants.users}/$userId/address', body: {'address': address, 'latitude': latitude, 'longitude': longitude});
 
+  Future<Map<String, dynamic>> updateCreditLimit(String userId, double? limit) async =>
+      _request('PUT', '${ApiConstants.users}/$userId/credit-limit', body: {'creditLimit': limit});
+
   // ===== ORDERS =====
-  Future<Map<String, dynamic>> getOrders({bool forceRefresh = false}) async {
+  Future<Map<String, dynamic>> getOrders({int page = 1, int limit = 20, bool forceRefresh = false}) async {
+    final cacheKey = 'orders_p${page}_l$limit';
+    
+    // 1. Try Cache if offline or not forced
     if (!forceRefresh) {
-      final cached = await _cache.getCachedOrders();
-      if (cached != null) {
-        return {'success': true, 'data': cached, 'fromCache': true};
+      if (!SyncService().isOnline) {
+        final cached = _hive.getCachedData(cacheKey);
+        if (cached != null) {
+          return {'success': true, 'data': cached, 'fromCache': true};
+        }
       }
     }
-    final result = await _request('GET', ApiConstants.orders);
-    if (result['success'] == true && result['data'] != null) {
-      await _cache.cacheOrders(result['data']);
+
+    try {
+      final result = await _request('GET', '${ApiConstants.orders}?page=$page&limit=$limit');
+      if (result['success'] == true && result['data'] != null) {
+        await _hive.cacheData(cacheKey, result['data']);
+        // Also cache first page as generic 'orders'
+        if (page == 1) await _hive.cacheData('orders', result['data']);
+      }
+      return result;
+    } catch (e) {
+      // If request failed (and we checked online status earlier but maybe it failed mid-flight), try cache
+      final cached = _hive.getCachedData(cacheKey);
+      if (cached != null) {
+        return {'success': true, 'data': cached, 'fromCache': true, 'offline': true};
+      }
+      rethrow;
     }
-    return result;
   }
-  Future<Map<String, dynamic>> getMyOrders() async => _request('GET', ApiConstants.myOrders);
+  Future<Map<String, dynamic>> getMyOrders({int page = 1, int limit = 20}) async => 
+      _request('GET', '${ApiConstants.myOrders}?page=$page&limit=$limit');
   Future<Map<String, dynamic>> createOrder(Map<String, dynamic> order) async {
     final result = await _request('POST', ApiConstants.orders, body: order);
     await _cache.clearCache('cache_orders');
@@ -248,15 +286,15 @@ class ApiService {
   }
 
   // ===== DELIVERIES =====
-  Future<Map<String, dynamic>> getDeliveries({bool forceRefresh = false}) async {
-    if (!forceRefresh) {
+  Future<Map<String, dynamic>> getDeliveries({int page = 1, int limit = 20, bool forceRefresh = false}) async {
+    if (!forceRefresh && page == 1) {
       final cached = await _cache.getCachedDeliveries();
       if (cached != null) {
         return {'success': true, 'data': cached, 'fromCache': true};
       }
     }
-    final result = await _request('GET', ApiConstants.deliveries);
-    if (result['success'] == true && result['data'] != null) {
+    final result = await _request('GET', '${ApiConstants.deliveries}?page=$page&limit=$limit');
+    if (result['success'] == true && result['data'] != null && page == 1) {
       await _cache.cacheDeliveries(result['data']);
     }
     return result;
@@ -306,4 +344,100 @@ class ApiService {
     if (action != null) url += '&action=$action';
     return _request('GET', url);
   }
+
+  // ===== DEBT (Feature 1) =====
+  Future<CustomerDebt?> getCustomerDebt(String customerId) async {
+    try {
+      final result = await _request('GET', '${ApiConstants.debtBase}/customers/$customerId/debt');
+      return CustomerDebt.fromJson(result);
+    } catch (e) {
+      if (e is ApiException && e.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> getUnpaidOrders(String customerId) async {
+    final result = await _request('GET', '${ApiConstants.debtBase}/customers/$customerId/unpaid-orders');
+    return result as List;
+  }
+
+  Future<Map<String, dynamic>> getDebtsList({
+    String sort = 'amount_desc',
+    double minDebt = 0,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    return _request('GET', '${ApiConstants.debtBase}/debts?sort=$sort&min_debt=$minDebt&page=$page&limit=$limit');
+  }
+
+  Future<Map<String, dynamic>> recordDebtPayment(Map<String, dynamic> paymentData) async {
+    final result = await _request('POST', '${ApiConstants.debtBase}/debt-payments', body: paymentData);
+    // Invalider cache (optionnel si utilisé pour getDebts)
+    return result;
+  }
+
+  Future<Map<String, dynamic>> getPaymentHistory({
+    String? customerId,
+    String? collectorId,
+    String? from,
+    String? to,
+    int page = 1,
+    int limit = 50
+  }) async {
+    String query = 'page=$page&limit=$limit';
+    if (customerId != null) query += '&customer_id=$customerId';
+    if (collectorId != null) query += '&collector_id=$collectorId';
+    if (from != null) query += '&from=$from';
+    if (to != null) query += '&to=$to';
+    
+    return _request('GET', '${ApiConstants.debtBase}/debt-payments?$query');
+  }
+
+  // ===== PACKAGING (Feature 3) =====
+  Future<Map<String, dynamic>> getPackagingTypes() async => 
+      _request('GET', '${ApiConstants.baseUrl}/packaging/types');
+
+  Future<Map<String, dynamic>> createPackagingType(Map<String, dynamic> data) async =>
+      _request('POST', '${ApiConstants.baseUrl}/packaging/types', body: data);
+
+  Future<Map<String, dynamic>> updatePackagingType(String id, Map<String, dynamic> data) async =>
+      _request('PUT', '${ApiConstants.baseUrl}/packaging/types/$id', body: data);
+
+  Future<Map<String, dynamic>> getCustomerPackagingBalance(String customerId) async =>
+      _request('GET', '${ApiConstants.baseUrl}/packaging/customers/$customerId/balance');
+
+  Future<Map<String, dynamic>> getCustomerPackagingHistory(String customerId, {int limit = 50, int offset = 0}) async =>
+      _request('GET', '${ApiConstants.baseUrl}/packaging/customers/$customerId/history?limit=$limit&offset=$offset');
+
+  Future<Map<String, dynamic>> recordPackagingDeposit(Map<String, dynamic> data) async =>
+      _request('POST', '${ApiConstants.baseUrl}/packaging/deposits', body: data);
+
+  Future<Map<String, dynamic>> getPackagingSummary() async =>
+      _request('GET', '${ApiConstants.baseUrl}/packaging/summary');
+
+  // ===== RECURRING ORDERS (Feature 4) =====
+  Future<Map<String, dynamic>> getRecurringOrders() async =>
+      _request('GET', '${ApiConstants.baseUrl}/recurring');
+
+  Future<Map<String, dynamic>> getRecurringOrderById(String id) async =>
+      _request('GET', '${ApiConstants.baseUrl}/recurring/$id');
+
+  Future<Map<String, dynamic>> createRecurringOrder(Map<String, dynamic> data) async =>
+      _request('POST', '${ApiConstants.baseUrl}/recurring', body: data);
+
+  Future<Map<String, dynamic>> updateRecurringOrder(String id, Map<String, dynamic> data) async =>
+      _request('PUT', '${ApiConstants.baseUrl}/recurring/$id', body: data);
+
+  Future<Map<String, dynamic>> deleteRecurringOrder(String id) async =>
+      _request('DELETE', '${ApiConstants.baseUrl}/recurring/$id');
+
+  Future<Map<String, dynamic>> toggleRecurringOrder(String id) async =>
+      _request('POST', '${ApiConstants.baseUrl}/recurring/$id/toggle');
+
+  Future<Map<String, dynamic>> getAdminRecurringOrders({bool? active}) async {
+    String query = '';
+    if (active != null) query = '?active=$active';
+    return _request('GET', '${ApiConstants.baseUrl}/recurring/admin/all$query');
+  }
 }
+

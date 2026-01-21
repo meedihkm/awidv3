@@ -1,8 +1,12 @@
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
+const compression = require('compression');
 
+// Security configurations
 const corsOptions = require('./config/cors');
+const { corsErrorHandler } = require('./config/cors');
+const { securityMiddleware, additionalSecurityHeaders } = require('./config/security');
+const httpsRedirect = require('./middleware/httpsRedirect');
 const { globalLimiter } = require('./middleware/rateLimit');
 
 // Routes
@@ -13,29 +17,98 @@ const ordersRoutes = require('./routes/orders.routes');
 const deliveriesRoutes = require('./routes/deliveries.routes');
 const organizationRoutes = require('./routes/organization.routes');
 const superAdminRoutes = require('./routes/superAdmin.routes');
+const debtRoutes = require('./routes/debt.routes');
+const packagingRoutes = require('./routes/packaging.routes');
+const recurringRoutes = require('./routes/recurring.routes');
+
+const { initSentry, Sentry } = require('./config/sentry');
+const logger = require('./config/logger');
+const { requestLogger } = require('./config/logger');
+const { metricsMiddleware, metricsEndpoint } = require('./middleware/metrics.middleware');
+const healthRoutes = require('./routes/health.routes');
 
 const app = express();
+
+// 0. Initialiser Sentry
+initSentry(app);
 
 // Trust proxy pour Vercel
 app.set('trust proxy', 1);
 
-// Middleware sécurité
-app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false
+// ============================================
+// SECURITY MIDDLEWARE (ordre important)
+// ============================================
+
+// 1. Sentry Request Handler (doit être le premier middleware)
+app.use(Sentry.Handlers.requestHandler());
+app.use(Sentry.Handlers.tracingHandler());
+
+// 2. Redirection HTTPS en production
+app.use(httpsRedirect);
+
+// 3. Headers de sécurité Helmet (CSP, HSTS, etc.)
+app.use(securityMiddleware);
+
+// 4. Headers de sécurité additionnels
+app.use(additionalSecurityHeaders);
+
+// 5. CORS
+app.use(cors(corsOptions));
+app.use(corsErrorHandler);
+
+// 6. Compression Gzip (Level 6 balance speed/size, threshold 1KB)
+app.use(compression({
+  level: 6,
+  threshold: 1024,
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  }
 }));
 
-app.use(cors(corsOptions));
+// 7. Servir les fichiers statiques (Uploads) avec Cache-Control agressif pour CDN
+app.use('/uploads', express.static('uploads', {
+  maxAge: '1y',
+  immutable: true,
+  setHeaders: (res, path) => {
+    if (path.endsWith('.webp')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }
+}));
+
+// 6. Metrics RED (Prometheus) - Avant body parsing pour capturer tout
+app.use(metricsMiddleware);
+
+// 7. Body parsing avec limite
 app.use(express.json({ limit: '1mb' }));
+
+// 8. Logger structuré (Winston)
+app.use(requestLogger);
+
+// 9. Rate limiting global
 app.use('/api/', globalLimiter);
 
-// Routes publiques
+
+// Routes publiques (Monitoring)
 app.get('/', (req, res) => {
   res.json({ status: 'ok', version: '2.0.0', name: 'Awid API', timestamp: new Date().toISOString() });
 });
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '2.0.0', timestamp: new Date().toISOString() });
+app.use('/api/health', healthRoutes); // /health, /health/live, /health/ready
+app.get('/metrics', metricsEndpoint); // Endpoint Prometheus
+
+// Documentation API (Swagger)
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./config/swagger');
+// Serve Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: "Awid API Documentation"
+}));
+app.get('/api-docs-json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpecs);
 });
 
 // Routes API
@@ -47,10 +120,37 @@ app.use('/api/deliveries', deliveriesRoutes);
 app.use('/api/deliverers', deliveriesRoutes); // Alias pour compatibilité
 app.use('/api/organization', organizationRoutes);
 app.use('/api/financial', organizationRoutes); // Routes financières dans organization
+app.use('/api/debt', debtRoutes); // Routes de gestion de la dette
+app.use('/api/packaging', packagingRoutes); // Routes de gestion des consignes
+app.use('/api/recurring', recurringRoutes); // Routes commandes récurrentes
 app.use('/api/audit-logs', organizationRoutes); // Routes audit dans organization
+// BullMQ & Bull Board
+const { createBullBoard } = require('@bull-board/api');
+const { BullMQAdapter } = require('@bull-board/api/bullMQAdapter');
+const { ExpressAdapter } = require('@bull-board/express');
+
+// Queues & Workers
+const { queues } = require('./queues');
+const { initWorkers } = require('./workers');
+
+// Démarrer les workers
+initWorkers();
+
+// Setup Bull Board Dashboard
+const serverAdapter = new ExpressAdapter();
+serverAdapter.setBasePath('/api/admin/queues');
+
+createBullBoard({
+  queues: queues.map(q => new BullMQAdapter(q)),
+  serverAdapter: serverAdapter,
+});
+
+app.use('/api/admin/queues', serverAdapter.getRouter());
+
 app.use('/api/super-admin', superAdminRoutes);
 
 // Page Super Admin HTML (inline pour Vercel serverless)
+// Note: Sentry.Handlers.tracingHandler ne trace pas les chaînes HTML brutes via send()
 app.get('/api/admin', (req, res) => {
   res.setHeader('Content-Type', 'text/html');
   res.send(`<!DOCTYPE html>
@@ -148,10 +248,26 @@ app.use('/api/*', (req, res) => {
   res.status(404).json({ error: 'Route non trouvée' });
 });
 
-// Error handler
+// The Sentry error handler must be before any other error middleware and after all controllers
+app.use(Sentry.Handlers.errorHandler());
+
+// Custom Error handler
 app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  res.status(500).json({ error: 'Erreur serveur interne' });
+  // Logger l'erreur avec Winston (avec stacktrace complet)
+  logger.error(err.message, {
+    stack: err.stack,
+    url: req.originalUrl,
+    method: req.method,
+    requestId: req.headers['x-request-id']
+  });
+
+  // Réponse client sans stacktrace (sauf Sentry ID si disponible)
+  const response = {
+    error: 'Erreur serveur interne',
+    requestId: res.sentry // ID d'erreur Sentry pour le support
+  };
+
+  res.status(500).json(response);
 });
 
 module.exports = app;

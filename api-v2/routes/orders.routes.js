@@ -6,63 +6,168 @@ const { authenticate, requireAdmin, requireKitchen } = require('../middleware/au
 const { validate, validateUUID } = require('../middleware/validate');
 const { logAudit } = require('../services/audit.service');
 const { getOrderItems, getOrderWithItems, formatOrder } = require('../services/order.service');
+const { getPagination, getPagingData } = require('../utils/pagination.helper');
 
+/**
+ * @swagger
+ * tags:
+ *   name: Orders
+ *   description: Gestion des commandes (création, suivi, cuisine)
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     OrderItem:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         productId:
+ *           type: string
+ *           format: uuid
+ *         productName:
+ *           type: string
+ *         quantity:
+ *           type: integer
+ *         price:
+ *           type: number
+ *           format: float
+ *     Order:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         orderNumber:
+ *           type: integer
+ *         status:
+ *           type: string
+ *           enum: [pending, validated, locked, preparing, ready, in_delivery, delivered, cancelled]
+ *         total:
+ *           type: number
+ *           format: float
+ *         date:
+ *           type: string
+ *           format: date-time
+ *         items:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/OrderItem'
+ *         cafeteria:
+ *           type: object
+ *           properties:
+ *             name: 
+ *               type: string
+ *             phone: 
+ *               type: string
+ */
+
+/**
+ * @swagger
+ * /orders:
+ *   get:
+ *     summary: Lister les commandes (Admin/Manager)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Numéro de page (défaut 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Nombre d'éléments par page (défaut 50)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: Filtrer par statut
+ *     responses:
+ *       200:
+ *         description: Liste des commandes paginée
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Order'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ */
 // GET /api/orders (avec pagination optionnelle)
 router.get('/', authenticate, async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = Math.min(parseInt(req.query.limit) || 50, 100); // Max 100
-    const offset = (page - 1) * limit;
+    const { page, limit, offset } = getPagination(req.query, 50);
     const status = req.query.status; // Filtre optionnel par statut
-    
+
     // Construire la requête avec filtres
     let whereClause = 'WHERE o.organization_id = $1';
     const params = [req.user.organization_id];
-    
+
     if (status && status !== 'all') {
       params.push(status);
       whereClause += ` AND o.status = $${params.length}`;
     }
-    
+
     // Compter le total
     const countResult = await pool.query(
       `SELECT COUNT(*) FROM orders o ${whereClause}`,
       params
     );
     const total = parseInt(countResult.rows[0].count);
-    
-    // Récupérer les commandes avec pagination
+
+    // Récupérer les commandes avec pagination et items en une seule requête (Optimisation N+1)
     const result = await pool.query(
-      `SELECT o.*, u.name as cafeteria_name, u.phone as cafeteria_phone
+      `SELECT o.*, 
+              u.name as cafeteria_name, u.phone as cafeteria_phone,
+              COALESCE(
+                json_agg(
+                  json_build_object(
+                    'id', oi.id,
+                    'productId', oi.product_id,
+                    'productName', oi.product_name,
+                    'quantity', oi.quantity,
+                    'price', oi.price
+                  )
+                ) FILTER (WHERE oi.id IS NOT NULL), 
+                '[]'
+              ) as items
        FROM orders o 
        JOIN users u ON o.cafeteria_id = u.id 
+       LEFT JOIN order_items oi ON o.id = oi.order_id
        ${whereClause}
+       GROUP BY o.id, u.id
        ORDER BY o.created_at DESC
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, offset]
     );
-    
-    const orders = [];
-    for (const order of result.rows) {
-      const items = await getOrderItems(order.id);
-      orders.push(formatOrder(order, items, { 
-        id: order.cafeteria_id, 
+
+    const orders = result.rows.map(order =>
+      formatOrder(order, order.items, {
+        id: order.cafeteria_id,
         name: order.cafeteria_name,
-        phone: order.cafeteria_phone 
-      }));
-    }
-    
-    res.json({ 
-      success: true, 
-      data: orders,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-        hasMore: page * limit < total
-      }
-    });
+        phone: order.cafeteria_phone
+      })
+    );
+
+    res.json(getPagingData(orders, total, page, limit));
   } catch (error) {
     console.error('Orders error:', error);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -76,13 +181,13 @@ router.get('/my', authenticate, async (req, res) => {
       `SELECT * FROM orders WHERE cafeteria_id = $1 ORDER BY created_at DESC`,
       [req.user.id]
     );
-    
+
     const orders = [];
     for (const order of result.rows) {
       const items = await getOrderItems(order.id);
       orders.push(formatOrder(order, items));
     }
-    
+
     res.json({ success: true, data: orders });
   } catch (error) {
     console.error('My orders error:', error);
@@ -90,6 +195,19 @@ router.get('/my', authenticate, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /orders/kitchen:
+ *   get:
+ *     summary: Liste des commandes en cours pour la cuisine
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     description: Retourne les commandes aux statuts 'validated' et 'preparing', triées par priorité.
+ *     responses:
+ *       200:
+ *         description: Liste des commandes cuisine
+ */
 // GET /api/orders/kitchen
 router.get('/kitchen', authenticate, requireKitchen, async (req, res) => {
   try {
@@ -103,7 +221,7 @@ router.get('/kitchen', authenticate, requireKitchen, async (req, res) => {
          o.created_at ASC`,
       [req.user.organization_id]
     );
-    
+
     const orders = [];
     for (const order of result.rows) {
       const items = await getOrderItems(order.id);
@@ -116,14 +234,14 @@ router.get('/kitchen', authenticate, requireKitchen, async (req, res) => {
         status: order.status,
         createdAt: order.created_at,
         items,
-        cafeteria: { 
-          id: order.cafeteria_id, 
+        cafeteria: {
+          id: order.cafeteria_id,
           name: order.cafeteria_name,
           phone: order.cafeteria_phone
         }
       });
     }
-    
+
     res.json({ success: true, data: orders });
   } catch (error) {
     console.error('Kitchen orders error:', error);
@@ -131,12 +249,55 @@ router.get('/kitchen', authenticate, requireKitchen, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /orders:
+ *   post:
+ *     summary: Créer une nouvelle commande (Cafétéria)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - items
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     productId:
+ *                       type: string
+ *                       format: uuid
+ *                     quantity:
+ *                       type: integer
+ *                       minimum: 1
+ *     responses:
+ *       200:
+ *         description: Commande créée
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/Order'
+ *       400:
+ *         description: Stock insuffisant ou données invalides
+ */
 // POST /api/orders
 router.post('/', authenticate, validate('createOrder'), async (req, res) => {
   try {
     const { items } = req.body;
     const clientId = req.user.id;
-    
+
     let total = 0;
     for (const item of items) {
       const product = await pool.query('SELECT price FROM products WHERE id = $1', [item.productId]);
@@ -144,11 +305,11 @@ router.post('/', authenticate, validate('createOrder'), async (req, res) => {
         total += product.rows[0].price * item.quantity;
       }
     }
-    
+
     if (total === 0) {
       return res.status(400).json({ error: 'Aucun produit valide trouvé' });
     }
-    
+
     // Générer numéro de commande séquentiel
     const seqResult = await pool.query(
       `INSERT INTO order_sequences (organization_id, last_number) 
@@ -159,15 +320,15 @@ router.post('/', authenticate, validate('createOrder'), async (req, res) => {
       [req.user.organization_id]
     );
     const orderNumber = seqResult.rows[0].last_number;
-    
+
     const orderResult = await pool.query(
       `INSERT INTO orders (organization_id, cafeteria_id, date, total, status, payment_status, amount_paid, order_number) 
        VALUES ($1, $2, NOW(), $3, 'pending', 'unpaid', 0, $4) RETURNING *`,
       [req.user.organization_id, clientId, total, orderNumber]
     );
-    
+
     const order = orderResult.rows[0];
-    
+
     for (const item of items) {
       const product = await pool.query('SELECT price FROM products WHERE id = $1', [item.productId]);
       if (product.rows.length > 0) {
@@ -177,9 +338,12 @@ router.post('/', authenticate, validate('createOrder'), async (req, res) => {
         );
       }
     }
-    
+
     await logAudit('ORDER_CREATED', req.user.id, req.user.organization_id, { orderId: order.id, total }, req);
-    
+
+    // Vérifier limite de crédit
+    await require('../services/credit.service').checkAndNotify(req.user.id, req.user.organization_id);
+
     const orderItems = await getOrderItems(order.id);
     res.json({ success: true, data: { ...order, items: orderItems } });
   } catch (error) {
@@ -192,18 +356,18 @@ router.post('/', authenticate, validate('createOrder'), async (req, res) => {
 router.put('/:id', authenticate, validateUUID('id'), validate('updateOrder'), async (req, res) => {
   try {
     const { items } = req.body;
-    
+
     const orderCheck = await pool.query(
       `SELECT * FROM orders WHERE id = $1 AND cafeteria_id = $2 AND status = 'pending'`,
       [req.params.id, req.user.id]
     );
-    
+
     if (orderCheck.rows.length === 0) {
       return res.status(403).json({ error: 'Commande non modifiable' });
     }
-    
+
     await pool.query('DELETE FROM order_items WHERE order_id = $1', [req.params.id]);
-    
+
     let total = 0;
     for (const item of items) {
       const product = await pool.query('SELECT price FROM products WHERE id = $1', [item.productId]);
@@ -216,11 +380,14 @@ router.put('/:id', authenticate, validateUUID('id'), validate('updateOrder'), as
         );
       }
     }
-    
+
     await pool.query('UPDATE orders SET total = $1, updated_at = NOW() WHERE id = $2', [total, req.params.id]);
-    
+
     await logAudit('ORDER_UPDATED', req.user.id, req.user.organization_id, { orderId: req.params.id, total }, req);
-    
+
+    // Vérifier limite de crédit
+    await require('../services/credit.service').checkAndNotify(req.user.id, req.user.organization_id);
+
     const updatedItems = await getOrderItems(req.params.id);
     res.json({ success: true, data: { id: req.params.id, total, items: updatedItems } });
   } catch (error) {
@@ -236,18 +403,18 @@ router.put('/:id/lock', authenticate, requireAdmin, validateUUID('id'), async (r
       'SELECT kitchen_mode FROM organizations WHERE id = $1',
       [req.user.organization_id]
     );
-    
+
     const kitchenMode = orgResult.rows[0]?.kitchen_mode || false;
     const newStatus = kitchenMode ? 'validated' : 'locked';
-    
+
     await pool.query(
       `UPDATE orders SET status = $1, locked_at = NOW() 
        WHERE id = $2 AND organization_id = $3 AND status = 'pending'`,
       [newStatus, req.params.id, req.user.organization_id]
     );
-    
+
     await logAudit('ORDER_LOCKED', req.user.id, req.user.organization_id, { orderId: req.params.id, newStatus }, req);
-    
+
     res.json({ success: true, status: newStatus });
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
@@ -258,26 +425,26 @@ router.put('/:id/lock', authenticate, requireAdmin, validateUUID('id'), async (r
 router.post('/:id/assign', authenticate, requireAdmin, validateUUID('id'), validate('assignDeliverer'), async (req, res) => {
   try {
     const { delivererId } = req.body;
-    
+
     const orderCheck = await pool.query(
       `SELECT * FROM orders WHERE id = $1 AND organization_id = $2 AND status IN ('locked', 'ready')`,
       [req.params.id, req.user.organization_id]
     );
-    
+
     if (orderCheck.rows.length === 0) {
       return res.status(400).json({ error: 'Commande non prête pour assignation' });
     }
-    
+
     const deliveryResult = await pool.query(
       `INSERT INTO deliveries (organization_id, order_id, deliverer_id, status) 
        VALUES ($1, $2, $3, 'assigned') RETURNING *`,
       [req.user.organization_id, req.params.id, delivererId]
     );
-    
+
     await pool.query(`UPDATE orders SET status = 'in_delivery' WHERE id = $1`, [req.params.id]);
-    
+
     await logAudit('ORDER_ASSIGNED', req.user.id, req.user.organization_id, { orderId: req.params.id, delivererId }, req);
-    
+
     res.json({ success: true, data: deliveryResult.rows[0] });
   } catch (error) {
     console.error('Assign error:', error);
@@ -289,32 +456,32 @@ router.post('/:id/assign', authenticate, requireAdmin, validateUUID('id'), valid
 router.put('/:id/kitchen-status', authenticate, requireKitchen, validateUUID('id'), validate('kitchenStatus'), async (req, res) => {
   try {
     const { status } = req.body;
-    
+
     const orderCheck = await pool.query(
       `SELECT status FROM orders WHERE id = $1 AND organization_id = $2`,
       [req.params.id, req.user.organization_id]
     );
-    
+
     if (orderCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Commande non trouvée' });
     }
-    
+
     const currentStatus = orderCheck.rows[0].status;
-    
+
     if (status === 'preparing' && currentStatus !== 'validated') {
       return res.status(400).json({ error: 'La commande doit être validée pour commencer la préparation' });
     }
     if (status === 'ready' && currentStatus !== 'preparing') {
       return res.status(400).json({ error: 'La commande doit être en préparation pour être marquée prête' });
     }
-    
+
     await pool.query(
       `UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`,
       [status, req.params.id]
     );
-    
+
     await logAudit('ORDER_KITCHEN_STATUS', req.user.id, req.user.organization_id, { orderId: req.params.id, status }, req);
-    
+
     res.json({ success: true });
   } catch (error) {
     console.error('Kitchen status error:', error);

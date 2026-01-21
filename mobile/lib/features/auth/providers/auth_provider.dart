@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/storage/secure_storage.dart';
+import '../../../core/services/notification_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -40,6 +41,12 @@ class AuthProvider with ChangeNotifier {
         
         _user = userData;
         _isLoading = false;
+        
+        // Connecter OneSignal
+        if (userData != null && userData['id'] != null) {
+          NotificationService.login(userData['id']);
+        }
+        
         notifyListeners();
         return true;
       }

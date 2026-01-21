@@ -33,7 +33,7 @@ class OrdersProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> lockOrder(int orderId) async {
+  Future<bool> lockOrder(String orderId) async {
     try {
       await _apiService.lockOrder(orderId);
       await loadOrders(); // Refresh the list
@@ -45,7 +45,7 @@ class OrdersProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> assignDeliverer(int orderId, int delivererId) async {
+  Future<bool> assignDeliverer(String orderId, String delivererId) async {
     try {
       await _apiService.assignDeliverer(orderId, delivererId);
       await loadOrders(); // Refresh the list

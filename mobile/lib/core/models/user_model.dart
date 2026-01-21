@@ -6,6 +6,7 @@ class User {
   final String organizationId;
   final Organization organization;
   final String? phone;
+  final double? creditLimit;
 
   User({
     required this.id,
@@ -15,6 +16,7 @@ class User {
     required this.organizationId,
     required this.organization,
     this.phone,
+    this.creditLimit,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class User {
       organizationId: json['organizationId']?.toString() ?? '',
       organization: Organization.fromJson(json['organization'] ?? {}),
       phone: json['phone'],
+      creditLimit: (json['credit_limit'] as num?)?.toDouble(),
     );
   }
 
@@ -38,6 +41,7 @@ class User {
       'organizationId': organizationId,
       'organization': organization.toJson(),
       'phone': phone,
+      'credit_limit': creditLimit,
     };
   }
 

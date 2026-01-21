@@ -115,7 +115,7 @@ class _ProductsPageState extends State<ProductsPage> {
       onTap: onTap,
       child: Column(
         children: [
-          Container(padding: EdgeInsets.all(16), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(16)), child: Icon(icon, color: color, size: 32)),
+          Container(padding: EdgeInsets.all(16), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)), child: Icon(icon, color: color, size: 32)),
           SizedBox(height: 8),
           Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w500)),
         ],
@@ -463,7 +463,7 @@ class _ProductsPageState extends State<ProductsPage> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.white.withOpacity(0.3) : Colors.blue.withOpacity(0.1),
+                color: isSelected ? Colors.white.withValues(alpha: 0.3) : Colors.blue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text('$count', style: TextStyle(color: isSelected ? Colors.white : Colors.blue, fontSize: 12, fontWeight: FontWeight.bold)),
@@ -562,7 +562,7 @@ class _ProductsPageState extends State<ProductsPage> {
             Positioned(top: 8, right: 8, child: Container(padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: product.active ? Colors.green : Colors.red, borderRadius: BorderRadius.circular(12)), child: Text(product.active ? 'Actif' : 'Inactif', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))),
             // Badge catégorie
             if (product.category != null)
-              Positioned(top: 8, left: 8, child: Container(padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.blue.withOpacity(0.9), borderRadius: BorderRadius.circular(12)), child: Text(product.category!, style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))),
+              Positioned(top: 8, left: 8, child: Container(padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(12)), child: Text(product.category!, style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))),
             // Badges Nouveau / Promo
             Positioned(
               bottom: 8,

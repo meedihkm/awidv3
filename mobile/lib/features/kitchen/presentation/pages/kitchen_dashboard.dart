@@ -105,7 +105,7 @@ class _KitchenDashboardState extends State<KitchenDashboard> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text('Atelier', style: TextStyle(fontSize: 12)),
@@ -210,9 +210,9 @@ class _KitchenDashboardState extends State<KitchenDashboard> {
       child: Container(
         padding: EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -240,7 +240,7 @@ class _KitchenDashboardState extends State<KitchenDashboard> {
       children: [
         Container(
           padding: EdgeInsets.all(8),
-          decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
           child: Icon(icon, color: color, size: 20),
         ),
         SizedBox(width: 10),
@@ -268,7 +268,7 @@ class _KitchenDashboardState extends State<KitchenDashboard> {
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(

@@ -80,7 +80,7 @@ class _LoginPageState extends State<LoginPage> {
                         Container(
                           padding: EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Color(0xFF2E7D32).withOpacity(0.1),
+                            color: Color(0xFF2E7D32).withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(

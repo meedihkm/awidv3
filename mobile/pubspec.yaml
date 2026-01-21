@@ -52,10 +52,24 @@ dependencies:
   # Cached images
   cached_network_image: ^3.4.1
 
+  # Monitoring Sentry
+  sentry_flutter: ^8.0.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  connectivity_plus: ^6.1.5
+  internet_connection_checker: ^3.0.1
+  onesignal_flutter: ^5.3.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  
+  # Testing
+  mockito: ^5.4.4
+  build_runner: ^2.4.13
+  golden_toolkit: ^0.15.0
+  mocktail: ^1.0.4
 
 flutter:
   uses-material-design: true

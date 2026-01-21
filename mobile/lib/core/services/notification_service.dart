@@ -1,136 +1,96 @@
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/material.dart';
 
+/// Model for in-app notifications (separate from push notifications)
 class AppNotification {
   final String id;
   final String title;
   final String message;
-  final String type; // order, delivery, debt, system
+  final IconData icon;
+  final Color color;
   final DateTime createdAt;
-  final bool isRead;
-  final Map<String, dynamic>? data;
+  bool isRead;
 
   AppNotification({
     required this.id,
     required this.title,
     required this.message,
-    required this.type,
-    required this.createdAt,
+    this.icon = Icons.notifications,
+    this.color = Colors.blue,
+    DateTime? createdAt,
     this.isRead = false,
-    this.data,
-  });
-
-  IconData get icon {
-    switch (type) {
-      case 'order': return Icons.shopping_cart;
-      case 'delivery': return Icons.local_shipping;
-      case 'debt': return Icons.warning;
-      case 'payment': return Icons.payments;
-      default: return Icons.notifications;
-    }
-  }
-
-  Color get color {
-    switch (type) {
-      case 'order': return Colors.blue;
-      case 'delivery': return Colors.orange;
-      case 'debt': return Colors.red;
-      case 'payment': return Colors.green;
-      default: return Colors.grey;
-    }
-  }
+  }) : createdAt = createdAt ?? DateTime.now();
 }
 
-class NotificationService extends ChangeNotifier {
-  static final NotificationService _instance = NotificationService._internal();
-  factory NotificationService() => _instance;
-  NotificationService._internal();
+class NotificationService {
+  static const String appId = "YOUR_ONESIGNAL_APP_ID"; // À remplacer par la vraie valeur ou config
 
+  // In-app notifications list
   final List<AppNotification> _notifications = [];
+  List<AppNotification> get notifications => _notifications;
   
-  List<AppNotification> get notifications => List.unmodifiable(_notifications);
   int get unreadCount => _notifications.where((n) => !n.isRead).length;
 
   void addNotification(AppNotification notification) {
     _notifications.insert(0, notification);
-    notifyListeners();
   }
 
   void markAsRead(String id) {
     final index = _notifications.indexWhere((n) => n.id == id);
     if (index != -1) {
-      _notifications[index] = AppNotification(
-        id: _notifications[index].id,
-        title: _notifications[index].title,
-        message: _notifications[index].message,
-        type: _notifications[index].type,
-        createdAt: _notifications[index].createdAt,
-        isRead: true,
-        data: _notifications[index].data,
-      );
-      notifyListeners();
+      _notifications[index].isRead = true;
     }
   }
 
   void markAllAsRead() {
-    for (int i = 0; i < _notifications.length; i++) {
-      if (!_notifications[i].isRead) {
-        _notifications[i] = AppNotification(
-          id: _notifications[i].id,
-          title: _notifications[i].title,
-          message: _notifications[i].message,
-          type: _notifications[i].type,
-          createdAt: _notifications[i].createdAt,
-          isRead: true,
-          data: _notifications[i].data,
-        );
-      }
+    for (var n in _notifications) {
+      n.isRead = true;
     }
-    notifyListeners();
   }
 
   void clearAll() {
     _notifications.clear();
-    notifyListeners();
   }
 
-  // Notifications prédéfinies
-  void notifyNewOrder(String clientName, double total) {
-    addNotification(AppNotification(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: 'Nouvelle commande',
-      message: '$clientName - ${total.toStringAsFixed(0)} DA',
-      type: 'order',
-      createdAt: DateTime.now(),
-    ));
+  static Future<void> init() async {
+    // Verbose logging set to help debug issues, remove in production
+    OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+
+    // Initialize OneSignal
+    // NOTE: Replace with your App ID from settings > Keys & IDs
+    // Idéalement via dotenv mais hardcodable dans le code source si nécessaire pour démo
+    OneSignal.initialize(appId);
+
+    // Request permission
+    await OneSignal.Notifications.requestPermission(true);
   }
 
-  void notifyDeliveryComplete(String clientName) {
-    addNotification(AppNotification(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: 'Livraison effectuée',
-      message: 'Commande livrée à $clientName',
-      type: 'delivery',
-      createdAt: DateTime.now(),
-    ));
+  static Future<void> login(String userId) async {
+    await OneSignal.login(userId);
   }
 
-  void notifyDeliveryFailed(String clientName, String reason) {
-    addNotification(AppNotification(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: 'Livraison échouée',
-      message: '$clientName - $reason',
-      type: 'delivery',
-      createdAt: DateTime.now(),
-    ));
+  static Future<void> logout() async {
+    await OneSignal.logout();
   }
 
-  void notifyHighDebt(String clientName, double amount) {
-    addNotification(AppNotification(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: 'Alerte dette',
-      message: '$clientName doit ${amount.toStringAsFixed(0)} DA',
-      type: 'debt',
-      createdAt: DateTime.now(),
-    ));
+  static void setNotificationHandler(GlobalKey<NavigatorState> navigatorKey) {
+    OneSignal.Notifications.addClickListener((event) {
+      final data = event.notification.additionalData;
+      if (data != null && data['type'] != null) {
+        _handleDeepLink(data, navigatorKey);
+      }
+    });
+  }
+
+  static void _handleDeepLink(Map<String, dynamic> data, GlobalKey<NavigatorState> navigatorKey) {
+    final type = data['type'];
+    final id = data['id'];
+
+    if (type == 'order' && id != null) {
+      // Naviguer via le navigatorKey
+      // navigatorKey.currentState?.pushNamed('/order_details', arguments: id);
+      print('Deep link to Order $id'); // Placeholder until routes are defined
+    }
   }
 }
+

@@ -6,19 +6,23 @@ const { authenticate, requireAdmin } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { logAudit } = require('../services/audit.service');
 const { getAuditLogs } = require('../services/audit.service');
+const cacheService = require('../services/cache.service');
+const cacheMiddleware = require('../middleware/cache.middleware');
+const { getPagination, getPagingData } = require('../utils/pagination.helper');
 
 // GET /api/organization/settings
-router.get('/settings', authenticate, async (req, res) => {
+// GET /api/organization/settings
+router.get('/settings', authenticate, cacheMiddleware(600), async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT id, name, type, kitchen_mode FROM organizations WHERE id = $1',
       [req.user.organization_id]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Organisation non trouvée' });
     }
-    
+
     const org = result.rows[0];
     res.json({
       success: true,
@@ -39,14 +43,18 @@ router.get('/settings', authenticate, async (req, res) => {
 router.put('/settings', authenticate, requireAdmin, validate('updateOrgSettings'), async (req, res) => {
   try {
     const { kitchenMode } = req.body;
-    
+
     await pool.query(
       'UPDATE organizations SET kitchen_mode = $1 WHERE id = $2',
       [kitchenMode || false, req.user.organization_id]
     );
-    
+
     await logAudit('ORG_SETTINGS_UPDATED', req.user.id, req.user.organization_id, { kitchenMode }, req);
-    
+
+    await cacheService.invalidate(`cache:organization:${req.user.organization_id}*`);
+
+
+
     res.json({ success: true });
   } catch (error) {
     console.error('Update org settings error:', error);
@@ -67,10 +75,10 @@ router.get('/daily', authenticate, async (req, res) => {
        WHERE organization_id = $1 AND DATE(created_at) = $2`,
       [req.user.organization_id, today]
     );
-    
+
     const data = result.rows[0];
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       data: {
         total_orders: parseFloat(data.total_orders) || 0,
         total_collected: parseFloat(data.total_collected) || 0,
@@ -99,7 +107,7 @@ router.get('/debts', authenticate, async (req, res) => {
        ORDER BY debt DESC`,
       [req.user.organization_id]
     );
-    
+
     // Formater les données pour éviter les problèmes de parsing
     const data = result.rows.map(row => ({
       id: row.id,
@@ -109,7 +117,7 @@ router.get('/debts', authenticate, async (req, res) => {
       order_count: parseInt(row.order_count) || 0,
       last_order: row.last_order
     }));
-    
+
     res.json({ success: true, data });
   } catch (error) {
     console.error('Debts error:', error);
@@ -120,9 +128,12 @@ router.get('/debts', authenticate, async (req, res) => {
 // GET /api/audit-logs (monté sur /api/audit-logs)
 router.get('/', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { limit, offset, action, userId } = req.query;
-    const logs = await getAuditLogs(req.user.organization_id, { limit, offset, action, userId });
-    res.json({ success: true, data: logs });
+    const { page, limit, offset } = getPagination(req.query, 50);
+    const { action, userId } = req.query;
+
+    const { data, total } = await getAuditLogs(req.user.organization_id, { limit, offset, action, userId });
+
+    res.json(getPagingData(data, total, page, limit));
   } catch (error) {
     console.error('Audit logs error:', error);
     res.status(500).json({ error: 'Erreur serveur' });

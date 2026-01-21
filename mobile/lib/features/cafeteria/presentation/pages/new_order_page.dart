@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../../core/services/api_service.dart';
+import '../../../../core/database/sync_service.dart';
 import '../../../../core/models/product_model.dart';
+// ... (skip lines)
 
 enum ViewMode { grid, list, compact }
 
@@ -133,13 +135,32 @@ class _NewOrderPageState extends State<NewOrderPage> {
       return;
     }
 
-    try {
-      final items = _cart.entries.map((entry) => {
-        'productId': entry.key,
-        'quantity': entry.value,
-      }).toList();
+    final items = _cart.entries.map((entry) => {
+      'productId': entry.key,
+      'quantity': entry.value,
+    }).toList();
+    final orderData = {'items': items};
 
-      await _apiService.createOrder({'items': items});
+    final syncService = SyncService();
+
+    // Offline Mode
+    if (!syncService.isOnline) {
+      await syncService.addOfflineAction('CREATE_ORDER', orderData);
+      setState(() {
+        _cart.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hors ligne : Commande sauvegardée localement'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await _apiService.createOrder(orderData);
       
       setState(() {
         _cart.clear();
@@ -182,15 +203,15 @@ class _NewOrderPageState extends State<NewOrderPage> {
         // Barre de recherche et options
         Container(
           padding: EdgeInsets.all(12),
-          color: Colors.grey[50],
+          color: Theme.of(context).scaffoldBackgroundColor,
           child: Column(
             children: [
               // Recherche
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)],
                 ),
                 child: TextField(
                   controller: _searchController,
@@ -230,7 +251,7 @@ class _NewOrderPageState extends State<NewOrderPage> {
                     child: Container(
                       padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: _groupByCategory ? Colors.green : Colors.white,
+                        color: _groupByCategory ? Colors.green : Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.green),
                       ),
@@ -276,7 +297,7 @@ class _NewOrderPageState extends State<NewOrderPage> {
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: [Colors.green.shade600, Colors.green.shade400]),
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.green.withOpacity(0.3), blurRadius: 8, offset: Offset(0, 4))],
+              boxShadow: [BoxShadow(color: Colors.green.withValues(alpha: 0.3), blurRadius: 8, offset: Offset(0, 4))],
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -691,7 +712,7 @@ class _NewOrderPageState extends State<NewOrderPage> {
 
   Widget _buildQuantityButton({required IconData icon, required Color color, VoidCallback? onPressed}) {
     return Material(
-      color: onPressed != null ? color.withOpacity(0.1) : Colors.grey.shade100,
+      color: onPressed != null ? color.withValues(alpha: 0.1) : Colors.grey.shade100,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onPressed,

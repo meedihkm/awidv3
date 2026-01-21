@@ -27,6 +27,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
   String _groupBy = 'none'; // none, client, deliverer
   String _periodFilter = 'all'; // all, day, week, month
   String? _selectedClient;
+  // ignore: unused_field
   String? _selectedDeliverer;
 
   @override
@@ -198,7 +199,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -234,7 +235,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.85,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
         child: Column(
           children: [
             // Handle
@@ -244,13 +245,13 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
             Container(
               padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [_getStatusColor(order.status), _getStatusColor(order.status).withOpacity(0.7)]),
+                gradient: LinearGradient(colors: [_getStatusColor(order.status), _getStatusColor(order.status).withValues(alpha: 0.7)]),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: Colors.white.withOpacity(0.2),
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
                     radius: 28,
                     child: Icon(Icons.receipt_long, color: Colors.white, size: 28),
                   ),
@@ -259,7 +260,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Commande', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14)),
+                        Text('Commande', style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14)),
                         Text('${order.total.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
                       ],
                     ),
@@ -299,14 +300,14 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
                     Text('Articles (${order.items.length})', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     SizedBox(height: 12),
                     Container(
-                      decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(12)),
+                      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(12)),
                       child: Column(
                         children: order.items.asMap().entries.map((entry) {
                           final item = entry.value;
                           final isLast = entry.key == order.items.length - 1;
                           return Container(
                             padding: EdgeInsets.all(12),
-                            decoration: BoxDecoration(border: isLast ? null : Border(bottom: BorderSide(color: Colors.grey[200]!))),
+                            decoration: BoxDecoration(border: isLast ? null : Border(bottom: BorderSide(color: Theme.of(context).dividerColor))),
                             child: Row(
                               children: [
                                 Container(
@@ -338,9 +339,9 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
                     Container(
                       padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
+                        color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blue.shade200),
+                        border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.3)),
                       ),
                       child: Column(
                         children: [
@@ -370,7 +371,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
             if (order.isPending || order.isLocked || order.status == 'ready')
               Container(
                 padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))]),
+                decoration: BoxDecoration(color: Theme.of(context).cardColor, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))]),
                 child: SafeArea(
                   child: Row(
                     children: [
@@ -410,7 +411,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
         SizedBox(height: 8),
         Container(
           padding: EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(12)),
           child: Column(children: children),
         ),
       ],
@@ -475,6 +476,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
   }
 
 
+  // ignore: unused_element
   void _showFilters() {
     showModalBottomSheet(
       context: context,
@@ -482,7 +484,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => Container(
           padding: EdgeInsets.all(20),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+          decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -525,7 +527,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
               SizedBox(height: 8),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(12)),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String?>(
                     value: _selectedClient,
@@ -584,7 +586,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : Colors.grey[100],
+          color: isSelected ? Theme.of(context).primaryColor : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.grey[700], fontWeight: FontWeight.w500)),
@@ -599,9 +601,9 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue : Colors.white,
+          color: isSelected ? Theme.of(context).primaryColor : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.blue),
+          border: Border.all(color: Theme.of(context).primaryColor),
         ),
         child: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.blue, fontWeight: FontWeight.w500, fontSize: 13)),
       ),
@@ -616,7 +618,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            color: Colors.grey[100],
+            color: Theme.of(context).scaffoldBackgroundColor,
             child: const SkeletonLoader(height: 40),
           ),
           Expanded(
@@ -631,7 +633,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
         // Filtres période directement visibles
         Container(
           padding: EdgeInsets.all(10),
-          color: Colors.grey[100],
+          color: Theme.of(context).scaffoldBackgroundColor,
           child: Column(
             children: [
               // Ligne 1: Filtres période
@@ -680,7 +682,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
                         child: Container(
                           padding: EdgeInsets.symmetric(horizontal: 12),
                           height: 40,
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                          decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(20)),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<String?>(
                               value: _selectedClient,
@@ -721,12 +723,12 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
 
         // Tabs
         Container(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           child: TabBar(
             controller: _tabController,
-            labelColor: Colors.blue.shade700,
+            labelColor: Theme.of(context).primaryColor,
             unselectedLabelColor: Colors.grey,
-            indicatorColor: Colors.blue.shade700,
+            indicatorColor: Theme.of(context).primaryColor,
             isScrollable: true,
             tabs: _kitchenMode ? [
               Tab(text: 'En attente (${_getFilteredOrders('pending').length})'),
@@ -848,7 +850,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: _getStatusColor(order.status).withOpacity(0.1),
+                color: _getStatusColor(order.status).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
               ),
               child: Row(

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:geolocator/geolocator.dart';
+// import 'package:geolocator/geolocator.dart'; // unused
 import '../../../../core/services/api_service.dart';
 import '../../../../core/services/print_service.dart';
 import '../../../../core/services/location_service.dart';
+import '../../../../core/database/sync_service.dart';
 import '../../../../core/models/delivery_model.dart';
-
 class DeliveryRoutePage extends StatefulWidget {
   @override
   _DeliveryRoutePageState createState() => _DeliveryRoutePageState();
@@ -34,8 +34,8 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
         });
       }
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
+      if (mounted) setState(() => _isLoading = false);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
     }
   }
 
@@ -43,9 +43,9 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
     final Uri phoneUri = Uri(scheme: 'tel', path: phone);
     try {
       if (await canLaunchUrl(phoneUri)) await launchUrl(phoneUri);
-      else ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Impossible d\'appeler')));
+      else if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Impossible d\'appeler')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
     }
   }
 
@@ -105,6 +105,7 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(children: [
           Icon(Icons.location_on, color: Colors.orange),
@@ -143,6 +144,18 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
       builder: (context) => _DeliveryConfirmSheet(delivery: delivery),
     );
     if (result != null) {
+      final syncService = SyncService();
+      if (!syncService.isOnline) {
+         final offlinePayload = {
+           'deliveryId': delivery.id,
+           'status': 'delivered',
+           ...result,
+         };
+         await syncService.addOfflineAction('UPDATE_DELIVERY', offlinePayload);
+         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hors ligne : Livraison validée'), backgroundColor: Colors.orange));
+         return;
+      }
+
       try {
         // Confirmer la livraison
         await _apiService.updateDeliveryStatus(delivery.id, {
@@ -158,7 +171,6 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
           try {
             final position = await _locationService.getCurrentPosition();
             if (position != null) {
-              // Enregistrer la position comme adresse du client (géocodage inverse côté serveur optionnel)
               await _apiService.updateUserAddress(
                 cafeteria.id, 
                 'Position GPS capturée',
@@ -167,7 +179,6 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
               );
             }
           } catch (e) {
-            // Silently fail - pas grave si on ne peut pas capturer la position
             print('GPS capture failed: $e');
           }
         }
@@ -190,7 +201,7 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
         await _apiService.updateDeliveryStatus(delivery.id, result);
         _loadDeliveries();
         final msg = result['status'] == 'failed' ? 'Échec signalé' : 'Livraison reportée';
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.orange));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.orange));
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
       }
@@ -211,7 +222,7 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
             ListTile(
               leading: Container(
                 padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                 child: Icon(Icons.description, color: Colors.blue),
               ),
               title: Text('Bon de livraison A5'),
@@ -224,7 +235,7 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
             ListTile(
               leading: Container(
                 padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                 child: Icon(Icons.receipt_long, color: Colors.orange),
               ),
               title: Text('Ticket thermique'),
@@ -237,7 +248,7 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
             ListTile(
               leading: Container(
                 padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                 child: Icon(Icons.receipt, color: Colors.green),
               ),
               title: Text('Facture client'),
@@ -280,7 +291,7 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
           return Card(
             margin: EdgeInsets.only(bottom: 16),
             elevation: 4,
-            shadowColor: Colors.black26,
+            shadowColor: Theme.of(context).shadowColor.withValues(alpha: 0.3),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             child: Column(children: [
               // Header
@@ -293,7 +304,7 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
                 child: Row(children: [
                   Container(
                     padding: EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12)),
                     child: Icon(Icons.local_shipping, color: Colors.white, size: 28),
                   ),
                   SizedBox(width: 12),
@@ -309,11 +320,11 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
                         ),
                       ],
                     ]),
-                    if (order.cafeteria != null) Text(order.cafeteria!.name, style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14)),
+                    if (order.cafeteria != null) Text(order.cafeteria!.name, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14)),
                   ])),
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                    decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(20)),
                     child: Text('${order.total.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.orange.shade700, fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
                 ]),
@@ -331,7 +342,11 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
                           onTap: () => _callClient(order.cafeteria!.phone!),
                           child: Container(
                             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blue.shade200)),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withValues(alpha: 0.1), 
+                              borderRadius: BorderRadius.circular(12), 
+                              border: Border.all(color: Colors.blue.withValues(alpha: 0.3))
+                            ),
                             child: Row(children: [
                               Container(padding: EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(8)), child: Icon(Icons.phone, size: 20, color: Colors.white)),
                               SizedBox(width: 8),
@@ -348,9 +363,9 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
                         child: Container(
                           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(
-                            color: order.cafeteria?.hasLocation == true ? Colors.green.shade50 : Colors.orange.shade50, 
+                            color: order.cafeteria?.hasLocation == true ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1), 
                             borderRadius: BorderRadius.circular(12), 
-                            border: Border.all(color: order.cafeteria?.hasLocation == true ? Colors.green.shade200 : Colors.orange.shade200),
+                            border: Border.all(color: order.cafeteria?.hasLocation == true ? Colors.green.withValues(alpha: 0.3) : Colors.orange.withValues(alpha: 0.3)),
                           ),
                           child: Row(children: [
                             Container(
@@ -377,7 +392,7 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
                     Container(
                       padding: EdgeInsets.all(10),
                       margin: EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)),
                       child: Row(children: [
                         Icon(Icons.location_on, size: 18, color: Colors.grey[600]),
                         SizedBox(width: 8),
@@ -390,7 +405,7 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
                   ...order.items.map((item) => Padding(
                     padding: EdgeInsets.only(bottom: 6),
                     child: Row(children: [
-                      Container(width: 28, height: 28, decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(6)),
+                      Container(width: 28, height: 28, decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
                         child: Center(child: Text('${item.quantity}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade700)))),
                       SizedBox(width: 12),
                       Expanded(child: Text(item.productName)),
@@ -401,7 +416,7 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
                   // Montant
                   Container(
                     padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
                     child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                       Row(children: [Icon(Icons.payments, color: Colors.green.shade700), SizedBox(width: 8), Text('À collecter:', style: TextStyle(fontWeight: FontWeight.w500))]),
                       Text('${order.remainingAmount.toStringAsFixed(0)} DA', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
@@ -475,7 +490,7 @@ class _DeliveryConfirmSheetState extends State<_DeliveryConfirmSheet> {
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
     return Container(
       margin: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16 + bottomPadding),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+      decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(24)),
       child: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.all(20),
@@ -484,7 +499,7 @@ class _DeliveryConfirmSheetState extends State<_DeliveryConfirmSheet> {
             Row(children: [
               Container(
                 padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
                 child: Icon(Icons.check_circle, color: Colors.green, size: 28),
               ),
               SizedBox(width: 12),
@@ -589,7 +604,7 @@ class _PaymentOption extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? color.withOpacity(0.1) : Colors.grey.shade100,
+          color: selected ? color.withValues(alpha: 0.1) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: selected ? color : Colors.transparent, width: 2),
         ),
@@ -649,7 +664,7 @@ class _FailureReportSheetState extends State<_FailureReportSheet> {
     return Container(
       margin: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16 + bottomPadding),
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+      decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(24)),
       child: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.all(20),
@@ -658,7 +673,7 @@ class _FailureReportSheetState extends State<_FailureReportSheet> {
             Row(children: [
               Container(
                 padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
                 child: Icon(Icons.warning_amber, color: Colors.red, size: 28),
               ),
               SizedBox(width: 12),
@@ -699,7 +714,7 @@ class _FailureReportSheetState extends State<_FailureReportSheet> {
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: _failureReason == r['value'] ? Colors.red.shade50 : Colors.grey.shade100,
+                    color: _failureReason == r['value'] ? Colors.red.withValues(alpha: 0.1) : Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: _failureReason == r['value'] ? Colors.red : Colors.transparent),
                   ),
@@ -722,9 +737,9 @@ class _FailureReportSheetState extends State<_FailureReportSheet> {
                 child: Container(
                   padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
+                    color: Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange.shade200),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                   ),
                   child: Row(children: [
                     Icon(Icons.calendar_today, color: Colors.orange),
@@ -808,7 +823,7 @@ class _ActionOption extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: selected ? color.withOpacity(0.1) : Colors.grey.shade100,
+          color: selected ? color.withValues(alpha: 0.1) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: selected ? color : Colors.transparent, width: 2),
         ),

@@ -10,29 +10,29 @@ const authenticate = async (req, res, next) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Token manquant' });
     }
-    
+
     const token = authHeader.substring(7);
     if (!token || token.length < 10) {
       return res.status(401).json({ error: 'Token invalide' });
     }
-    
+
     const decoded = jwt.verify(token, jwtSecret);
-    
+
     const result = await pool.query(
       'SELECT id, organization_id, role, active FROM users WHERE id = $1',
       [decoded.id]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Utilisateur non trouvé' });
     }
-    
+
     const user = result.rows[0];
-    
+
     if (!user.active) {
       return res.status(403).json({ error: 'Compte désactivé' });
     }
-    
+
     req.user = user;
     next();
   } catch (error) {
@@ -74,19 +74,37 @@ const requireDeliverer = (req, res, next) => {
 // Middleware d'authentification super-admin (timing-safe)
 const authenticateSuperAdmin = (req, res, next) => {
   const key = req.headers['x-super-admin-key'];
-  
+
   if (!key || key.length !== superAdminKey.length) {
     return res.status(403).json({ error: 'Accès super-admin requis' });
   }
-  
+
   const keyBuffer = Buffer.from(key);
   const secretBuffer = Buffer.from(superAdminKey);
-  
+
   if (!crypto.timingSafeEqual(keyBuffer, secretBuffer)) {
     return res.status(403).json({ error: 'Accès super-admin requis' });
   }
-  
+
   next();
+};
+
+// Middleware générique pour vérifier les rôles
+const authorize = (roles = []) => {
+  if (typeof roles === 'string') {
+    roles = [roles];
+  }
+
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    if (roles.length && !roles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Accès non autorisé' });
+    }
+    next();
+  };
 };
 
 module.exports = {
@@ -95,4 +113,5 @@ module.exports = {
   requireKitchen,
   requireDeliverer,
   authenticateSuperAdmin,
+  authorize
 };

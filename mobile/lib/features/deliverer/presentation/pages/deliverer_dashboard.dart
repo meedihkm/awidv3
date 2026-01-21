@@ -4,6 +4,7 @@ import '../../../auth/providers/auth_provider.dart';
 import '../../../../core/services/location_service.dart';
 import 'delivery_route_page.dart';
 import 'delivery_history_page.dart';
+import '../../../../core/widgets/sync_indicator.dart';
 
 class DelivererDashboard extends StatefulWidget {
   @override
@@ -55,7 +56,8 @@ class _DelivererDashboardState extends State<DelivererDashboard> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
+
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text('Livreur', style: TextStyle(fontSize: 12)),
@@ -65,6 +67,7 @@ class _DelivererDashboardState extends State<DelivererDashboard> {
         backgroundColor: Colors.orange.shade600,
         foregroundColor: Colors.white,
         actions: [
+          SyncIndicator(),
           // Bouton GPS
           IconButton(
             icon: Icon(_isTracking ? Icons.gps_fixed : Icons.gps_off),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/storage/secure_storage.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/presentation/pages/login_page.dart';
@@ -7,37 +8,56 @@ import 'features/admin/presentation/pages/admin_dashboard.dart';
 import 'features/cafeteria/presentation/pages/cafeteria_dashboard.dart';
 import 'features/deliverer/presentation/pages/deliverer_dashboard.dart';
 import 'features/kitchen/presentation/pages/kitchen_dashboard.dart';
+import 'features/onboarding/presentation/pages/onboarding_page.dart';
 
-void main() {
+import 'core/services/sentry_service.dart';
+import 'core/services/notification_service.dart';
+import 'core/theme/app_theme.dart';
+import 'core/providers/theme_provider.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MyApp());
+  
+  // Initialisation OneSignal
+  await NotificationService.init();
+
+  // Check Onboarding status
+  final prefs = await SharedPreferences.getInstance();
+  final bool showOnboarding = !(prefs.getBool('onboarding_complete') ?? false);
+  
+  // Initialisation de Sentry qui va wrapper l'application
+  await SentryService.init(() async {
+    runApp(MyApp(showOnboarding: showOnboarding));
+  });
 }
 
 class MyApp extends StatelessWidget {
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  final bool showOnboarding;
+
+  MyApp({Key? key, required this.showOnboarding}) : super(key: key) {
+    NotificationService.setNotificationHandler(navigatorKey);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: MaterialApp(
-        title: 'Awid',
-        theme: ThemeData(
-          primarySwatch: Colors.green,
-          primaryColor: Color(0xFF2E7D32),
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Color(0xFF2E7D32),
-            brightness: Brightness.light,
-          ),
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-          appBarTheme: AppBarTheme(
-            backgroundColor: Color(0xFF2E7D32),
-            foregroundColor: Colors.white,
-            elevation: 0,
-          ),
-        ),
-        home: AuthWrapper(),
-        debugShowCheckedModeBanner: false,
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Awid',
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode,
+            home: showOnboarding ? OnboardingPage() : AuthWrapper(),
+            navigatorKey: navigatorKey,
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
     );
   }
