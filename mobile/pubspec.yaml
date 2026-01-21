@@ -6,7 +6,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.1.0 <4.0.0'
+  sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -47,13 +47,13 @@ dependencies:
   table_calendar: ^3.1.2
   
   # Local storage for cache
-  shared_preferences: ^2.3.3
+  shared_preferences: ^2.4.0
   
   # Cached images
   cached_network_image: ^3.4.1
 
   # Monitoring Sentry
-  sentry_flutter: ^8.0.0
+  sentry_flutter: ^8.13.0
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   connectivity_plus: ^6.1.5
@@ -66,8 +66,8 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   
   # Testing
-  mockito: ^5.4.4
-  build_runner: ^2.4.13
+  mockito: ^5.4.5
+  build_runner: ^2.4.15
   golden_toolkit: ^0.15.0
   mocktail: ^1.0.4
 
