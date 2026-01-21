@@ -1,0 +1,103 @@
+feat: Système de localisation GPS + Corrections build Flutter
+
+🎯 SYSTÈME DE LOCALISATION GPS
+================================
+
+📊 BASE DE DONNÉES
+- Table location_history corrigée (deliverer_id: UUID → TEXT)
+- Ajout organization_id TEXT pour isolation
+- Ajout accuracy DOUBLE PRECISION pour précision GPS
+- Contraintes GPS: latitude [-90,90], longitude [-180,180], accuracy >= 0
+- Index optimisés: deliverer, organization, date
+- Trigger: update_client_address_from_delivery()
+  → Met à jour automatiquement l'adresse client lors de la livraison
+- Fonction: get_deliverer_location_stats() pour analytics
+- Fonction: cleanup_old_location_history() déjà existante
+
+🔧 BACKEND (api-v2/)
+Routes modifiées/ajoutées:
+- POST /api/realtime/location (+ accuracy, + organization_id)
+- GET /api/realtime/deliverer/:id/history (+ accuracy)
+- GET /api/realtime/deliverer/:id/stats (nouveau)
+- POST /api/realtime/cleanup-history (nouveau)
+
+Validation:
+- Ajout accuracy (optionnel) dans updateLocation schema
+
+📱 FRONTEND (mobile/)
+Services modifiés:
+- location_service.dart: Envoie accuracy au serveur
+- api_service.dart: Paramètre accuracy optionnel
+
+🔄 LOGIQUE AUTOMATIQUE
+Quand delivery.status → 'delivered':
+1. Vérifier si client a déjà une adresse GPS
+2. Si NON: Récupérer position actuelle du livreur
+3. Mettre à jour users.address_lat/lng du client
+4. Logger dans audit_logs (auto_update_client_location)
+
+🐛 CORRECTIONS BUILD FLUTTER
+================================
+
+1. notification_model.dart
+   ✅ Déplacé import Flutter Material en haut du fichier
+   ❌ AVANT: Import après la classe (ligne 135)
+   ✅ APRÈS: Import avant la classe (ligne 1)
+
+2. notification_service.dart
+   ✅ Corrigé import: secure_storage.dart → ../storage/secure_storage.dart
+   ✅ Corrigé méthode: getAccessToken() → getToken()
+
+3. favorite_service.dart
+   ✅ Corrigé import: secure_storage.dart → ../storage/secure_storage.dart
+   ✅ Corrigé méthode: getAccessToken() → getToken()
+
+4. financial_page.dart
+   ✅ Corrigé paramètres RecordPaymentDialog
+   ❌ AVANT: clientId, clientName
+   ✅ APRÈS: client (Map), totalDebt, unpaidOrders, onSuccess
+
+🔒 SÉCURITÉ
+- Isolation par organization_id sur toutes les requêtes
+- Contraintes GPS validées en base
+- Authentification JWT requise
+- CASCADE DELETE sur foreign keys
+
+📝 DOCUMENTATION
+- LOCATION_SYSTEM_IMPLEMENTATION.md: Guide complet
+- LOCATION_SYSTEM_SUMMARY.md: Résumé exécutif
+- FINAL_LOCATION_CHANGES.md: Détails des corrections
+- FLUTTER_BUILD_FIXES.md: Corrections de build
+- TYPE_VERIFICATION.md: Mis à jour avec location_history
+
+🎯 BÉNÉFICES
+✅ Plus besoin de saisir manuellement les adresses clients
+✅ Historique GPS complet pour analyse et optimisation
+✅ Statistiques de performance des livreurs
+✅ Maintenance automatique de la base de données
+✅ Précision GPS garantie pour les livraisons futures
+✅ Build Flutter sans erreurs
+
+📋 FICHIERS MODIFIÉS
+Backend:
+- api-v2/routes/realtime.routes.js
+- api-v2/schemas/validation.js
+
+Frontend:
+- mobile/lib/core/models/notification_model.dart
+- mobile/lib/core/services/api_service.dart
+- mobile/lib/core/services/favorite_service.dart
+- mobile/lib/core/services/location_service.dart
+- mobile/lib/core/services/notification_service.dart
+- mobile/lib/features/admin/presentation/pages/financial_page.dart
+
+SQL:
+- sql_migrations_v2_optimized.sql (location_history corrigée)
+- sql_location_system.sql (nouveau: trigger + fonctions)
+
+Documentation:
+- TYPE_VERIFICATION.md
+- LOCATION_SYSTEM_IMPLEMENTATION.md (nouveau)
+- LOCATION_SYSTEM_SUMMARY.md (nouveau)
+- FINAL_LOCATION_CHANGES.md (nouveau)
+- FLUTTER_BUILD_FIXES.md (nouveau)
