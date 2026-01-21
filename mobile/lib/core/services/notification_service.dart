@@ -53,7 +53,7 @@ class NotificationService {
         'title': n.title,
         'message': n.message,
         'icon': 0xe57f, // Fixed: codePoint not available on String, using dummy int or fetch from mapping
-        'color': n.color.value,
+        'color': n.color.toARGB32(),
         'createdAt': n.createdAt.toIso8601String(),
         'isRead': n.isRead,
       }).toList()

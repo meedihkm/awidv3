@@ -62,9 +62,9 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       
       // Charger depuis le serveur
       final results = await Future.wait([
-        _apiService.getOrders(),
+        _apiService.getOrders(limit: 500),
         _apiService.getDebtsList(limit: 100),
-        _apiService.getDeliveries(),
+        _apiService.getDeliveries(limit: 500),
         _apiService.getDeliverers(),
         _apiService.getUsers(),
       ]);
@@ -148,7 +148,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       
       if (status == 'delivered') deliveredCount++;
       else if (status == 'pending') pendingCount++;
-      else if (status == 'failed') failedCount++;
+      else if (status == 'failed' || status == 'locked') failedCount++;
       
       caByClient[clientName] = (caByClient[clientName] ?? 0) + total;
       

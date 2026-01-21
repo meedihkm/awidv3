@@ -24,11 +24,11 @@ class _DelivererDetailPageState extends State<DelivererDetailPage> {
 
   Future<void> _loadDeliveries() async {
     try {
-      final response = await _apiService.getDeliveries();
+      final response = await _apiService.getDeliveries(delivererId: widget.deliverer['id'], limit: 100);
       if (response['success']) {
         final allDeliveries = response['data'] as List;
         setState(() {
-          _deliveries = allDeliveries.where((d) => d['delivererId'] == widget.deliverer['id']).toList();
+          _deliveries = allDeliveries; // API already filtered by delivererId
           _isLoading = false;
         });
       }

@@ -10,4 +10,5 @@ const mockSentry = {
 module.exports = {
     Sentry: mockSentry,
     initSentry: jest.fn(),
+    getHandlers: () => mockSentry.Handlers,
 };

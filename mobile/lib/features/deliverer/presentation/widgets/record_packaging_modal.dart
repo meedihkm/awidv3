@@ -225,7 +225,7 @@ class _RecordPackagingModalState extends State<RecordPackagingModal> {
                 Center(child: Text('Aucun type de consigne configuré', style: TextStyle(color: Colors.grey)))
               else
                 DropdownButtonFormField<String>(
-                  value: _selectedTypeId,
+                  initialValue: _selectedTypeId,
                   decoration: InputDecoration(
                     labelText: 'Type de consigne',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),

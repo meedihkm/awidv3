@@ -157,20 +157,23 @@ router.put('/:id/toggle', authenticate, requireAdmin, validateUUID('id'), async 
   }
 });
 
-// DELETE /api/products/:id
+// DELETE /api/products/:id (Soft Delete)
 router.delete('/:id', authenticate, requireAdmin, validateUUID('id'), async (req, res) => {
   try {
+    // Soft delete: désactiver le produit au lieu de le supprimer physiquement
+    // Cela évite les erreurs de clé étrangère (order_items)
     await pool.query(
-      'DELETE FROM products WHERE id = $1 AND organization_id = $2',
+      'UPDATE products SET active = false WHERE id = $1 AND organization_id = $2',
       [req.params.id, req.user.organization_id]
     );
 
-    await logAudit('PRODUCT_DELETED', req.user.id, req.user.organization_id, { productId: req.params.id }, req);
+    await logAudit('PRODUCT_DELETED', req.user.id, req.user.organization_id, { productId: req.params.id, type: 'soft_delete' }, req);
 
     await cacheService.invalidate(`cache:products:${req.user.organization_id}*`);
 
-    res.json({ success: true });
+    res.json({ success: true, message: 'Produit archivé avec succès' });
   } catch (error) {
+    console.error('Delete product error:', error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });

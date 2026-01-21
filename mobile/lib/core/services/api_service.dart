@@ -231,8 +231,14 @@ class ApiService {
       _request('PUT', '${ApiConstants.users}/$userId/credit-limit', body: {'creditLimit': limit});
 
   // ===== ORDERS =====
-  Future<Map<String, dynamic>> getOrders({int page = 1, int limit = 20, bool forceRefresh = false}) async {
-    final cacheKey = 'orders_p${page}_l$limit';
+  Future<Map<String, dynamic>> getOrders({
+    int page = 1, 
+    int limit = 20, 
+    bool forceRefresh = false,
+    String? cafeteriaId,
+    String? status
+  }) async {
+    final cacheKey = 'orders_p${page}_l$limit${cafeteriaId != null ? "_c$cafeteriaId" : ""}${status != null ? "_s$status" : ""}';
     
     // 1. Try Cache if offline or not forced
     if (!forceRefresh) {
@@ -245,11 +251,15 @@ class ApiService {
     }
 
     try {
-      final result = await _request('GET', '${ApiConstants.orders}?page=$page&limit=$limit');
+      String query = 'page=$page&limit=$limit';
+      if (cafeteriaId != null) query += '&cafeteriaId=$cafeteriaId';
+      if (status != null) query += '&status=$status';
+
+      final result = await _request('GET', '${ApiConstants.orders}?$query');
       if (result['success'] == true && result['data'] != null) {
         await _hive.cacheData(cacheKey, result['data']);
-        // Also cache first page as generic 'orders'
-        if (page == 1) await _hive.cacheData('orders', result['data']);
+        // Only cache generic list for page 1 if no filters
+        if (page == 1 && cafeteriaId == null && status == null) await _hive.cacheData('orders', result['data']);
       }
       return result;
     } catch (e) {
@@ -286,15 +296,28 @@ class ApiService {
   }
 
   // ===== DELIVERIES =====
-  Future<Map<String, dynamic>> getDeliveries({int page = 1, int limit = 20, bool forceRefresh = false}) async {
-    if (!forceRefresh && page == 1) {
+  Future<Map<String, dynamic>> getDeliveries({
+    int page = 1, 
+    int limit = 20, 
+    bool forceRefresh = false,
+    String? delivererId,
+    String? status,
+    String? cafeteriaId
+  }) async {
+    if (!forceRefresh && page == 1 && delivererId == null && status == null && cafeteriaId == null) {
       final cached = await _cache.getCachedDeliveries();
       if (cached != null) {
         return {'success': true, 'data': cached, 'fromCache': true};
       }
     }
-    final result = await _request('GET', '${ApiConstants.deliveries}?page=$page&limit=$limit');
-    if (result['success'] == true && result['data'] != null && page == 1) {
+    
+    String query = 'page=$page&limit=$limit';
+    if (delivererId != null) query += '&delivererId=$delivererId';
+    if (status != null) query += '&status=$status';
+    if (cafeteriaId != null) query += '&cafeteriaId=$cafeteriaId';
+
+    final result = await _request('GET', '${ApiConstants.deliveries}?$query');
+    if (result['success'] == true && result['data'] != null && page == 1 && delivererId == null && status == null && cafeteriaId == null) {
       await _cache.cacheDeliveries(result['data']);
     }
     return result;

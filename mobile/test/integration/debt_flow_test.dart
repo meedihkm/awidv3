@@ -13,12 +13,25 @@ import 'package:awid/core/models/debt_model.dart';
 
 class MockApiService extends Mock implements ApiService {
   @override
-  Future<Map<String, dynamic>> getOrders({int page = 1, int limit = 20, bool forceRefresh = false}) async {
+  Future<Map<String, dynamic>> getOrders({
+    int page = 1, 
+    int limit = 20, 
+    bool forceRefresh = false,
+    String? cafeteriaId,
+    String? status
+  }) async {
     return {'success': true, 'data': []};
   }
 
   @override
-  Future<Map<String, dynamic>> getDeliveries({int page = 1, int limit = 20, bool forceRefresh = false}) async {
+  Future<Map<String, dynamic>> getDeliveries({
+    int page = 1, 
+    int limit = 20, 
+    bool forceRefresh = false,
+    String? delivererId,
+    String? status,
+    String? cafeteriaId
+  }) async {
     return {'success': true, 'data': []};
   }
 

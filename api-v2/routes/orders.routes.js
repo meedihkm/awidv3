@@ -116,6 +116,7 @@ router.get('/', authenticate, async (req, res) => {
   try {
     const { page, limit, offset } = getPagination(req.query, 50);
     const status = req.query.status; // Filtre optionnel par statut
+    const cafeteriaId = req.query.cafeteriaId; // Filtre optionnel par client (cafétéria)
 
     // Construire la requête avec filtres
     let whereClause = 'WHERE o.organization_id = $1';
@@ -124,6 +125,11 @@ router.get('/', authenticate, async (req, res) => {
     if (status && status !== 'all') {
       params.push(status);
       whereClause += ` AND o.status = $${params.length}`;
+    }
+
+    if (cafeteriaId) {
+      params.push(cafeteriaId);
+      whereClause += ` AND o.cafeteria_id = $${params.length}`;
     }
 
     // Compter le total

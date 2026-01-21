@@ -15,7 +15,6 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
   List<dynamic> _clientsWithDebts = [];
   List<dynamic> _myCollections = [];
   bool _isLoading = true;
-  bool _isLoadingCollections = false;
 
   @override
   void initState() {
@@ -282,7 +281,7 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: Colors.red.withOpacity(0.1),
+                    backgroundColor: Colors.red.withValues(alpha: 0.1),
                     child: Icon(Icons.warning_amber, color: Colors.red),
                   ),
                   title: Text(client['name'] ?? 'Client', 
@@ -363,15 +362,13 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: Colors.green.withOpacity(0.1),
+                      backgroundColor: Colors.green.withValues(alpha: 0.1),
                       child: Icon(Icons.check_circle, color: Colors.green),
                     ),
                     title: Text(collection['client_name'] ?? 'Client',
                       style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text(
-                      date != null 
-                        ? '${date.hour}:${date.minute.toString().padLeft(2, '0')}'
-                        : '',
+                      '${date.hour}:${date.minute.toString().padLeft(2, '0')}',
                       style: TextStyle(fontSize: 12),
                     ),
                     trailing: Text(

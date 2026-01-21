@@ -82,6 +82,8 @@ router.get('/', authenticate, async (req, res) => {
   try {
     const { page, limit, offset } = getPagination(req.query, 50);
     const status = req.query.status;
+    const delivererId = req.query.delivererId;
+    const cafeteriaId = req.query.cafeteriaId;
 
     let whereClause = 'WHERE d.organization_id = $1';
     const params = [req.user.organization_id];
@@ -91,15 +93,27 @@ router.get('/', authenticate, async (req, res) => {
       whereClause += ` AND d.status = $${params.length}`;
     }
 
+    if (delivererId) {
+      params.push(delivererId);
+      whereClause += ` AND d.deliverer_id = $${params.length}`;
+    }
+
+    if (cafeteriaId) {
+      params.push(cafeteriaId);
+      whereClause += ` AND o.cafeteria_id = $${params.length}`;
+    }
+
     // Compter le total
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM deliveries d ${whereClause}`,
-      params
-    );
+    // Si on filtre par cafeteria, il faut faire le JOIN
+    const countQuery = cafeteriaId
+      ? `SELECT COUNT(*) FROM deliveries d LEFT JOIN orders o ON d.order_id = o.id ${whereClause}`
+      : `SELECT COUNT(*) FROM deliveries d ${whereClause}`;
+
+    const countResult = await pool.query(countQuery, params);
     const total = parseInt(countResult.rows[0].count);
 
     const result = await pool.query(
-      `SELECT d.*, 
+      `SELECT d.*,
               u.name as deliverer_name,
               to_jsonb(o.*) as order_data,
               ou.name as cafeteria_name, ou.phone as cafeteria_phone,

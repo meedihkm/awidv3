@@ -86,22 +86,20 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
   Future<void> _loadClientData() async {
     try {
       final results = await Future.wait([
-        _apiService.getOrders(),
-        _apiService.getDeliveries(),
+        _apiService.getOrders(cafeteriaId: widget.client['id'], limit: 100),
+        _apiService.getDeliveries(cafeteriaId: widget.client['id'], limit: 100),
         _apiService.getCustomerDebt(widget.client['id']),
         _apiService.getPaymentHistory(customerId: widget.client['id']),
       ]);
       
-      final allOrders = (results[0] as Map<String, dynamic>)['data'] as List? ?? [];
-      final allDeliveries = (results[1] as Map<String, dynamic>)['data'] as List? ?? [];
+      final clientOrders = (results[0] as Map<String, dynamic>)['data'] as List? ?? [];
+      final clientDeliveries = (results[1] as Map<String, dynamic>)['data'] as List? ?? [];
       final debtInfo = results[2] as CustomerDebt?;
       final paymentHistory = (results[3] as Map<String, dynamic>)['data'] as List? ?? [];
       
-      final clientOrders = allOrders.where((o) => o['cafeteriaId'] == widget.client['id']).toList();
-      final clientDeliveries = allDeliveries.where((d) {
-        final orderId = d['orderId'];
-        return clientOrders.any((o) => o['id'] == orderId);
-      }).toList();
+      // Filtering handled by API
+      // final clientOrders = ...
+      // final clientDeliveries = ...
       
       // Mettre en cache
       final history = [

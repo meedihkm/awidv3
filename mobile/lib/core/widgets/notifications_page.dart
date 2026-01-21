@@ -204,7 +204,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                             side: notification.isRead
                                 ? BorderSide.none
                                 : BorderSide(
-                                    color: notification.color.withOpacity(0.3),
+                                    color: notification.color.withValues(alpha: 0.3),
                                     width: 2,
                                   ),
                           ),
@@ -221,13 +221,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                     width: 48,
                                     height: 48,
                                     decoration: BoxDecoration(
-                                      color: notification.color.withOpacity(0.1),
+                                      color: notification.color.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Center(
-                                      child: Text(
+                                      child: Icon(
                                         notification.icon,
-                                        style: TextStyle(fontSize: 24),
+                                        color: notification.color,
+                                        size: 24,
                                       ),
                                     ),
                                   ),

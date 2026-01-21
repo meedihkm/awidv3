@@ -120,7 +120,7 @@ class _RecordDebtPaymentModalState extends State<RecordDebtPaymentModal> {
                 SizedBox(height: 16),
                 
                 DropdownButtonFormField<String>(
-                  value: _paymentType,
+                  initialValue: _paymentType,
                   decoration: InputDecoration(
                     labelText: 'Type de paiement',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),

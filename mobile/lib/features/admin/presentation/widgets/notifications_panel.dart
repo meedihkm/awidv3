@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/models/notification_model.dart';
 
 class NotificationsPanel extends StatelessWidget {
   final NotificationService notificationService;
