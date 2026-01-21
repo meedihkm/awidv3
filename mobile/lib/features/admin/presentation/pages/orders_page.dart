@@ -21,7 +21,8 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
   bool _isLoading = true;
   bool _hasData = false;
   bool _kitchenMode = false;
-  late TabController _tabController;
+  TabController? _tabController;
+  bool _isInitialized = false;
   
   // Filtres
   String _groupBy = 'none'; // none, client, deliverer
@@ -33,22 +34,30 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
+    // Initialize with default 4 tabs, will be updated if kitchenMode is true
+    _tabController = TabController(length: 4, vsync: this);
     _loadSettings();
   }
 
   Future<void> _loadSettings() async {
     await _settingsService.loadSettings();
-    setState(() {
-      _kitchenMode = _settingsService.kitchenMode;
-      // 4 tabs sans kitchen mode, 7 tabs avec kitchen mode
-      _tabController = TabController(length: _kitchenMode ? 7 : 4, vsync: this);
-    });
+    final newKitchenMode = _settingsService.kitchenMode;
+    
+    // Only recreate TabController if kitchenMode changed and requires different tab count
+    if (newKitchenMode != _kitchenMode || !_isInitialized) {
+      _tabController?.dispose();
+      setState(() {
+        _kitchenMode = newKitchenMode;
+        _tabController = TabController(length: _kitchenMode ? 7 : 4, vsync: this);
+        _isInitialized = true;
+      });
+    }
     _loadData();
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -235,6 +244,14 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    // Show loading indicator while TabController initializes
+    if (_tabController == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Commandes')),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
     return Scaffold(
       appBar: AppBar(
         title: Text('Commandes'),
@@ -277,7 +294,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
         Container(
           color: Theme.of(context).cardColor,
           child: TabBar(
-            controller: _tabController,
+            controller: _tabController!,
             labelColor: Theme.of(context).primaryColor,
             unselectedLabelColor: Colors.grey,
             indicatorColor: Theme.of(context).primaryColor,
@@ -303,7 +320,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
         // Content
         Expanded(
           child: TabBarView(
-            controller: _tabController,
+            controller: _tabController!,
             children: _kitchenMode ? [
               _buildOrderList('pending'),
               _buildOrderList('validated'),
