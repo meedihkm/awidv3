@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart'; // Added import
 import '../../../../core/services/api_service.dart';
 import '../../../../features/auth/providers/auth_provider.dart';
 
@@ -27,6 +28,7 @@ class _DeliverersMapPageState extends State<DeliverersMapPage> {
   bool _showClients = true;
   bool _showDeliverers = true;
   String? _userRole;
+  bool _isSatellite = false; // Added state
 
   // Defaults
   final LatLng _defaultCenter = LatLng(36.7538, 3.0588); // Algiers
@@ -46,6 +48,7 @@ class _DeliverersMapPageState extends State<DeliverersMapPage> {
     _loadData();
     // Refresh every 30s
     _refreshTimer = Timer.periodic(Duration(seconds: 30), (_) => _refreshData());
+    _locateUser(); // Trigger location
   }
 
   @override
@@ -128,6 +131,27 @@ class _DeliverersMapPageState extends State<DeliverersMapPage> {
         // For Deliverer mode, markers logic uses _clients if !isAdmin.
         _clients = points; 
       });    }
+  }
+
+  Future<void> _locateUser() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+
+    if (permission == LocationPermission.deniedForever) return;
+
+    final position = await Geolocator.getCurrentPosition();
+    if (mounted) {
+      _mapController.move(LatLng(position.latitude, position.longitude), 15);
+    }
   }
 
   // --- Helpers ---
@@ -240,8 +264,11 @@ class _DeliverersMapPageState extends State<DeliverersMapPage> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: _isSatellite
+                    ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.awid.delivery',
+                // Attribution (optional but good practice)
               ),
               MarkerLayer(markers: markers),
             ],
@@ -253,6 +280,31 @@ class _DeliverersMapPageState extends State<DeliverersMapPage> {
               top: 0, left: 0, right: 0,
               child: LinearProgressIndicator(color: theme.primaryColor),
             ),
+
+          // CONTROLS LAYER (Satellite & Location)
+          Positioned(
+            top: 16,
+            right: 16,
+            child: Column(
+              children: [
+                FloatingActionButton.small(
+                  heroTag: 'layer',
+                  onPressed: () => setState(() => _isSatellite = !_isSatellite),
+                  backgroundColor: Colors.white,
+                  child: Icon(_isSatellite ? Icons.map : Icons.satellite_alt, color: Colors.blue),
+                  tooltip: _isSatellite ? 'Mode Plan' : 'Mode Satellite',
+                ),
+                SizedBox(height: 8),
+                FloatingActionButton.small(
+                  heroTag: 'gps',
+                  onPressed: _locateUser,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.my_location, color: Colors.blue),
+                  tooltip: 'Ma position',
+                ),
+              ],
+            ),
+          ),
 
           // ADMIN CONTROLS (Bottom Sheet inside Stack or Floating Card)
           if (isAdmin)
