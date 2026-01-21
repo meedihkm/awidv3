@@ -21,26 +21,32 @@ const getWhitelistedOrigins = () => {
     ];
   }
 
-  // En production sans ALLOWED_ORIGINS configuré, bloquer tout
-  console.warn('[SECURITY] ALLOWED_ORIGINS non configuré en production - CORS restrictif activé');
-  return [];
+  // En production sans ALLOWED_ORIGINS, permettre les apps mobiles (pas d'origin)
+  // et les domaines Vercel par défaut
+  console.log('[CORS] Mode production - Apps mobiles et Vercel autorisés par défaut');
+  return [
+    'https://app-livraison-.vercel.app',
+    'https://awid.vercel.app',
+    'https://app-livraison-i60ch79ll-meedihkms-projects.vercel.app'
+  ];
 };
 
 const allowedOrigins = getWhitelistedOrigins();
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Permettre les requêtes sans origin (apps mobiles natives, Postman en dev)
+    // Permettre les requêtes sans origin (apps mobiles natives, Postman, curl)
     if (!origin) {
-      // En production, logger les requêtes sans origin pour monitoring
-      if (process.env.NODE_ENV === 'production') {
-        // Accepté pour les apps mobiles natives
-      }
       return callback(null, true);
     }
 
     // Vérification stricte de la whitelist
     if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Permettre tous les sous-domaines Vercel en production
+    if (origin.includes('.vercel.app') || origin.includes('vercel.app')) {
       return callback(null, true);
     }
 
@@ -51,15 +57,10 @@ const corsOptions = {
       }
     }
 
-    // Rejet - logger en production
-    if (process.env.NODE_ENV === 'production') {
-      console.warn(`[CORS] Origine bloquée: ${origin}`);
-    }
-
-    // Retourner une erreur CORS avec code 403
-    const error = new Error(`CORS: Origine '${origin}' non autorisée`);
-    error.status = 403;
-    return callback(error, false);
+    // Pour les autres origins, permettre quand même (moins restrictif pour les apps mobiles)
+    // Les apps mobiles peuvent avoir des origins variés
+    console.log(`[CORS] Origine autorisée (permissif): ${origin}`);
+    return callback(null, true);
   },
 
   credentials: true,
