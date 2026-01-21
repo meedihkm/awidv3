@@ -6,6 +6,16 @@
 
 const Sentry = require('@sentry/node');
 
+// Flag pour vérifier si Sentry est initialisé
+let sentryInitialized = false;
+
+// Stub handlers pour quand Sentry n'est pas configuré
+const stubHandlers = {
+    requestHandler: () => (req, res, next) => next(),
+    tracingHandler: () => (req, res, next) => next(),
+    errorHandler: () => (err, req, res, next) => next(err),
+};
+
 // Initialisation de Sentry
 const initSentry = (app) => {
     // Ne pas initialiser si pas de DSN (ex: dev local sans monitoring)
@@ -58,10 +68,20 @@ const initSentry = (app) => {
             },
         });
 
+        sentryInitialized = true;
         console.log('[Monitoring] Sentry initialisé');
     } catch (error) {
         console.error('[Monitoring] Erreur initialisation Sentry:', error.message);
     }
 };
 
-module.exports = { initSentry, Sentry };
+// Getter pour les Handlers (retourne stubs si Sentry non initialisé)
+const getHandlers = () => {
+    if (sentryInitialized && Sentry.Handlers) {
+        return Sentry.Handlers;
+    }
+    return stubHandlers;
+};
+
+module.exports = { initSentry, Sentry, getHandlers };
+

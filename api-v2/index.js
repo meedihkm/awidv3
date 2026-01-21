@@ -21,7 +21,7 @@ const debtRoutes = require('./routes/debt.routes');
 const packagingRoutes = require('./routes/packaging.routes');
 const recurringRoutes = require('./routes/recurring.routes');
 
-const { initSentry, Sentry } = require('./config/sentry');
+const { initSentry, getHandlers } = require('./config/sentry');
 const logger = require('./config/logger');
 const { requestLogger } = require('./config/logger');
 const { metricsMiddleware, metricsEndpoint } = require('./middleware/metrics.middleware');
@@ -40,8 +40,8 @@ app.set('trust proxy', 1);
 // ============================================
 
 // 1. Sentry Request Handler (doit être le premier middleware)
-app.use(Sentry.Handlers.requestHandler());
-app.use(Sentry.Handlers.tracingHandler());
+app.use(getHandlers().requestHandler());
+app.use(getHandlers().tracingHandler());
 
 // 2. Redirection HTTPS en production
 app.use(httpsRedirect);
@@ -249,7 +249,7 @@ app.use('/api/*', (req, res) => {
 });
 
 // The Sentry error handler must be before any other error middleware and after all controllers
-app.use(Sentry.Handlers.errorHandler());
+app.use(getHandlers().errorHandler());
 
 // Custom Error handler
 app.use((err, req, res, next) => {
