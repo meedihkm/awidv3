@@ -276,10 +276,10 @@ void main() {
 
       // Find and verify all tabs exist using Tab widget
       final tabs = find.byType(Tab);
-      expect(tabs, findsNWidgets(3));
+      expect(tabs, findsNWidgets(4)); // Should be 4 tabs now (incl Consignes)
       
-      // Verify Debt History tab text exists
-      expect(find.text('Dette'), findsOneWidget);
+      // Verify Debt History tab text exists (might find 2 including stat card, but we ensure the Tab exists)
+      expect(find.descendant(of: find.byType(TabBar), matching: find.text('Dette')), findsOneWidget);
     });
 
     testWidgets('Debt history shows empty state when no payments', (WidgetTester tester) async {
@@ -306,8 +306,8 @@ void main() {
       await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -400));
       await tester.pumpAndSettle();
 
-      // Tap on Debt History tab
-      await tester.tap(find.text('Dette'));
+      // Tap on Debt History tab (use specific finder)
+      await tester.tap(find.descendant(of: find.byType(TabBar), matching: find.text('Dette')));
       await tester.pumpAndSettle();
       
       // Verify empty state message
