@@ -154,3 +154,22 @@ Awidv2-main/
 # Fichiers de config Coolify locaux
 .env.coolify
 docker-compose.coolify.yml
+
+# Documentation non essentielle
+AWID_COMMERCIAL.md
+Audit_AWID_Application.md
+CHANGELOG_V2.md
+CONTRIBUTING.md
+DEPLOYMENT_GUIDE*.md
+docs/CDN_SETUP.md
+docs/MONITORING.md
+docs/SECURITY_AUDIT.md
+docs/SQL_OPTIMIZATIONS.md
+docs/USER_GUIDE.md
+
+# Scripts et tests de charge
+artillery/
+scripts/health-check.sh
+
+# Config workspace
+*.code-workspace
