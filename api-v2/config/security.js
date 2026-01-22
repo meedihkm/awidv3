@@ -15,6 +15,7 @@ const getHelmetConfig = () => {
             directives: {
                 defaultSrc: ["'self'"],
                 scriptSrc: ["'self'", "'unsafe-inline'"], // Nécessaire pour la page admin inline
+                scriptSrcAttr: ["'unsafe-inline'"], // Permettre onclick, onsubmit, etc.
                 styleSrc: ["'self'", "'unsafe-inline'"],  // Styles inline pour admin
                 imgSrc: ["'self'", "data:", "https:"],
                 connectSrc: ["'self'"],

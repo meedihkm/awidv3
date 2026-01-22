@@ -8,6 +8,11 @@
  * Utilise x-forwarded-proto car Vercel/proxies terminent le SSL
  */
 const httpsRedirect = (req, res, next) => {
+    // Désactiver la redirection HTTPS si DISABLE_HTTPS_REDIRECT=true
+    if (process.env.DISABLE_HTTPS_REDIRECT === 'true') {
+        return next();
+    }
+
     // Uniquement en production
     if (process.env.NODE_ENV !== 'production') {
         return next();
