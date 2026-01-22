@@ -173,3 +173,19 @@ scripts/health-check.sh
 
 # Config workspace
 *.code-workspace
+
+# Tous les fichiers markdown sauf ceux dans .github
+*.md
+!.github/**/*.md
+
+# Migrations et scripts
+api-v2/migrations/
+api-v2/scripts/
+scripts/
+
+# Docker et déploiement
+docker-compose*.yml
+Dockerfile
+
+# Documentation
+docs/
