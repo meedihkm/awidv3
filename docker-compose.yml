@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: awid-postgres
+    environment:
+      POSTGRES_DB: awid
+      POSTGRES_USER: awid_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql_migrations.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./api-v2/migrations/DEPLOY_ALL_NEW_FEATURES.sql:/docker-entrypoint-initdb.d/02-features.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U awid_user -d awid"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - awid-network
+
+  # Backend API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: awid-api
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://awid_user:${DB_PASSWORD:-changeme}@postgres:5432/awid
+      DATABASE_SSL_REJECT_UNAUTHORIZED: "false"
+      JWT_SECRET: ${JWT_SECRET}
+      SUPER_ADMIN_KEY: ${SUPER_ADMIN_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/api-v2/uploads
+    restart: unless-stopped
+    networks:
+      - awid-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads:
+    driver: local
+
+networks:
+  awid-network:
+    driver: bridge
