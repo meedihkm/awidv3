@@ -120,3 +120,37 @@ out/
 # Documentation builds
 docs/_build/
 site/
+
+# Documentation temporaire / archives
+AUDIT_*.md
+PHASE_*.md
+ALL_PHASES_COMPLETE.md
+ACTION_REQUISE_URGENT.md
+COMMIT_MESSAGE*.txt
+WORK_COMPLETED.md
+SESSION_SUMMARY.md
+IMPROVEMENTS_SUMMARY.md
+IMPLEMENTATION_STATUS.md
+FRONTEND_DEBT_PROGRESS.md
+BUG_FIX_ORGANIZATION_ISOLATION.md
+DEBT_MANAGEMENT_IMPLEMENTATION.md
+FINAL_LOCATION_CHANGES.md
+FLUTTER_BUILD_FIXES.md
+LOCATION_SYSTEM_*.md
+MIGRATION_GUIDE.md
+PLAN_AMELIORATION_AWID_2026.md
+PROMPTS_*.md
+TYPE_VERIFICATION.md
+
+# Backups et logs VPS
+supabase_backup.sql
+fix_organization_isolation.sql
+sql_*.sql
+log vps
+
+# Dossiers dupliqués
+Awidv2-main/
+
+# Fichiers de config Coolify locaux
+.env.coolify
+docker-compose.coolify.yml
