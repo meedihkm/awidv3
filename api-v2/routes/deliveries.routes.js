@@ -1,12 +1,12 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const pool = require('../config/database');
-const { authenticate, requireAdmin } = require('../middleware/auth');
-const { validate, validateUUID } = require('../middleware/validate');
-const { logAudit } = require('../services/audit.service');
-const { getOrderWithItems } = require('../services/order.service');
-const { getPagination, getPagingData } = require('../utils/pagination.helper');
+const pool = require("../config/database");
+const { authenticate, requireAdmin } = require("../middleware/auth");
+const { validate, validateUUID } = require("../middleware/validate");
+const { logAudit } = require("../services/audit.service");
+const { getOrderWithItems } = require("../services/order.service");
+const { getPagination, getPagingData } = require("../utils/pagination.helper");
 
 /**
  * @swagger
@@ -78,17 +78,17 @@ const { getPagination, getPagingData } = require('../utils/pagination.helper');
  *                     $ref: '#/components/schemas/Delivery'
  */
 // GET /api/deliveries (avec pagination optionnelle)
-router.get('/', authenticate, async (req, res) => {
+router.get("/", authenticate, async (req, res) => {
   try {
     const { page, limit, offset } = getPagination(req.query, 50);
     const status = req.query.status;
     const delivererId = req.query.delivererId;
     const customerId = req.query.customerId;
 
-    let whereClause = 'WHERE d.organization_id = $1';
+    let whereClause = "WHERE d.organization_id = $1";
     const params = [req.user.organization_id];
 
-    if (status && status !== 'all') {
+    if (status && status !== "all") {
       params.push(status);
       whereClause += ` AND d.status = $${params.length}`;
     }
@@ -138,23 +138,25 @@ router.get('/', authenticate, async (req, res) => {
        GROUP BY d.id, u.id, o.id, ou.id
        ORDER BY d.created_at DESC
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
-      [...params, limit, offset]
+      [...params, limit, offset],
     );
 
-    const deliveries = result.rows.map(d => {
+    const deliveries = result.rows.map((d) => {
       // Reconstituer l'objet order complet comme getOrderWithItems le ferait
-      const order = d.order_data ? {
-        ...d.order_data,
-        items: d.order_items,
-        cafeteria: { name: d.cafeteria_name, phone: d.cafeteria_phone } // Basic info
-      } : null;
+      const order = d.order_data
+        ? {
+            ...d.order_data,
+            items: d.order_items,
+            cafeteria: { name: d.cafeteria_name, phone: d.cafeteria_phone }, // Basic info
+          }
+        : null;
 
       return {
         id: d.id,
         orderId: d.order_id,
         delivererId: d.deliverer_id,
         status: d.status,
-        paymentStatus: d.payment_status || 'unpaid',
+        paymentStatus: d.payment_status || "unpaid",
         amountCollected: parseFloat(d.amount_collected || 0),
         comment: d.comment,
         failureReason: d.failure_reason,
@@ -164,14 +166,16 @@ router.get('/', authenticate, async (req, res) => {
         deliveredAt: d.delivered_at,
         createdAt: d.created_at,
         order,
-        deliverer: d.deliverer_id ? { id: d.deliverer_id, name: d.deliverer_name } : null
+        deliverer: d.deliverer_id
+          ? { id: d.deliverer_id, name: d.deliverer_name }
+          : null,
       };
     });
 
     res.json(getPagingData(deliveries, total, page, limit));
   } catch (error) {
-    console.error('Deliveries error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error("Deliveries error:", error);
+    res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
@@ -199,13 +203,13 @@ router.get('/', authenticate, async (req, res) => {
  *                     $ref: '#/components/schemas/Delivery'
  */
 // GET /api/deliveries/route
-router.get('/route', authenticate, async (req, res) => {
+router.get("/route", authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT d.* FROM deliveries d
        WHERE d.deliverer_id = $1 AND d.status IN ('assigned', 'in_progress', 'postponed')
        ORDER BY CASE WHEN d.status = 'postponed' THEN 1 ELSE 0 END, d.created_at`,
-      [req.user.id]
+      [req.user.id],
     );
 
     const deliveries = [];
@@ -216,7 +220,7 @@ router.get('/route', authenticate, async (req, res) => {
         orderId: d.order_id,
         delivererId: d.deliverer_id,
         status: d.status,
-        paymentStatus: d.payment_status || 'unpaid',
+        paymentStatus: d.payment_status || "unpaid",
         amountCollected: parseFloat(d.amount_collected || 0),
         comment: d.comment,
         failureReason: d.failure_reason,
@@ -224,26 +228,26 @@ router.get('/route', authenticate, async (req, res) => {
         postponedTo: d.postponed_to,
         attempts: d.attempts || 0,
         createdAt: d.created_at,
-        order
+        order,
       });
     }
 
     res.json({ success: true, data: deliveries });
   } catch (error) {
-    console.error('Route error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error("Route error:", error);
+    res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
 // GET /api/deliveries/history
-router.get('/history', authenticate, async (req, res) => {
+router.get("/history", authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT d.* FROM deliveries d
        WHERE d.deliverer_id = $1 AND d.status IN ('delivered', 'failed')
        ORDER BY d.delivered_at DESC NULLS LAST, d.created_at DESC
        LIMIT 100`,
-      [req.user.id]
+      [req.user.id],
     );
 
     const deliveries = [];
@@ -254,36 +258,36 @@ router.get('/history', authenticate, async (req, res) => {
         orderId: d.order_id,
         delivererId: d.deliverer_id,
         status: d.status,
-        paymentStatus: d.payment_status || 'unpaid',
+        paymentStatus: d.payment_status || "unpaid",
         amountCollected: parseFloat(d.amount_collected || 0),
         comment: d.comment,
         failureReason: d.failure_reason,
         deliveredAt: d.delivered_at,
         createdAt: d.created_at,
-        order
+        order,
       });
     }
 
     res.json({ success: true, data: deliveries });
   } catch (error) {
-    console.error('History error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error("History error:", error);
+    res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
 // GET /api/deliveries/:id
-router.get('/:id', authenticate, validateUUID('id'), async (req, res) => {
+router.get("/:id", authenticate, validateUUID("id"), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT d.*, u.name as deliverer_name
        FROM deliveries d
        LEFT JOIN users u ON d.deliverer_id = u.id
        WHERE d.id = $1 AND d.organization_id = $2`,
-      [req.params.id, req.user.organization_id]
+      [req.params.id, req.user.organization_id],
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Livraison non trouvée' });
+      return res.status(404).json({ error: "Livraison non trouvée" });
     }
 
     const d = result.rows[0];
@@ -296,17 +300,19 @@ router.get('/:id', authenticate, validateUUID('id'), async (req, res) => {
         orderId: d.order_id,
         delivererId: d.deliverer_id,
         status: d.status,
-        paymentStatus: d.payment_status || 'unpaid',
+        paymentStatus: d.payment_status || "unpaid",
         amountCollected: parseFloat(d.amount_collected || 0),
         comment: d.comment,
         deliveredAt: d.delivered_at,
         createdAt: d.created_at,
         order,
-        deliverer: d.deliverer_id ? { id: d.deliverer_id, name: d.deliverer_name } : null
-      }
+        deliverer: d.deliverer_id
+          ? { id: d.deliverer_id, name: d.deliverer_name }
+          : null,
+      },
     });
   } catch (error) {
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
@@ -351,78 +357,141 @@ router.get('/:id', authenticate, validateUUID('id'), async (req, res) => {
  *         description: Statut mis à jour
  */
 // PUT /api/deliveries/:id/status
-router.put('/:id/status', authenticate, validateUUID('id'), validate('updateDeliveryStatus'), async (req, res) => {
-  try {
-    const { status, paymentStatus, amountCollected, comment, failureReason, postponedTo } = req.body;
+router.put(
+  "/:id/status",
+  authenticate,
+  validateUUID("id"),
+  validate("updateDeliveryStatus"),
+  async (req, res) => {
+    try {
+      const {
+        status,
+        paymentStatus,
+        amountCollected,
+        comment,
+        failureReason,
+        postponedTo,
+      } = req.body;
 
-    // Vérifier que la livraison existe et appartient au livreur
-    const checkDelivery = await pool.query(
-      'SELECT id, deliverer_id FROM deliveries WHERE id = $1',
-      [req.params.id]
-    );
-
-    if (checkDelivery.rows.length === 0) {
-      return res.status(404).json({ error: 'Livraison non trouvée' });
-    }
-
-    if (checkDelivery.rows[0].deliverer_id !== req.user.id) {
-      return res.status(403).json({ error: 'Cette livraison ne vous est pas assignée' });
-    }
-
-    if (status === 'delivered') {
-      await pool.query(
-        `UPDATE deliveries SET status = $1, payment_status = $2, amount_collected = $3, comment = $4, delivered_at = NOW() 
-         WHERE id = $5 AND deliverer_id = $6`,
-        [status, paymentStatus || 'unpaid', amountCollected || 0, comment || null, req.params.id, req.user.id]
+      // Vérifier que la livraison existe et appartient au livreur
+      const checkDelivery = await pool.query(
+        "SELECT id, deliverer_id FROM deliveries WHERE id = $1",
+        [req.params.id],
       );
 
-      const delivery = await pool.query('SELECT order_id FROM deliveries WHERE id = $1', [req.params.id]);
-      if (delivery.rows.length > 0) {
+      if (checkDelivery.rows.length === 0) {
+        return res.status(404).json({ error: "Livraison non trouvée" });
+      }
+
+      if (checkDelivery.rows[0].deliverer_id !== req.user.id) {
+        return res
+          .status(403)
+          .json({ error: "Cette livraison ne vous est pas assignée" });
+      }
+
+      if (status === "delivered") {
         await pool.query(
-          `UPDATE orders SET status = 'delivered', payment_status = $1, amount_paid = amount_paid + $2 
+          `UPDATE deliveries SET status = $1, payment_status = $2, amount_collected = $3, comment = $4, delivered_at = NOW() 
+         WHERE id = $5 AND deliverer_id = $6`,
+          [
+            status,
+            paymentStatus || "unpaid",
+            amountCollected || 0,
+            comment || null,
+            req.params.id,
+            req.user.id,
+          ],
+        );
+
+        const delivery = await pool.query(
+          "SELECT order_id FROM deliveries WHERE id = $1",
+          [req.params.id],
+        );
+        if (delivery.rows.length > 0) {
+          await pool.query(
+            `UPDATE orders SET status = 'delivered', payment_status = $1, amount_paid = amount_paid + $2 
            WHERE id = $3`,
-          [paymentStatus || 'unpaid', amountCollected || 0, delivery.rows[0].order_id]
+            [
+              paymentStatus || "unpaid",
+              amountCollected || 0,
+              delivery.rows[0].order_id,
+            ],
+          );
+        }
+
+        await logAudit(
+          "DELIVERY_COMPLETED",
+          req.user.id,
+          req.user.organization_id,
+          { deliveryId: req.params.id, amountCollected },
+          req,
+        );
+      } else if (status === "failed") {
+        await pool.query(
+          `UPDATE deliveries SET status = $1, comment = $2, failure_reason = $3, failed_at = NOW(), attempts = COALESCE(attempts, 0) + 1
+         WHERE id = $4 AND deliverer_id = $5`,
+          [
+            status,
+            comment || null,
+            failureReason || "other",
+            req.params.id,
+            req.user.id,
+          ],
+        );
+
+        const delivery = await pool.query(
+          "SELECT order_id FROM deliveries WHERE id = $1",
+          [req.params.id],
+        );
+        if (delivery.rows.length > 0) {
+          await pool.query(
+            `UPDATE orders SET status = 'locked' WHERE id = $1`,
+            [delivery.rows[0].order_id],
+          );
+        }
+
+        await logAudit(
+          "DELIVERY_FAILED",
+          req.user.id,
+          req.user.organization_id,
+          { deliveryId: req.params.id, failureReason },
+          req,
+        );
+      } else if (status === "postponed") {
+        await pool.query(
+          `UPDATE deliveries SET status = $1, comment = $2, failure_reason = $3, postponed_to = $4, attempts = COALESCE(attempts, 0) + 1
+         WHERE id = $5 AND deliverer_id = $6`,
+          [
+            status,
+            comment || null,
+            failureReason || "other",
+            postponedTo || null,
+            req.params.id,
+            req.user.id,
+          ],
+        );
+
+        await logAudit(
+          "DELIVERY_POSTPONED",
+          req.user.id,
+          req.user.organization_id,
+          { deliveryId: req.params.id, postponedTo },
+          req,
+        );
+      } else {
+        await pool.query(
+          "UPDATE deliveries SET status = $1, comment = $2 WHERE id = $3 AND deliverer_id = $4",
+          [status, comment || null, req.params.id, req.user.id],
         );
       }
 
-      await logAudit('DELIVERY_COMPLETED', req.user.id, req.user.organization_id, { deliveryId: req.params.id, amountCollected }, req);
-
-    } else if (status === 'failed') {
-      await pool.query(
-        `UPDATE deliveries SET status = $1, comment = $2, failure_reason = $3, failed_at = NOW(), attempts = COALESCE(attempts, 0) + 1
-         WHERE id = $4 AND deliverer_id = $5`,
-        [status, comment || null, failureReason || 'other', req.params.id, req.user.id]
-      );
-
-      const delivery = await pool.query('SELECT order_id FROM deliveries WHERE id = $1', [req.params.id]);
-      if (delivery.rows.length > 0) {
-        await pool.query(`UPDATE orders SET status = 'locked' WHERE id = $1`, [delivery.rows[0].order_id]);
-      }
-
-      await logAudit('DELIVERY_FAILED', req.user.id, req.user.organization_id, { deliveryId: req.params.id, failureReason }, req);
-
-    } else if (status === 'postponed') {
-      await pool.query(
-        `UPDATE deliveries SET status = $1, comment = $2, failure_reason = $3, postponed_to = $4, attempts = COALESCE(attempts, 0) + 1
-         WHERE id = $5 AND deliverer_id = $6`,
-        [status, comment || null, failureReason || 'other', postponedTo || null, req.params.id, req.user.id]
-      );
-
-      await logAudit('DELIVERY_POSTPONED', req.user.id, req.user.organization_id, { deliveryId: req.params.id, postponedTo }, req);
-
-    } else {
-      await pool.query(
-        'UPDATE deliveries SET status = $1, comment = $2 WHERE id = $3 AND deliverer_id = $4',
-        [status, comment || null, req.params.id, req.user.id]
-      );
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delivery status error:", error);
+      res.status(500).json({ error: "Erreur serveur: " + error.message });
     }
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Delivery status error:', error);
-    res.status(500).json({ error: 'Erreur serveur: ' + error.message });
-  }
-});
+  },
+);
 
 /**
  * @swagger
@@ -451,72 +520,84 @@ router.put('/:id/status', authenticate, validateUUID('id'), validate('updateDeli
  *         description: Position mise à jour
  */
 // POST /api/deliverers/location
-router.post('/location', authenticate, validate('updateLocation'), async (req, res) => {
-  try {
-    const { latitude, longitude } = req.body;
+router.post(
+  "/location",
+  authenticate,
+  validate("updateLocation"),
+  async (req, res) => {
+    try {
+      const { latitude, longitude } = req.body;
 
-    await pool.query(
-      `UPDATE users SET latitude = $1, longitude = $2, location_updated_at = NOW() 
+      await pool.query(
+        `UPDATE users SET latitude = $1, longitude = $2, location_updated_at = NOW() 
        WHERE id = $3 AND role = 'deliverer'`,
-      [latitude, longitude, req.user.id]
-    );
+        [latitude, longitude, req.user.id],
+      );
 
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Location update error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Location update error:", error);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+);
 
 // GET /api/deliverers/locations
-router.get('/locations', authenticate, requireAdmin, async (req, res) => {
+router.get("/locations", authenticate, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, name, phone, latitude, longitude, location_updated_at
        FROM users 
        WHERE organization_id = $1 AND role = 'deliverer' AND active = true
        AND latitude IS NOT NULL AND longitude IS NOT NULL`,
-      [req.user.organization_id]
+      [req.user.organization_id],
     );
 
     res.json({ success: true, data: result.rows });
   } catch (error) {
-    console.error('Get locations error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error("Get locations error:", error);
+    res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
 // GET /api/deliverers/:id/history (alias pour compatibilité)
 // SECURITY: Filtrer par organization_id pour éviter fuite de données inter-organisations
-router.get('/:id/history', authenticate, validateUUID('id'), async (req, res) => {
-  try {
-    const { date } = req.query;
-    const delivererId = req.params.id;
+router.get(
+  "/:id/history",
+  authenticate,
+  validateUUID("id"),
+  async (req, res) => {
+    try {
+      const { date } = req.query;
+      const delivererId = req.params.id;
 
-    // Vérifier que le livreur appartient à l'organisation de l'utilisateur
-    const delivererCheck = await pool.query(
-      'SELECT id FROM users WHERE id = $1 AND organization_id = $2 AND role = $3',
-      [delivererId, req.user.organization_id, 'deliverer']
-    );
+      // Vérifier que le livreur appartient à l'organisation de l'utilisateur
+      const delivererCheck = await pool.query(
+        "SELECT id FROM users WHERE id = $1 AND organization_id = $2 AND role = $3",
+        [delivererId, req.user.organization_id, "deliverer"],
+      );
 
-    if (delivererCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Livreur non trouvé dans votre organisation' });
-    }
+      if (delivererCheck.rows.length === 0) {
+        return res
+          .status(404)
+          .json({ error: "Livreur non trouvé dans votre organisation" });
+      }
 
-    const result = await pool.query(
-      `SELECT latitude, longitude, recorded_at
+      const result = await pool.query(
+        `SELECT latitude, longitude, recorded_at
        FROM location_history 
        WHERE deliverer_id = $1 AND DATE(recorded_at) = $2
        ORDER BY recorded_at`,
-      [delivererId, date || new Date().toISOString().split('T')[0]]
-    );
+        [delivererId, date || new Date().toISOString().split("T")[0]],
+      );
 
-    res.json({ success: true, data: result.rows });
-  } catch (error) {
-    console.error('Get history error:', error);
-    // Retourner tableau vide si table n'existe pas
-    res.json({ success: true, data: [] });
-  }
-});
+      res.json({ success: true, data: result.rows });
+    } catch (error) {
+      console.error("Get history error:", error);
+      // Retourner tableau vide si table n'existe pas
+      res.json({ success: true, data: [] });
+    }
+  },
+);
 
 module.exports = router;
