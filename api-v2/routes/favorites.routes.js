@@ -4,10 +4,10 @@ const { authenticate } = require('../middleware/auth');
 const pool = require('../config/database');
 
 // ============================================
-// 1. GET /api/favorites/my-favorites
+// ROUTES SPÉCIFIQUES (AVANT LES ROUTES AVEC :id)
 // ============================================
-// Récupère les favoris du client connecté
 
+// 1. GET /api/favorites/my-favorites
 router.get('/my-favorites', authenticate, async (req, res) => {
   try {
     const clientId = req.user.id;
@@ -31,11 +31,151 @@ router.get('/my-favorites', authenticate, async (req, res) => {
   }
 });
 
-// ============================================
-// 2. POST /api/favorites/create
-// ============================================
-// Crée un nouveau favori (manuel ou depuis pattern)
+// 2. GET /api/favorites/preferences
+router.get('/preferences', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    let result = await pool.query(
+      'SELECT * FROM user_preferences WHERE user_id = $1',
+      [userId]
+    );
+    
+    // Si pas de préférences, créer avec valeurs par défaut
+    if (result.rows.length === 0) {
+      result = await pool.query(
+        `INSERT INTO user_preferences (user_id, favorite_orders_enabled, auto_suggest_enabled, min_pattern_count)
+         VALUES ($1, true, true, 3)
+         RETURNING *`,
+        [userId]
+      );
+    }
+    
+    res.json({
+      success: true,
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching preferences:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des préférences',
+      error: error.message
+    });
+  }
+});
 
+// 3. PUT /api/favorites/preferences
+router.put('/preferences', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { favorite_orders_enabled, auto_suggest_enabled, min_pattern_count } = req.body;
+    
+    const result = await pool.query(
+      `INSERT INTO user_preferences (user_id, favorite_orders_enabled, auto_suggest_enabled, min_pattern_count)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (user_id)
+       DO UPDATE SET
+         favorite_orders_enabled = EXCLUDED.favorite_orders_enabled,
+         auto_suggest_enabled = EXCLUDED.auto_suggest_enabled,
+         min_pattern_count = EXCLUDED.min_pattern_count,
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING *`,
+      [userId, favorite_orders_enabled, auto_suggest_enabled, min_pattern_count]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Préférences mises à jour',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error updating preferences:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la mise à jour',
+      error: error.message
+    });
+  }
+});
+
+// 4. POST /api/favorites/detect-pattern
+router.post('/detect-pattern', authenticate, async (req, res) => {
+  try {
+    const { items } = req.body;
+    const clientId = req.user.id;
+    const organizationId = req.user.organizationId;
+    
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Items requis'
+      });
+    }
+    
+    // Détecter le pattern
+    const result = await pool.query(
+      'SELECT * FROM detect_order_pattern($1, $2, $3)',
+      [clientId, organizationId, JSON.stringify(items)]
+    );
+    
+    const patternData = result.rows[0].detect_order_pattern;
+    
+    res.json({
+      success: true,
+      data: patternData
+    });
+  } catch (error) {
+    console.error('Error detecting pattern:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la détection',
+      error: error.message
+    });
+  }
+});
+
+// 5. GET /api/favorites/stats (Admin)
+router.get('/stats', authenticate, async (req, res) => {
+  try {
+    // Vérifier que c'est un admin
+    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès non autorisé'
+      });
+    }
+    
+    const organizationId = req.user.organizationId;
+    
+    const result = await pool.query(
+      `SELECT
+        COUNT(DISTINCT f.client_id) AS clients_with_favorites,
+        COUNT(f.id) AS total_favorites,
+        SUM(f.order_count) AS total_favorite_orders,
+        AVG(f.order_count) AS avg_orders_per_favorite,
+        COUNT(CASE WHEN f.is_auto_detected THEN 1 END) AS auto_detected_count,
+        COUNT(CASE WHEN NOT f.is_auto_detected THEN 1 END) AS manual_count
+       FROM favorite_orders f
+       WHERE f.organization_id = $1 AND f.is_active = true`,
+      [organizationId]
+    );
+    
+    res.json({
+      success: true,
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération des statistiques',
+      error: error.message
+    });
+  }
+});
+
+// 6. POST /api/favorites/create
 router.post('/create', authenticate, async (req, res) => {
   try {
     const { name, items, fromPattern } = req.body;
@@ -73,10 +213,46 @@ router.post('/create', authenticate, async (req, res) => {
 });
 
 // ============================================
-// 3. PUT /api/favorites/:id
+// ROUTES AVEC PARAMÈTRES :id (APRÈS LES ROUTES SPÉCIFIQUES)
 // ============================================
-// Met à jour un favori existant
 
+// 7. POST /api/favorites/:id/use
+router.post('/:id/use', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const clientId = req.user.id;
+    
+    // Vérifier que le favori appartient au client
+    const checkResult = await pool.query(
+      'SELECT id FROM favorite_orders WHERE id = $1 AND client_id = $2 AND is_active = true',
+      [id, clientId]
+    );
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Favori non trouvé'
+      });
+    }
+    
+    // Mettre à jour les stats
+    await pool.query('SELECT update_favorite_usage($1)', [id]);
+    
+    res.json({
+      success: true,
+      message: 'Utilisation enregistrée'
+    });
+  } catch (error) {
+    console.error('Error recording favorite usage:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'enregistrement',
+      error: error.message
+    });
+  }
+});
+
+// 8. PUT /api/favorites/:id
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
@@ -126,11 +302,7 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 });
 
-// ============================================
-// 4. DELETE /api/favorites/:id
-// ============================================
-// Supprime (désactive) un favori
-
+// 9. DELETE /api/favorites/:id
 router.delete('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
@@ -160,206 +332,6 @@ router.delete('/:id', authenticate, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la suppression',
-      error: error.message
-    });
-  }
-});
-
-// ============================================
-// 5. POST /api/favorites/:id/use
-// ============================================
-// Enregistre l'utilisation d'un favori
-
-router.post('/:id/use', authenticate, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const clientId = req.user.id;
-    
-    // Vérifier que le favori appartient au client
-    const checkResult = await pool.query(
-      'SELECT id FROM favorite_orders WHERE id = $1 AND client_id = $2 AND is_active = true',
-      [id, clientId]
-    );
-    
-    if (checkResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Favori non trouvé'
-      });
-    }
-    
-    // Mettre à jour les stats
-    await pool.query('SELECT update_favorite_usage($1)', [id]);
-    
-    res.json({
-      success: true,
-      message: 'Utilisation enregistrée'
-    });
-  } catch (error) {
-    console.error('Error recording favorite usage:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de l\'enregistrement',
-      error: error.message
-    });
-  }
-});
-
-// ============================================
-// 6. POST /api/favorites/detect-pattern
-// ============================================
-// Détecte un pattern après création de commande
-
-router.post('/detect-pattern', authenticate, async (req, res) => {
-  try {
-    const { items } = req.body;
-    const clientId = req.user.id;
-    const organizationId = req.user.organizationId;
-    
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Items requis'
-      });
-    }
-    
-    // Détecter le pattern
-    const result = await pool.query(
-      'SELECT * FROM detect_order_pattern($1, $2, $3)',
-      [clientId, organizationId, JSON.stringify(items)]
-    );
-    
-    const patternData = result.rows[0].detect_order_pattern;
-    
-    res.json({
-      success: true,
-      data: patternData
-    });
-  } catch (error) {
-    console.error('Error detecting pattern:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la détection',
-      error: error.message
-    });
-  }
-});
-
-// ============================================
-// 7. GET /api/favorites/preferences
-// ============================================
-// Récupère les préférences de l'utilisateur
-
-router.get('/preferences', authenticate, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    
-    let result = await pool.query(
-      'SELECT * FROM user_preferences WHERE user_id = $1',
-      [userId]
-    );
-    
-    // Si pas de préférences, créer avec valeurs par défaut
-    if (result.rows.length === 0) {
-      result = await pool.query(
-        `INSERT INTO user_preferences (user_id, favorite_orders_enabled, auto_suggest_enabled, min_pattern_count)
-         VALUES ($1, true, true, 3)
-         RETURNING *`,
-        [userId]
-      );
-    }
-    
-    res.json({
-      success: true,
-      data: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Error fetching preferences:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la récupération des préférences',
-      error: error.message
-    });
-  }
-});
-
-// ============================================
-// 8. PUT /api/favorites/preferences
-// ============================================
-// Met à jour les préférences de l'utilisateur
-
-router.put('/preferences', authenticate, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { favorite_orders_enabled, auto_suggest_enabled, min_pattern_count } = req.body;
-    
-    const result = await pool.query(
-      `INSERT INTO user_preferences (user_id, favorite_orders_enabled, auto_suggest_enabled, min_pattern_count)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (user_id)
-       DO UPDATE SET
-         favorite_orders_enabled = EXCLUDED.favorite_orders_enabled,
-         auto_suggest_enabled = EXCLUDED.auto_suggest_enabled,
-         min_pattern_count = EXCLUDED.min_pattern_count,
-         updated_at = CURRENT_TIMESTAMP
-       RETURNING *`,
-      [userId, favorite_orders_enabled, auto_suggest_enabled, min_pattern_count]
-    );
-    
-    res.json({
-      success: true,
-      message: 'Préférences mises à jour',
-      data: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Error updating preferences:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la mise à jour',
-      error: error.message
-    });
-  }
-});
-
-// ============================================
-// 9. GET /api/favorites/stats (Admin)
-// ============================================
-// Statistiques sur l'utilisation des favoris
-
-router.get('/stats', authenticate, async (req, res) => {
-  try {
-    // Vérifier que c'est un admin
-    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Accès non autorisé'
-      });
-    }
-    
-    const organizationId = req.user.organizationId;
-    
-    const result = await pool.query(
-      `SELECT
-        COUNT(DISTINCT f.client_id) AS clients_with_favorites,
-        COUNT(f.id) AS total_favorites,
-        SUM(f.order_count) AS total_favorite_orders,
-        AVG(f.order_count) AS avg_orders_per_favorite,
-        COUNT(CASE WHEN f.is_auto_detected THEN 1 END) AS auto_detected_count,
-        COUNT(CASE WHEN NOT f.is_auto_detected THEN 1 END) AS manual_count
-       FROM favorite_orders f
-       WHERE f.organization_id = $1 AND f.is_active = true`,
-      [organizationId]
-    );
-    
-    res.json({
-      success: true,
-      data: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Error fetching stats:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la récupération des statistiques',
       error: error.message
     });
   }

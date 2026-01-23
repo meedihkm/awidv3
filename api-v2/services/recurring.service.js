@@ -163,7 +163,7 @@ async function getRecurringOrders(cafeteriaId, organizationId) {
        JOIN products p ON roi.product_id = p.id
        WHERE roi.recurring_order_id = ro.id) as items
      FROM recurring_orders ro
-     WHERE ro.cafeteria_id = $1 AND ro.organization_id = $2
+     WHERE ro.cafeteria_id = $1::uuid AND ro.organization_id = $2::uuid
      ORDER BY ro.created_at DESC`,
         [cafeteriaId, organizationId]
     );
