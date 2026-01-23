@@ -541,7 +541,7 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
               backgroundColor: Colors.orange.shade100,
               child: Icon(Icons.shopping_bag, color: Colors.orange),
             ),
-            title: Text(order['cafeteria']?['name'] ?? 'Client', style: TextStyle(fontWeight: FontWeight.w600)),
+            title: Text(order['customer']?['name'] ?? 'Client', style: TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text('${(order['items'] as List?)?.length ?? 0} articles'),
             trailing: Text('${_parseDouble(order['total']).toStringAsFixed(0)} DA', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
             onTap: () => widget.onNavigate(1),

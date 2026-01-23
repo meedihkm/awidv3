@@ -108,8 +108,8 @@ class _DeliverersMapPageState extends State<DeliverersMapPage> {
       List<Map<String, dynamic>> points = [];
       for (var d in deliveries) {
         final order = d['order'];
-        if (order != null && order['cafeteria'] != null) {
-          final cafeteria = order['cafeteria'];
+        if (order != null && order['customer'] != null) {
+          final cafeteria = order['customer'];
           final lat = double.tryParse(cafeteria['latitude']?.toString() ?? '0') ?? 0;
           final lng = double.tryParse(cafeteria['longitude']?.toString() ?? '0') ?? 0;
           

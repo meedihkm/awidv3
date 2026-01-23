@@ -33,9 +33,9 @@ async function getOrderItems(orderId) {
  */
 async function getOrderWithItems(orderId) {
   const orderResult = await pool.query(
-    `SELECT o.*, u.name as cafeteria_name, u.phone as cafeteria_phone, u.address as cafeteria_address, u.address_lat as cafeteria_lat, u.address_lng as cafeteria_lng
+    `SELECT o.*, u.name as customer_name, u.phone as customer_phone, u.address as customer_address, u.address_lat as customer_lat, u.address_lng as customer_lng
      FROM orders o 
-     JOIN users u ON o.cafeteria_id = u.id 
+     JOIN users u ON o.customer_id = u.id 
      WHERE o.id = $1`,
     [orderId]
   );
@@ -49,7 +49,7 @@ async function getOrderWithItems(orderId) {
     id: order.id,
     orderNumber: order.order_number || null,
     organizationId: order.organization_id,
-    cafeteriaId: order.cafeteria_id,
+    customerId: order.customer_id,
     date: order.date || '',
     total: safeParseFloat(order.total),
     status: order.status || 'pending',
@@ -58,12 +58,12 @@ async function getOrderWithItems(orderId) {
     createdAt: order.created_at,
     items,
     cafeteria: {
-      id: order.cafeteria_id,
-      name: order.cafeteria_name || '',
-      phone: order.cafeteria_phone || null,
-      address: order.cafeteria_address || null,
-      latitude: order.cafeteria_lat ? parseFloat(order.cafeteria_lat) : null,
-      longitude: order.cafeteria_lng ? parseFloat(order.cafeteria_lng) : null
+      id: order.customer_id,
+      name: order.customer_name || '',
+      phone: order.customer_phone || null,
+      address: order.customer_address || null,
+      latitude: order.customer_lat ? parseFloat(order.customer_lat) : null,
+      longitude: order.customer_lng ? parseFloat(order.customer_lng) : null
     }
   };
 }
@@ -76,7 +76,7 @@ function formatOrder(order, items, cafeteria = null) {
     id: order.id,
     orderNumber: order.order_number || null,
     organizationId: order.organization_id,
-    cafeteriaId: order.cafeteria_id,
+    customerId: order.customer_id,
     date: order.date || '',
     total: safeParseFloat(order.total),
     status: order.status || 'pending',
@@ -84,7 +84,7 @@ function formatOrder(order, items, cafeteria = null) {
     amountPaid: safeParseFloat(order.amount_paid),
     createdAt: order.created_at,
     items,
-    cafeteria: cafeteria || { id: order.cafeteria_id, name: order.cafeteria_name || '' }
+    cafeteria: cafeteria || { id: order.customer_id, name: order.customer_name || '' }
   };
 }
 

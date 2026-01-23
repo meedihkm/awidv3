@@ -90,7 +90,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       // Créer map des clients
       final clientsMap = <String, dynamic>{};
       for (var user in users) {
-        if (user['role'] == 'cafeteria') {
+        if (user['role'] == 'customer') {
           clientsMap[user['id']] = user;
         }
       }
@@ -153,7 +153,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       final total = _parseDouble(order['total']);
       final paid = _parseDouble(order['amountPaid']);
       final status = order['status'] ?? '';
-      final clientName = order['cafeteria']?['name'] ?? 'Inconnu';
+      final clientName = order['customer']?['name'] ?? 'Inconnu';
       
       totalCA += total;
       totalCollected += paid;

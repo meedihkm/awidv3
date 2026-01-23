@@ -79,7 +79,7 @@ router.get('/deliveries-map', authenticate, requireAdmin, async (req, res) => {
         u.location_updated_at as deliverer_location_updated
        FROM deliveries d
        JOIN orders o ON d.order_id = o.id
-       JOIN users c ON o.cafeteria_id = c.id
+       JOIN users c ON o.customer_id = c.id
        LEFT JOIN users u ON d.deliverer_id = u.id
        WHERE d.organization_id = $1 
        AND d.status IN ('assigned', 'in_progress')
@@ -150,7 +150,7 @@ router.get('/deliverer/:id/route', authenticate, requireAdmin, validateUUID('id'
         c.address_lng as client_lng
        FROM deliveries d
        JOIN orders o ON d.order_id = o.id
-       JOIN users c ON o.cafeteria_id = c.id
+       JOIN users c ON o.customer_id = c.id
        WHERE d.deliverer_id = $1 
        AND d.status IN ('assigned', 'in_progress', 'postponed')
        ORDER BY 

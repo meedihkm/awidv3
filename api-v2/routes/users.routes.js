@@ -81,8 +81,8 @@ router.get('/clients-locations', authenticate, cacheMiddleware(300), async (req,
   try {
     const result = await pool.query(
       `SELECT u.id, u.name, u.phone, u.address, u.address_lat as latitude, u.address_lng as longitude,
-              (SELECT COUNT(*) FROM orders o WHERE o.cafeteria_id = u.id AND o.status IN ('pending', 'validated', 'preparing', 'ready', 'in_delivery'))::int as active_orders_count,
-              (SELECT COALESCE(SUM(total), 0) FROM orders o WHERE o.cafeteria_id = u.id AND o.status IN ('pending', 'validated', 'preparing', 'ready', 'in_delivery'))::float as active_orders_total
+              (SELECT COUNT(*) FROM orders o WHERE o.customer_id = u.id AND o.status IN ('pending', 'validated', 'preparing', 'ready', 'in_delivery'))::int as active_orders_count,
+              (SELECT COALESCE(SUM(total), 0) FROM orders o WHERE o.customer_id = u.id AND o.status IN ('pending', 'validated', 'preparing', 'ready', 'in_delivery'))::float as active_orders_total
        FROM users u
        WHERE u.organization_id = $1 AND u.role = 'cafeteria' AND u.active = true
        AND u.address_lat IS NOT NULL AND u.address_lng IS NOT NULL`,
@@ -191,7 +191,7 @@ router.delete('/:id', authenticate, requireAdmin, validateUUID('id'), async (req
     }
 
     const ordersCheck = await pool.query(
-      'SELECT COUNT(*) as count FROM orders WHERE cafeteria_id = $1',
+      'SELECT COUNT(*) as count FROM orders WHERE customer_id = $1',
       [userId]
     );
 

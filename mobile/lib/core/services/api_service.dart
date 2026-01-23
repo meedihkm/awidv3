@@ -235,10 +235,10 @@ class ApiService {
     int page = 1, 
     int limit = 20, 
     bool forceRefresh = false,
-    String? cafeteriaId,
+    String? customerId,
     String? status
   }) async {
-    final cacheKey = 'orders_p${page}_l$limit${cafeteriaId != null ? "_c$cafeteriaId" : ""}${status != null ? "_s$status" : ""}';
+    final cacheKey = 'orders_p${page}_l$limit${customerId != null ? "_c$customerId" : ""}${status != null ? "_s$status" : ""}';
     
     // 1. Try Cache if offline or not forced
     if (!forceRefresh) {
@@ -252,14 +252,14 @@ class ApiService {
 
     try {
       String query = 'page=$page&limit=$limit';
-      if (cafeteriaId != null) query += '&cafeteriaId=$cafeteriaId';
+      if (customerId != null) query += '&customerId=$customerId';
       if (status != null) query += '&status=$status';
 
       final result = await _request('GET', '${ApiConstants.orders}?$query');
       if (result['success'] == true && result['data'] != null) {
         await _hive.cacheData(cacheKey, result['data']);
         // Only cache generic list for page 1 if no filters
-        if (page == 1 && cafeteriaId == null && status == null) await _hive.cacheData('orders', result['data']);
+        if (page == 1 && customerId == null && status == null) await _hive.cacheData('orders', result['data']);
       }
       return result;
     } catch (e) {
@@ -302,9 +302,9 @@ class ApiService {
     bool forceRefresh = false,
     String? delivererId,
     String? status,
-    String? cafeteriaId
+    String? customerId
   }) async {
-    if (!forceRefresh && page == 1 && delivererId == null && status == null && cafeteriaId == null) {
+    if (!forceRefresh && page == 1 && delivererId == null && status == null && customerId == null) {
       final cached = await _cache.getCachedDeliveries();
       if (cached != null) {
         return {'success': true, 'data': cached, 'fromCache': true};
@@ -314,10 +314,10 @@ class ApiService {
     String query = 'page=$page&limit=$limit';
     if (delivererId != null) query += '&delivererId=$delivererId';
     if (status != null) query += '&status=$status';
-    if (cafeteriaId != null) query += '&cafeteriaId=$cafeteriaId';
+    if (customerId != null) query += '&customerId=$customerId';
 
     final result = await _request('GET', '${ApiConstants.deliveries}?$query');
-    if (result['success'] == true && result['data'] != null && page == 1 && delivererId == null && status == null && cafeteriaId == null) {
+    if (result['success'] == true && result['data'] != null && page == 1 && delivererId == null && status == null && customerId == null) {
       await _cache.cacheDeliveries(result['data']);
     }
     return result;

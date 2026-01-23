@@ -91,8 +91,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
       print('🔍 Loading data for client: ${widget.client['id']}');
       
       final results = await Future.wait([
-        _apiService.getOrders(cafeteriaId: widget.client['id'], limit: 100),
-        _apiService.getDeliveries(cafeteriaId: widget.client['id'], limit: 100),
+        _apiService.getOrders(customerId: widget.client['id'], limit: 100),
+        _apiService.getDeliveries(customerId: widget.client['id'], limit: 100),
         _apiService.getCustomerDebt(widget.client['id']),
         _paymentService.getClientDebtDetails(widget.client['id']),
       ]);

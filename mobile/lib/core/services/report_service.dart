@@ -104,7 +104,7 @@ class ReportService {
         ),
         ...orders.take(20).map((o) => pw.TableRow(
           children: [
-            _cell(o['cafeteria']?['name'] ?? 'N/A'),
+            _cell(o['customer']?['name'] ?? 'N/A'),
             _cell('${_formatNum(o['total'])} DA'),
             _cell('${_formatNum(o['amountPaid'])} DA'),
             _cell(_getStatusText(o['status'])),
@@ -138,7 +138,7 @@ class ReportService {
         ),
         ...deliveries.take(20).map((d) => pw.TableRow(
           children: [
-            _cell(d['order']?['cafeteria']?['name'] ?? 'N/A'),
+            _cell(d['order']?['customer']?['name'] ?? 'N/A'),
             _cell(d['deliverer']?['name'] ?? 'N/A'),
             _cell('${_formatNum(d['amountCollected'])} DA'),
             _cell(_getDeliveryStatusText(d['status'])),

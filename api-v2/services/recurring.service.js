@@ -15,7 +15,7 @@ async function createRecurringOrder(data) {
     try {
         await client.query('BEGIN');
 
-        const { organizationId, cafeteriaId, name, frequency, dayOfWeek, dayOfMonth, timeOfDay, items } = data;
+        const { organizationId, customerId, name, frequency, dayOfWeek, dayOfMonth, timeOfDay, items } = data;
 
         // Calculer la prochaine génération
         const nextGeneration = calculateNextGeneration({ frequency, dayOfWeek, dayOfMonth, timeOfDay });
@@ -23,10 +23,10 @@ async function createRecurringOrder(data) {
         // Insérer le template
         const result = await client.query(
             `INSERT INTO recurring_orders 
-       (organization_id, cafeteria_id, name, frequency, day_of_week, day_of_month, time_of_day, next_generation_at)
+       (organization_id, customer_id, name, frequency, day_of_week, day_of_month, time_of_day, next_generation_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-            [organizationId, cafeteriaId, name, frequency, dayOfWeek || null, dayOfMonth || null, timeOfDay || '06:00:00', nextGeneration]
+            [organizationId, customerId, name, frequency, dayOfWeek || null, dayOfMonth || null, timeOfDay || '06:00:00', nextGeneration]
         );
 
         const recurringOrder = result.rows[0];
@@ -44,7 +44,7 @@ async function createRecurringOrder(data) {
 
         await client.query('COMMIT');
 
-        logger.info(`Recurring order created: ${recurringOrder.id} for cafeteria ${cafeteriaId}`);
+        logger.info(`Recurring order created: ${recurringOrder.id} for cafeteria ${customerId}`);
         return formatRecurringOrder(recurringOrder);
     } catch (error) {
         await client.query('ROLLBACK');
@@ -151,7 +151,7 @@ async function deleteRecurringOrder(id, organizationId) {
 /**
  * Liste les commandes récurrentes d'une cafétéria
  */
-async function getRecurringOrders(cafeteriaId, organizationId) {
+async function getRecurringOrders(customerId, organizationId) {
     const result = await pool.query(
         `SELECT ro.*, 
        (SELECT json_agg(json_build_object(
@@ -163,9 +163,9 @@ async function getRecurringOrders(cafeteriaId, organizationId) {
        JOIN products p ON roi.product_id = p.id
        WHERE roi.recurring_order_id = ro.id) as items
      FROM recurring_orders ro
-     WHERE ro.cafeteria_id = $1::uuid AND ro.organization_id = $2::uuid
+     WHERE ro.customer_id = $1::uuid AND ro.organization_id = $2::uuid
      ORDER BY ro.created_at DESC`,
-        [cafeteriaId, organizationId]
+        [customerId, organizationId]
     );
 
     return result.rows.map(formatRecurringOrder);
@@ -217,7 +217,7 @@ async function getAllRecurringOrders(organizationId, options = {}) {
     SELECT ro.*, u.name as cafeteria_name,
       (SELECT COUNT(*) FROM recurring_order_items WHERE recurring_order_id = ro.id) as items_count
     FROM recurring_orders ro
-    JOIN users u ON ro.cafeteria_id = u.id
+    JOIN users u ON ro.customer_id = u.id
     WHERE ro.organization_id = $1
   `;
     const params = [organizationId];
@@ -284,10 +284,10 @@ async function processRecurringOrders() {
 
                 // Créer la commande
                 const orderResult = await client.query(
-                    `INSERT INTO orders (organization_id, cafeteria_id, date, total, status, payment_status)
+                    `INSERT INTO orders (organization_id, customer_id, date, total, status, payment_status)
            VALUES ($1, $2, CURRENT_DATE, $3, 'pending', 'unpaid')
            RETURNING *`,
-                    [recurringOrder.organization_id, recurringOrder.cafeteria_id, total]
+                    [recurringOrder.organization_id, recurringOrder.customer_id, total]
                 );
 
                 const newOrder = orderResult.rows[0];
@@ -327,7 +327,7 @@ async function processRecurringOrders() {
                 generatedOrders.push({
                     recurringOrderId: recurringOrder.id,
                     orderId: newOrder.id,
-                    cafeteriaId: recurringOrder.cafeteria_id,
+                    customerId: recurringOrder.customer_id,
                     total
                 });
 
@@ -396,7 +396,7 @@ function formatRecurringOrder(row) {
     return {
         id: row.id,
         organizationId: row.organization_id,
-        cafeteriaId: row.cafeteria_id,
+        customerId: row.customer_id,
         name: row.name,
         frequency: row.frequency,
         dayOfWeek: row.day_of_week,

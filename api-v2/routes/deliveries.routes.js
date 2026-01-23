@@ -83,7 +83,7 @@ router.get('/', authenticate, async (req, res) => {
     const { page, limit, offset } = getPagination(req.query, 50);
     const status = req.query.status;
     const delivererId = req.query.delivererId;
-    const cafeteriaId = req.query.cafeteriaId;
+    const customerId = req.query.customerId;
 
     let whereClause = 'WHERE d.organization_id = $1';
     const params = [req.user.organization_id];
@@ -98,14 +98,14 @@ router.get('/', authenticate, async (req, res) => {
       whereClause += ` AND d.deliverer_id = $${params.length}`;
     }
 
-    if (cafeteriaId) {
-      params.push(cafeteriaId);
-      whereClause += ` AND o.cafeteria_id = $${params.length}`;
+    if (customerId) {
+      params.push(customerId);
+      whereClause += ` AND o.customer_id = $${params.length}`;
     }
 
     // Compter le total
     // Si on filtre par cafeteria, il faut faire le JOIN
-    const countQuery = cafeteriaId
+    const countQuery = customerId
       ? `SELECT COUNT(*) FROM deliveries d LEFT JOIN orders o ON d.order_id = o.id ${whereClause}`
       : `SELECT COUNT(*) FROM deliveries d ${whereClause}`;
 
@@ -132,7 +132,7 @@ router.get('/', authenticate, async (req, res) => {
        FROM deliveries d
        LEFT JOIN users u ON d.deliverer_id = u.id
        LEFT JOIN orders o ON d.order_id = o.id
-       LEFT JOIN users ou ON o.cafeteria_id = ou.id
+       LEFT JOIN users ou ON o.customer_id = ou.id
        LEFT JOIN order_items oi ON o.id = oi.order_id
        ${whereClause}
        GROUP BY d.id, u.id, o.id, ou.id

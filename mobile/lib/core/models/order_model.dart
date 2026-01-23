@@ -16,7 +16,7 @@ int parseInt(dynamic value) {
 class Order {
   final String id;
   final String organizationId;
-  final String cafeteriaId;
+  final String customerId;
   final String date;
   final double total;
   final String status;
@@ -30,7 +30,7 @@ class Order {
   Order({
     required this.id,
     required this.organizationId,
-    required this.cafeteriaId,
+    required this.customerId,
     required this.date,
     required this.total,
     required this.status,
@@ -46,7 +46,7 @@ class Order {
     return Order(
       id: json['id']?.toString() ?? '',
       organizationId: json['organizationId']?.toString() ?? '',
-      cafeteriaId: json['cafeteriaId']?.toString() ?? '',
+      customerId: json['customerId']?.toString() ?? '',
       date: json['date'] ?? '',
       total: parseDouble(json['total']),
       status: json['status'] ?? 'pending',
@@ -56,7 +56,7 @@ class Order {
       items: json['items'] != null 
           ? (json['items'] as List).map((item) => OrderItem.fromJson(item)).toList()
           : [],
-      cafeteria: json['cafeteria'] != null ? Cafeteria.fromJson(json['cafeteria']) : null,
+      cafeteria: json['customer'] != null ? Cafeteria.fromJson(json['customer']) : null,
       delivererId: json['delivererId']?.toString(),
     );
   }
@@ -65,7 +65,7 @@ class Order {
     return {
       'id': id,
       'organizationId': organizationId,
-      'cafeteriaId': cafeteriaId,
+      'customerId': customerId,
       'date': date,
       'total': total,
       'status': status,
@@ -73,7 +73,7 @@ class Order {
       'amountPaid': amountPaid,
       'createdAt': createdAt?.toIso8601String(),
       'items': items.map((item) => item.toJson()).toList(),
-      'cafeteria': cafeteria?.toJson(),
+      'customer': cafeteria?.toJson(),
     };
   }
 

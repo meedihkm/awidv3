@@ -116,7 +116,7 @@ router.get('/', authenticate, async (req, res) => {
   try {
     const { page, limit, offset } = getPagination(req.query, 50);
     const status = req.query.status; // Filtre optionnel par statut
-    const cafeteriaId = req.query.cafeteriaId; // Filtre optionnel par client (cafétéria)
+    const customerId = req.query.customerId; // Filtre optionnel par client (cafétéria)
 
     // Construire la requête avec filtres
     let whereClause = 'WHERE o.organization_id = $1';
@@ -127,9 +127,9 @@ router.get('/', authenticate, async (req, res) => {
       whereClause += ` AND o.status = $${params.length}`;
     }
 
-    if (cafeteriaId) {
-      params.push(cafeteriaId);
-      whereClause += ` AND o.cafeteria_id = $${params.length}`;
+    if (customerId) {
+      params.push(customerId);
+      whereClause += ` AND o.customer_id = $${params.length}`;
     }
 
     // Compter le total
@@ -142,7 +142,7 @@ router.get('/', authenticate, async (req, res) => {
     // Récupérer les commandes avec pagination et items en une seule requête (Optimisation N+1)
     const result = await pool.query(
       `SELECT o.*, 
-              u.name as cafeteria_name, u.phone as cafeteria_phone,
+              u.name as customer_name, u.phone as customer_phone,
               COALESCE(
                 json_agg(
                   json_build_object(
@@ -156,7 +156,7 @@ router.get('/', authenticate, async (req, res) => {
                 '[]'
               ) as items
        FROM orders o 
-       JOIN users u ON o.cafeteria_id = u.id 
+       JOIN users u ON o.customer_id = u.id 
        LEFT JOIN order_items oi ON o.id = oi.order_id
        LEFT JOIN products p ON oi.product_id = p.id
        ${whereClause}
@@ -168,9 +168,9 @@ router.get('/', authenticate, async (req, res) => {
 
     const orders = result.rows.map(order =>
       formatOrder(order, order.items, {
-        id: order.cafeteria_id,
-        name: order.cafeteria_name,
-        phone: order.cafeteria_phone
+        id: order.customer_id,
+        name: order.customer_name,
+        phone: order.customer_phone
       })
     );
 
@@ -185,7 +185,7 @@ router.get('/', authenticate, async (req, res) => {
 router.get('/my', authenticate, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT * FROM orders WHERE cafeteria_id = $1 AND organization_id = $2 ORDER BY created_at DESC`,
+      `SELECT * FROM orders WHERE customer_id = $1 AND organization_id = $2 ORDER BY created_at DESC`,
       [req.user.id, req.user.organization_id]
     );
 
@@ -219,9 +219,9 @@ router.get('/my', authenticate, async (req, res) => {
 router.get('/kitchen', authenticate, requireKitchen, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT o.*, u.name as cafeteria_name, u.phone as cafeteria_phone
+      `SELECT o.*, u.name as customer_name, u.phone as customer_phone
        FROM orders o 
-       JOIN users u ON o.cafeteria_id = u.id 
+       JOIN users u ON o.customer_id = u.id 
        WHERE o.organization_id = $1 AND o.status IN ('validated', 'preparing')
        ORDER BY 
          CASE WHEN o.status = 'validated' THEN 0 ELSE 1 END,
@@ -235,16 +235,16 @@ router.get('/kitchen', authenticate, requireKitchen, async (req, res) => {
       orders.push({
         id: order.id,
         organizationId: order.organization_id,
-        cafeteriaId: order.cafeteria_id,
+        customerId: order.customer_id,
         date: order.date,
         total: parseFloat(order.total),
         status: order.status,
         createdAt: order.created_at,
         items,
         cafeteria: {
-          id: order.cafeteria_id,
-          name: order.cafeteria_name,
-          phone: order.cafeteria_phone
+          id: order.customer_id,
+          name: order.customer_name,
+          phone: order.customer_phone
         }
       });
     }
@@ -329,7 +329,7 @@ router.post('/', authenticate, validate('createOrder'), async (req, res) => {
     const orderNumber = seqResult.rows[0].last_number;
 
     const orderResult = await pool.query(
-      `INSERT INTO orders(organization_id, cafeteria_id, date, total, status, payment_status, amount_paid, order_number) 
+      `INSERT INTO orders(organization_id, customer_id, date, total, status, payment_status, amount_paid, order_number) 
        VALUES($1, $2, NOW(), $3, 'pending', 'unpaid', 0, $4) RETURNING * `,
       [req.user.organization_id, clientId, total, orderNumber]
     );
@@ -365,7 +365,7 @@ router.put('/:id', authenticate, validateUUID('id'), validate('updateOrder'), as
     const { items } = req.body;
 
     const orderCheck = await pool.query(
-      `SELECT * FROM orders WHERE id = $1 AND cafeteria_id = $2 AND organization_id = $3 AND status = 'pending'`,
+      `SELECT * FROM orders WHERE id = $1 AND customer_id = $2 AND organization_id = $3 AND status = 'pending'`,
       [req.params.id, req.user.id, req.user.organization_id]
     );
 

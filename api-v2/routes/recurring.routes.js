@@ -44,7 +44,7 @@ router.get('/:id', authenticate, validateUUID('id'), async (req, res) => {
         }
 
         // Vérifier que c'est bien la cafétéria propriétaire ou un admin
-        if (req.user.role !== 'admin' && order.cafeteriaId !== req.user.id) {
+        if (req.user.role !== 'admin' && order.customerId !== req.user.id) {
             return res.status(403).json({ error: 'Accès non autorisé' });
         }
 
@@ -65,7 +65,7 @@ router.post('/', authenticate, async (req, res) => {
             return res.status(403).json({ error: 'Non autorisé' });
         }
 
-        const { name, frequency, dayOfWeek, dayOfMonth, timeOfDay, items, cafeteriaId } = req.body;
+        const { name, frequency, dayOfWeek, dayOfMonth, timeOfDay, items, customerId } = req.body;
 
         if (!frequency || !['daily', 'weekly', 'monthly'].includes(frequency)) {
             return res.status(400).json({ error: 'Fréquence invalide (daily, weekly, monthly)' });
@@ -75,12 +75,12 @@ router.post('/', authenticate, async (req, res) => {
             return res.status(400).json({ error: 'Au moins un produit requis' });
         }
 
-        // Déterminer le cafeteriaId
-        const targetCafeteriaId = req.user.role === 'admin' && cafeteriaId ? cafeteriaId : req.user.id;
+        // Déterminer le customerId
+        const targetCafeteriaId = req.user.role === 'admin' && customerId ? customerId : req.user.id;
 
         const order = await recurringService.createRecurringOrder({
             organizationId: req.user.organization_id,
-            cafeteriaId: targetCafeteriaId,
+            customerId: targetCafeteriaId,
             name,
             frequency,
             dayOfWeek,
@@ -117,7 +117,7 @@ router.put('/:id', authenticate, validateUUID('id'), async (req, res) => {
             return res.status(404).json({ error: 'Commande récurrente non trouvée' });
         }
 
-        if (req.user.role !== 'admin' && existing.cafeteriaId !== req.user.id) {
+        if (req.user.role !== 'admin' && existing.customerId !== req.user.id) {
             return res.status(403).json({ error: 'Accès non autorisé' });
         }
 
@@ -151,7 +151,7 @@ router.delete('/:id', authenticate, validateUUID('id'), async (req, res) => {
             return res.status(404).json({ error: 'Commande récurrente non trouvée' });
         }
 
-        if (req.user.role !== 'admin' && existing.cafeteriaId !== req.user.id) {
+        if (req.user.role !== 'admin' && existing.customerId !== req.user.id) {
             return res.status(403).json({ error: 'Accès non autorisé' });
         }
 
@@ -184,7 +184,7 @@ router.post('/:id/toggle', authenticate, validateUUID('id'), async (req, res) =>
             return res.status(404).json({ error: 'Commande récurrente non trouvée' });
         }
 
-        if (req.user.role !== 'admin' && existing.cafeteriaId !== req.user.id) {
+        if (req.user.role !== 'admin' && existing.customerId !== req.user.id) {
             return res.status(403).json({ error: 'Accès non autorisé' });
         }
 
