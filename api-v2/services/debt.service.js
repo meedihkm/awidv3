@@ -2,21 +2,21 @@
 // SERVICE : Gestion de la dette
 // =====================================================
 
-const db = require('../config/database');
-const auditService = require('./audit.service');
-const notificationService = require('./notification.service');
-const logger = require('../config/logger');
+const db = require("../config/database");
+const auditService = require("./audit.service");
+const notificationService = require("./notification.service");
+const logger = require("../config/logger");
 
 class DebtService {
-
-    /**
-     * Récupérer la dette totale d'un client
-     * @param {string} customerId 
-     * @param {string} organizationId 
-     * @returns {Promise<Object>} Détails de la dette
-     */
-    async getCustomerDebt(customerId, organizationId) {
-        const result = await db.query(`
+  /**
+   * Récupérer la dette totale d'un client
+   * @param {string} customerId
+   * @param {string} organizationId
+   * @returns {Promise<Object>} Détails de la dette
+   */
+  async getCustomerDebt(customerId, organizationId) {
+    const result = await db.query(
+      `
       SELECT 
         u.id as customer_id,
         u.name as customer_name,
@@ -30,89 +30,113 @@ class DebtService {
         AND o.status != 'cancelled'
       WHERE u.id = $1
       GROUP BY u.id, u.name, u.phone
-    `, [customerId, organizationId]);
+    `,
+      [customerId, organizationId],
+    );
 
-        if (result.rows.length === 0) {
-            return null;
-        }
+    if (result.rows.length === 0) {
+      return null;
+    }
 
-        // Récupérer dernier paiement
-        const lastPayment = await db.query(`
+    // Récupérer dernier paiement
+    const lastPayment = await db.query(
+      `
       SELECT created_at, amount 
       FROM debt_payments 
       WHERE customer_id = $1 AND organization_id = $2
       ORDER BY created_at DESC 
       LIMIT 1
-    `, [customerId, organizationId]);
+    `,
+      [customerId, organizationId],
+    );
 
-        return {
-            ...result.rows[0],
-            total_debt: parseFloat(result.rows[0].total_debt) || 0,
-            last_payment_date: lastPayment.rows[0]?.created_at || null,
-            last_payment_amount: lastPayment.rows[0]?.amount || null
-        };
+    return {
+      ...result.rows[0],
+      total_debt: parseFloat(result.rows[0].total_debt) || 0,
+      last_payment_date: lastPayment.rows[0]?.created_at || null,
+      last_payment_amount: lastPayment.rows[0]?.amount || null,
+    };
+  }
+
+  /**
+   * Liste des clients avec dette > 0
+   * @param {string} organizationId
+   * @param {Object} options - { sort, minDebt, page, limit, customerId, delivererId, dateFrom, dateTo }
+   * @returns {Promise<Object>} { data, summary, pagination }
+   */
+  async getCustomersWithDebt(organizationId, options = {}) {
+    const {
+      sort = "amount_desc",
+      minDebt = 0,
+      page = 1,
+      limit = 50,
+      customerId = null,
+      delivererId = null,
+      dateFrom = null,
+      dateTo = null,
+    } = options;
+
+    const offset = (page - 1) * limit;
+    const orderBy =
+      sort === "amount_desc"
+        ? "total_debt DESC"
+        : sort === "amount_asc"
+          ? "total_debt ASC"
+          : sort === "name"
+            ? "u.name ASC"
+            : "total_debt DESC";
+
+    // Construire les conditions WHERE dynamiques
+    const conditions = [];
+    const params = [organizationId, minDebt, limit, offset];
+    let paramIndex = 5;
+
+    if (customerId) {
+      conditions.push(`u.id = $${paramIndex}`);
+      params.splice(paramIndex - 1, 0, customerId);
+      paramIndex++;
     }
 
-    /**
-     * Liste des clients avec dette > 0
-     * @param {string} organizationId 
-     * @param {Object} options - { sort, minDebt, page, limit, customerId, delivererId, dateFrom, dateTo }
-     * @returns {Promise<Object>} { data, summary, pagination }
-     */
-    async getCustomersWithDebt(organizationId, options = {}) {
-        const {
-            sort = 'amount_desc',
-            minDebt = 0,
-            page = 1,
-            limit = 50,
-            customerId = null,
-            delivererId = null,
-            dateFrom = null,
-            dateTo = null
-        } = options;
-
-        const offset = (page - 1) * limit;
-        const orderBy = sort === 'amount_desc' ? 'total_debt DESC' :
-            sort === 'amount_asc' ? 'total_debt ASC' :
-                sort === 'name' ? 'u.name ASC' : 'total_debt DESC';
-
-        // Construire les conditions WHERE dynamiques
-        const conditions = [];
-        const params = [organizationId, minDebt, limit, offset];
-        let paramIndex = 5;
-
-        if (customerId) {
-            conditions.push(`u.id = $${paramIndex}`);
-            params.splice(paramIndex - 1, 0, customerId);
-            paramIndex++;
-        }
-
-        if (delivererId) {
-            conditions.push(`EXISTS (
+    if (delivererId) {
+      conditions.push(`EXISTS (
                 SELECT 1 FROM deliveries d 
                 WHERE d.order_id = o.id 
                 AND d.deliverer_id = $${paramIndex}
             )`);
-            params.splice(paramIndex - 1, 0, delivererId);
-            paramIndex++;
-        }
+      params.splice(paramIndex - 1, 0, delivererId);
+      paramIndex++;
+    }
 
-        if (dateFrom) {
-            conditions.push(`o.created_at >= $${paramIndex}::timestamp`);
-            params.splice(paramIndex - 1, 0, dateFrom);
-            paramIndex++;
-        }
+    if (dateFrom) {
+      conditions.push(`o.created_at >= $${paramIndex}::timestamp`);
+      params.splice(paramIndex - 1, 0, dateFrom);
+      paramIndex++;
+    }
 
-        if (dateTo) {
-            conditions.push(`o.created_at <= $${paramIndex}::timestamp`);
-            params.splice(paramIndex - 1, 0, dateTo);
-            paramIndex++;
-        }
+    if (dateTo) {
+      conditions.push(`o.created_at <= $${paramIndex}::timestamp`);
+      params.splice(paramIndex - 1, 0, dateTo);
+      paramIndex++;
+    }
 
-        const additionalWhere = conditions.length > 0 ? `AND ${conditions.join(' AND ')}` : '';
+    const additionalWhere =
+      conditions.length > 0 ? `AND ${conditions.join(" AND ")}` : "";
 
-        // Données paginées
-        const result = await db.query(`
+    // Condition spéciale pour delivererId - doit filtrer les users, pas les orders
+    let delivererFilter = "";
+    if (delivererId) {
+      delivererFilter = `AND u.id IN (
+                SELECT DISTINCT ord.customer_id
+                FROM deliveries d 
+                JOIN orders ord ON d.order_id = ord.id
+                WHERE d.deliverer_id = $${paramIndex - 1}
+                AND d.status IN ('assigned', 'in_progress')
+            )`;
+    }
+
+    // Données paginées
+    const result = await db.query(
+      `
       SELECT 
         u.id as customer_id,
         u.name,
@@ -129,48 +153,65 @@ class DebtService {
       WHERE u.organization_id = $1 
         AND u.role = 'cafeteria'
         AND u.active = true
+        ${delivererFilter}
       GROUP BY u.id, u.name, u.phone, u.email
       HAVING COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) >= $2
       ORDER BY ${orderBy}
       LIMIT $3 OFFSET $4
-    `, params);
+    `,
+      params,
+    );
 
-        // Total pour pagination (avec les mêmes filtres)
-        const countParams = [organizationId, minDebt];
-        let countParamIndex = 3;
-        const countConditions = [];
+    // Total pour pagination (avec les mêmes filtres)
+    const countParams = [organizationId, minDebt];
+    let countParamIndex = 3;
+    const countConditions = [];
 
-        if (customerId) {
-            countConditions.push(`u.id = $${countParamIndex}`);
-            countParams.push(customerId);
-            countParamIndex++;
-        }
+    if (customerId) {
+      countConditions.push(`u.id = $${countParamIndex}`);
+      countParams.push(customerId);
+      countParamIndex++;
+    }
 
-        if (delivererId) {
-            countConditions.push(`EXISTS (
+    if (delivererId) {
+      countConditions.push(`EXISTS (
                 SELECT 1 FROM deliveries d 
                 WHERE d.order_id = o.id 
                 AND d.deliverer_id = $${countParamIndex}
             )`);
-            countParams.push(delivererId);
-            countParamIndex++;
-        }
+      countParams.push(delivererId);
+      countParamIndex++;
+    }
 
-        if (dateFrom) {
-            countConditions.push(`o.created_at >= $${countParamIndex}::timestamp`);
-            countParams.push(dateFrom);
-            countParamIndex++;
-        }
+    if (dateFrom) {
+      countConditions.push(`o.created_at >= $${countParamIndex}::timestamp`);
+      countParams.push(dateFrom);
+      countParamIndex++;
+    }
 
-        if (dateTo) {
-            countConditions.push(`o.created_at <= $${countParamIndex}::timestamp`);
-            countParams.push(dateTo);
-            countParamIndex++;
-        }
+    if (dateTo) {
+      countConditions.push(`o.created_at <= $${countParamIndex}::timestamp`);
+      countParams.push(dateTo);
+      countParamIndex++;
+    }
 
-        const countAdditionalWhere = countConditions.length > 0 ? `AND ${countConditions.join(' AND ')}` : '';
+    const countAdditionalWhere =
+      countConditions.length > 0 ? `AND ${countConditions.join(" AND ")}` : "";
 
-        const countResult = await db.query(`
+    // Condition spéciale pour delivererId dans le count
+    let countDelivererFilter = "";
+    if (delivererId) {
+      countDelivererFilter = `AND u.id IN (
+            SELECT DISTINCT ord.customer_id
+            FROM deliveries d 
+            JOIN orders ord ON d.order_id = ord.id
+            WHERE d.deliverer_id = $${countParamIndex - 1}
+            AND d.status IN ('assigned', 'in_progress')
+        )`;
+    }
+
+    const countResult = await db.query(
+      `
       SELECT COUNT(*) as total
       FROM (
         SELECT u.id
@@ -182,13 +223,17 @@ class DebtService {
         WHERE u.organization_id = $1 
           AND u.role = 'cafeteria'
           AND u.active = true
+          ${countDelivererFilter}
         GROUP BY u.id
         HAVING COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) >= $2
       ) as subquery
-    `, countParams);
+    `,
+      countParams,
+    );
 
-        // Résumé global
-        const summaryResult = await db.query(`
+    // Résumé global
+    const summaryResult = await db.query(
+      `
       SELECT 
         COUNT(DISTINCT o.customer_id) as total_customers_with_debt,
         COALESCE(SUM(o.total) - SUM(o.amount_paid), 0)::numeric as total_debt_amount
@@ -196,147 +241,182 @@ class DebtService {
       WHERE o.organization_id = $1 
         AND o.payment_status != 'paid'
         AND o.status != 'cancelled'
-    `, [organizationId]);
+    `,
+      [organizationId],
+    );
 
-        const total = parseInt(countResult.rows[0]?.total || 0);
+    const total = parseInt(countResult.rows[0]?.total || 0);
 
-        return {
-            data: result.rows.map(r => ({
-                ...r,
-                total_debt: parseFloat(r.total_debt) || 0
-            })),
-            summary: {
-                total_customers_with_debt: parseInt(summaryResult.rows[0]?.total_customers_with_debt) || 0,
-                total_debt_amount: parseFloat(summaryResult.rows[0]?.total_debt_amount) || 0
-            },
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-                hasNext: page * limit < total,
-                hasPrev: page > 1
-            }
-        };
+    return {
+      data: result.rows.map((r) => ({
+        ...r,
+        total_debt: parseFloat(r.total_debt) || 0,
+      })),
+      summary: {
+        total_customers_with_debt:
+          parseInt(summaryResult.rows[0]?.total_customers_with_debt) || 0,
+        total_debt_amount:
+          parseFloat(summaryResult.rows[0]?.total_debt_amount) || 0,
+      },
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1,
+      },
+    };
+  }
+
+  /**
+   * Enregistrer un paiement de dette
+   * @param {Object} data - { customer_id, amount, payment_type, delivery_id?, note? }
+   * @param {string} collectorId - ID de celui qui collecte
+   * @param {string} collectorRole - 'admin' ou 'deliverer'
+   * @param {string} organizationId
+   * @returns {Promise<Object>} Paiement créé + nouvelle dette
+   */
+  async recordDebtPayment(data, collectorId, collectorRole, organizationId) {
+    const {
+      customer_id,
+      amount,
+      payment_type = "cash",
+      delivery_id,
+      note,
+    } = data;
+
+    // Validation
+    if (!customer_id || !amount || amount <= 0) {
+      throw new Error("customer_id et amount (> 0) sont requis");
     }
 
-    /**
-     * Enregistrer un paiement de dette
-     * @param {Object} data - { customer_id, amount, payment_type, delivery_id?, note? }
-     * @param {string} collectorId - ID de celui qui collecte
-     * @param {string} collectorRole - 'admin' ou 'deliverer'
-     * @param {string} organizationId 
-     * @returns {Promise<Object>} Paiement créé + nouvelle dette
-     */
-    async recordDebtPayment(data, collectorId, collectorRole, organizationId) {
-        const { customer_id, amount, payment_type = 'cash', delivery_id, note } = data;
+    // Vérifier que le client existe et a une dette
+    const debt = await this.getCustomerDebt(customer_id, organizationId);
+    if (!debt) {
+      throw new Error("Client non trouvé");
+    }
 
-        // Validation
-        if (!customer_id || !amount || amount <= 0) {
-            throw new Error('customer_id et amount (> 0) sont requis');
-        }
+    if (debt.total_debt <= 0) {
+      throw new Error("Ce client n'a pas de dette");
+    }
 
-        // Vérifier que le client existe et a une dette
-        const debt = await this.getCustomerDebt(customer_id, organizationId);
-        if (!debt) {
-            throw new Error('Client non trouvé');
-        }
+    if (amount > debt.total_debt) {
+      throw new Error(
+        `Montant supérieur à la dette (${debt.total_debt.toFixed(2)} DA)`,
+      );
+    }
 
-        if (debt.total_debt <= 0) {
-            throw new Error('Ce client n\'a pas de dette');
-        }
+    // Transaction pour atomicité
+    const client = await db.getClient();
 
-        if (amount > debt.total_debt) {
-            throw new Error(`Montant supérieur à la dette (${debt.total_debt.toFixed(2)} DA)`);
-        }
+    try {
+      await client.query("BEGIN");
 
-        // Transaction pour atomicité
-        const client = await db.getClient();
-
-        try {
-            await client.query('BEGIN');
-
-            // 1. Créer le paiement
-            const paymentResult = await client.query(`
+      // 1. Créer le paiement
+      const paymentResult = await client.query(
+        `
         INSERT INTO debt_payments 
           (organization_id, customer_id, amount, payment_type, collected_by, collector_role, delivery_id, note)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *
-      `, [organizationId, customer_id, amount, payment_type, collectorId, collectorRole, delivery_id, note]);
+      `,
+        [
+          organizationId,
+          customer_id,
+          amount,
+          payment_type,
+          collectorId,
+          collectorRole,
+          delivery_id,
+          note,
+        ],
+      );
 
-            const payment = paymentResult.rows[0];
+      const payment = paymentResult.rows[0];
 
-            // 2. Appliquer le paiement aux commandes (FIFO)
-            await this.applyPaymentToOrders(client, customer_id, amount, organizationId);
+      // 2. Appliquer le paiement aux commandes (FIFO)
+      await this.applyPaymentToOrders(
+        client,
+        customer_id,
+        amount,
+        organizationId,
+      );
 
-            await client.query('COMMIT');
+      await client.query("COMMIT");
 
-            // 3. Récupérer nouvelle dette
-            const newDebt = await this.getCustomerDebt(customer_id, organizationId);
+      // 3. Récupérer nouvelle dette
+      const newDebt = await this.getCustomerDebt(customer_id, organizationId);
 
-            // 4. Audit log
-            await auditService.log({
-                action: 'DEBT_PAYMENT_RECORDED',
-                user_id: collectorId,
-                organization_id: organizationId,
-                entity_type: 'debt_payment',
-                entity_id: payment.id,
-                details: {
-                    customer_id,
-                    amount,
-                    payment_type,
-                    delivery_id,
-                    previous_debt: debt.total_debt,
-                    new_debt: newDebt.total_debt
-                }
-            });
+      // 4. Audit log
+      await auditService.log({
+        action: "DEBT_PAYMENT_RECORDED",
+        user_id: collectorId,
+        organization_id: organizationId,
+        entity_type: "debt_payment",
+        entity_id: payment.id,
+        details: {
+          customer_id,
+          amount,
+          payment_type,
+          delivery_id,
+          previous_debt: debt.total_debt,
+          new_debt: newDebt.total_debt,
+        },
+      });
 
-            // 5. Notification à l'admin (si collecté par livreur)
-            if (collectorRole === 'deliverer') {
-                const collector = await db.query('SELECT name FROM users WHERE id = $1', [collectorId]);
-                await notificationService.sendToRole('admin', organizationId, {
-                    title: 'Paiement dette reçu',
-                    message: `${amount.toFixed(0)} DA reçus de ${debt.customer_name} par ${collector.rows[0]?.name || 'Livreur'}`,
-                    data: {
-                        type: 'debt_payment',
-                        customer_id,
-                        payment_id: payment.id
-                    }
-                });
-            }
+      // 5. Notification à l'admin (si collecté par livreur)
+      if (collectorRole === "deliverer") {
+        const collector = await db.query(
+          "SELECT name FROM users WHERE id = $1",
+          [collectorId],
+        );
+        await notificationService.sendToRole("admin", organizationId, {
+          title: "Paiement dette reçu",
+          message: `${amount.toFixed(0)} DA reçus de ${debt.customer_name} par ${collector.rows[0]?.name || "Livreur"}`,
+          data: {
+            type: "debt_payment",
+            customer_id,
+            payment_id: payment.id,
+          },
+        });
+      }
 
-            logger.info('Debt payment recorded', {
-                paymentId: payment.id,
-                customerId: customer_id,
-                amount,
-                collectorId
-            });
+      logger.info("Debt payment recorded", {
+        paymentId: payment.id,
+        customerId: customer_id,
+        amount,
+        collectorId,
+      });
 
-            return {
-                payment,
-                previous_debt: debt.total_debt,
-                new_debt: newDebt.total_debt,
-                customer_name: debt.customer_name
-            };
-
-        } catch (error) {
-            await client.query('ROLLBACK');
-            logger.error('Error recording debt payment', { error: error.message, data });
-            throw error;
-        } finally {
-            client.release();
-        }
+      return {
+        payment,
+        previous_debt: debt.total_debt,
+        new_debt: newDebt.total_debt,
+        customer_name: debt.customer_name,
+      };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      logger.error("Error recording debt payment", {
+        error: error.message,
+        data,
+      });
+      throw error;
+    } finally {
+      client.release();
     }
+  }
 
-    /**
-     * Appliquer un paiement aux commandes (FIFO - plus anciennes d'abord)
-     * @private
-     */
-    async applyPaymentToOrders(client, customerId, amount, organizationId) {
-        let remaining = parseFloat(amount);
+  /**
+   * Appliquer un paiement aux commandes (FIFO - plus anciennes d'abord)
+   * @private
+   */
+  async applyPaymentToOrders(client, customerId, amount, organizationId) {
+    let remaining = parseFloat(amount);
 
-        // Récupérer commandes non payées, plus anciennes d'abord
-        const orders = await client.query(`
+    // Récupérer commandes non payées, plus anciennes d'abord
+    const orders = await client.query(
+      `
       SELECT id, total, amount_paid, (total - amount_paid) as due
       FROM orders
       WHERE customer_id = $1 
@@ -344,75 +424,82 @@ class DebtService {
         AND payment_status != 'paid'
         AND status != 'cancelled'
       ORDER BY created_at ASC
-    `, [customerId, organizationId]);
+    `,
+      [customerId, organizationId],
+    );
 
-        for (const order of orders.rows) {
-            if (remaining <= 0) break;
+    for (const order of orders.rows) {
+      if (remaining <= 0) break;
 
-            const due = parseFloat(order.due);
-            const toApply = Math.min(remaining, due);
-            const newAmountPaid = parseFloat(order.amount_paid) + toApply;
-            const newStatus = newAmountPaid >= parseFloat(order.total) ? 'paid' : 'partial';
+      const due = parseFloat(order.due);
+      const toApply = Math.min(remaining, due);
+      const newAmountPaid = parseFloat(order.amount_paid) + toApply;
+      const newStatus =
+        newAmountPaid >= parseFloat(order.total) ? "paid" : "partial";
 
-            await client.query(`
+      await client.query(
+        `
         UPDATE orders 
         SET amount_paid = $1, payment_status = $2, updated_at = NOW()
         WHERE id = $3
-      `, [newAmountPaid, newStatus, order.id]);
+      `,
+        [newAmountPaid, newStatus, order.id],
+      );
 
-            remaining -= toApply;
+      remaining -= toApply;
 
-            logger.debug('Applied payment to order', {
-                orderId: order.id,
-                applied: toApply,
-                newStatus
-            });
-        }
+      logger.debug("Applied payment to order", {
+        orderId: order.id,
+        applied: toApply,
+        newStatus,
+      });
+    }
+  }
+
+  /**
+   * Historique des paiements
+   * @param {string} organizationId
+   * @param {Object} options - { customer_id?, collector_id?, from?, to?, page, limit }
+   */
+  async getPaymentHistory(organizationId, options = {}) {
+    const {
+      customer_id,
+      collector_id,
+      from,
+      to,
+      page = 1,
+      limit = 50,
+    } = options;
+
+    const offset = (page - 1) * limit;
+    const conditions = ["dp.organization_id = $1"];
+    const params = [organizationId];
+    let paramIndex = 2;
+
+    if (customer_id) {
+      conditions.push(`dp.customer_id = \$${paramIndex++}`);
+      params.push(customer_id);
     }
 
-    /**
-     * Historique des paiements
-     * @param {string} organizationId 
-     * @param {Object} options - { customer_id?, collector_id?, from?, to?, page, limit }
-     */
-    async getPaymentHistory(organizationId, options = {}) {
-        const {
-            customer_id,
-            collector_id,
-            from,
-            to,
-            page = 1,
-            limit = 50
-        } = options;
+    if (collector_id) {
+      conditions.push(`dp.collected_by = \$${paramIndex++}`);
+      params.push(collector_id);
+    }
 
-        const offset = (page - 1) * limit;
-        const conditions = ['dp.organization_id = $1'];
-        const params = [organizationId];
-        let paramIndex = 2;
+    if (from) {
+      conditions.push(`dp.created_at >= \$${paramIndex++}`);
+      params.push(from);
+    }
 
-        if (customer_id) {
-conditions.push(`dp.customer_id = \$${paramIndex++}`);
-            params.push(customer_id);
-        }
+    if (to) {
+      conditions.push(`dp.created_at <= \$${paramIndex++}`);
+      params.push(to);
+    }
 
-        if (collector_id) {
-conditions.push(`dp.collected_by = \$${paramIndex++}`);
-            params.push(collector_id);
-        }
+    const whereClause = conditions.join(" AND ");
 
-        if (from) {
-conditions.push(`dp.created_at >= \$${paramIndex++}`);
-            params.push(from);
-        }
-
-        if (to) {
-conditions.push(`dp.created_at <= \$${paramIndex++}`);
-            params.push(to);
-        }
-
-        const whereClause = conditions.join(' AND ');
-
-        const result = await db.query(`
+    const result = await db.query(
+      `
       SELECT 
         dp.*,
         c.name as customer_name,
@@ -423,33 +510,39 @@ conditions.push(`dp.created_at <= \$${paramIndex++}`);
       WHERE ${whereClause}
       ORDER BY dp.created_at DESC
 LIMIT \$${paramIndex++} OFFSET \$${paramIndex}
-    `, [...params, limit, offset]);
+    `,
+      [...params, limit, offset],
+    );
 
-        // Count total
-        const countResult = await db.query(`
+    // Count total
+    const countResult = await db.query(
+      `
       SELECT COUNT(*) as total FROM debt_payments dp WHERE ${whereClause}
-    `, params);
+    `,
+      params,
+    );
 
-        const total = parseInt(countResult.rows[0].total);
+    const total = parseInt(countResult.rows[0].total);
 
-        return {
-            data: result.rows,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-                hasNext: page * limit < total,
-                hasPrev: page > 1
-            }
-        };
-    }
+    return {
+      data: result.rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1,
+      },
+    };
+  }
 
-    /**
-     * Commandes impayées d'un client (pour détail)
-     */
-    async getUnpaidOrders(customerId, organizationId) {
-        const result = await db.query(`
+  /**
+   * Commandes impayées d'un client (pour détail)
+   */
+  async getUnpaidOrders(customerId, organizationId) {
+    const result = await db.query(
+      `
       SELECT 
         id, 
         created_at, 
@@ -463,10 +556,12 @@ LIMIT \$${paramIndex++} OFFSET \$${paramIndex}
         AND payment_status != 'paid'
         AND status != 'cancelled'
       ORDER BY created_at ASC
-    `, [customerId, organizationId]);
+    `,
+      [customerId, organizationId],
+    );
 
-        return result.rows;
-    }
+    return result.rows;
+  }
 }
 
 module.exports = new DebtService();
