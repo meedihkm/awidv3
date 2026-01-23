@@ -96,16 +96,19 @@ class DebtService {
 
         // Total pour pagination
         const countResult = await db.query(`
-      SELECT COUNT(DISTINCT u.id) as total
-      FROM users u
-      LEFT JOIN orders o ON u.id = o.customer_id 
-        AND o.organization_id = $1 
-        AND o.status != 'cancelled'
-      WHERE u.organization_id = $1 
-        AND u.role = 'cafeteria'
-        AND u.active = true
-      GROUP BY u.id
-      HAVING COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) >= $2
+      SELECT COUNT(*) as total
+      FROM (
+        SELECT u.id
+        FROM users u
+        LEFT JOIN orders o ON u.id = o.customer_id 
+          AND o.organization_id = $1 
+          AND o.status != 'cancelled'
+        WHERE u.organization_id = $1 
+          AND u.role = 'cafeteria'
+          AND u.active = true
+        GROUP BY u.id
+        HAVING COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) >= $2
+      ) as subquery
     `, [organizationId, minDebt]);
 
         // Résumé global

@@ -557,7 +557,7 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
   }
 
   Widget _buildDebtsPreview() {
-    final totalDebt = _debts.fold<double>(0, (sum, d) => sum + _parseDouble(d['debt']));
+    final totalDebt = _debts.fold<double>(0, (sum, d) => sum + _parseDouble(d['total_debt']));
     
     return Container(
       padding: EdgeInsets.all(16),
@@ -601,7 +601,7 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
                 ),
                 SizedBox(width: 10),
                 Expanded(child: Text(d['name'] ?? 'Client', style: TextStyle(color: Colors.white))),
-                Text('${_parseDouble(d['debt']).toStringAsFixed(0)} DA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                Text('${_parseDouble(d['total_debt']).toStringAsFixed(0)} DA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ],
             ),
           ))),

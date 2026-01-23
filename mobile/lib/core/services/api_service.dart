@@ -343,10 +343,12 @@ class ApiService {
     }
     try {
       final result = await _request('GET', ApiConstants.debts);
-      if (result['success'] == true && result['data'] != null) {
+      // Backend retourne { data, summary, pagination }
+      if (result['data'] != null) {
         await _cache.cacheDebts(result['data']);
+        return {'success': true, 'data': result['data'], 'summary': result['summary'], 'pagination': result['pagination']};
       }
-      return result;
+      return {'success': false, 'data': []};
     } catch (e) {
       print('Error getting debts: $e');
       return {'success': false, 'data': [], 'error': e.toString()};

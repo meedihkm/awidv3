@@ -47,8 +47,8 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   Future<void> _loadData({bool forceRefresh = false}) async {
     setState(() => _isLoading = true);
     try {
-      // Essayer le cache d'abord
-      if (!forceRefresh) {
+      // Essayer le cache d'abord (sauf si premier chargement ou force refresh)
+      if (!forceRefresh && _allOrders.isNotEmpty) {
         final cachedOrders = await _cacheService.getCachedOrders();
         final cachedDebts = await _cacheService.getCachedDebts();
         if (cachedOrders != null && cachedDebts != null) {
