@@ -1,37 +1,30 @@
 import 'order_model.dart';
 
 double parseDouble(dynamic value) {
-  if (value == null) return 0.0;
+  if (value == null) return 0;
   if (value is double) return value;
   if (value is int) return value.toDouble();
   if (value is String) return double.tryParse(value) ?? 0.0;
-  return 0.0;
+  return 0;
+}
+
+int parseInt(dynamic value) {
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is String) return int.tryParse(value) ?? 0;
+  if (value is double) return value.toInt();
+  return 0;
 }
 
 class Delivery {
-  final String id;
-  final String orderId;
-  final String? delivererId;
-  final String status;
-  final String paymentStatus;
-  final double amountCollected;
-  final String? comment;
-  final String? failureReason;
-  final DateTime? deliveredAt;
-  final DateTime? failedAt;
-  final DateTime? postponedTo;
-  final int attempts;
-  final DateTime? createdAt;
-  final Order order;
-  final Deliverer? deliverer;
-
   Delivery({
     required this.id,
     required this.orderId,
-    this.delivererId,
     required this.status,
     required this.paymentStatus,
     required this.amountCollected,
+    required this.order,
+    this.delivererId,
     this.comment,
     this.failureReason,
     this.deliveredAt,
@@ -39,7 +32,6 @@ class Delivery {
     this.postponedTo,
     this.attempts = 0,
     this.createdAt,
-    required this.order,
     this.deliverer,
   });
 
@@ -56,12 +48,27 @@ class Delivery {
       deliveredAt: json['deliveredAt'] != null ? DateTime.tryParse(json['deliveredAt'].toString()) : null,
       failedAt: json['failedAt'] != null ? DateTime.tryParse(json['failedAt'].toString()) : null,
       postponedTo: json['postponedTo'] != null ? DateTime.tryParse(json['postponedTo'].toString()) : null,
-      attempts: json['attempts'] ?? 0,
+      attempts: parseInt(json['attempts']),
       createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) : null,
       order: Order.fromJson(json['order'] ?? {}),
       deliverer: json['deliverer'] != null ? Deliverer.fromJson(json['deliverer']) : null,
     );
   }
+  final String id;
+  final String orderId;
+  final String? delivererId;
+  final String status;
+  final String paymentStatus;
+  final double amountCollected;
+  final String? comment;
+  final String? failureReason;
+  final DateTime? deliveredAt;
+  final DateTime? failedAt;
+  final DateTime? postponedTo;
+  final int attempts;
+  final DateTime? createdAt;
+  final Order order;
+  final Deliverer? deliverer;
 
   Map<String, dynamic> toJson() {
     return {
@@ -89,24 +96,26 @@ class Delivery {
   bool get isFailed => status == 'failed';
   bool get isPostponed => status == 'postponed';
   bool get isPaid => paymentStatus == 'paid';
-  
+
   String get failureReasonText {
     switch (failureReason) {
-      case 'closed': return 'Client fermé';
-      case 'absent': return 'Client absent';
-      case 'address_not_found': return 'Adresse introuvable';
-      case 'refused': return 'Commande refusée';
-      case 'other': return 'Autre raison';
-      default: return failureReason ?? '';
+      case 'closed':
+        return 'Client fermé';
+      case 'absent':
+        return 'Client absent';
+      case 'address_not_found':
+        return 'Adresse introuvable';
+      case 'refused':
+        return 'Commande refusée';
+      case 'other':
+        return 'Autre raison';
+      default:
+        return failureReason ?? '';
     }
   }
 }
 
 class Deliverer {
-  final String id;
-  final String name;
-  final String? phone;
-
   Deliverer({required this.id, required this.name, this.phone});
 
   factory Deliverer.fromJson(Map<String, dynamic> json) {
@@ -116,6 +125,9 @@ class Deliverer {
       phone: json['phone'],
     );
   }
+  final String id;
+  final String name;
+  final String? phone;
 
   Map<String, dynamic> toJson() => {'id': id, 'name': name, 'phone': phone};
 }
