@@ -88,6 +88,8 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
 
   Future<void> _loadClientData() async {
     try {
+      print('🔍 Loading data for client: ${widget.client['id']}');
+      
       final results = await Future.wait([
         _apiService.getOrders(cafeteriaId: widget.client['id'], limit: 100),
         _apiService.getDeliveries(cafeteriaId: widget.client['id'], limit: 100),
@@ -95,11 +97,18 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
         _paymentService.getClientDebtDetails(widget.client['id']),
       ]);
       
+      print('📦 Orders response: ${results[0]}');
+      print('🚚 Deliveries response: ${results[1]}');
+      print('💰 Debt response: ${results[2]}');
+      print('📊 Debt details response: ${results[3]}');
+      
       final clientOrders = (results[0] as Map<String, dynamic>)['data'] as List? ?? [];
       final clientDeliveries = (results[1] as Map<String, dynamic>)['data'] as List? ?? [];
       final debtInfo = results[2] as CustomerDebt?;
       final debtDetails = results[3] as Map<String, dynamic>;
       final paymentHistory = (debtDetails['data']?['payment_history'] as List?) ?? [];
+      
+      print('✅ Parsed: ${clientOrders.length} orders, ${clientDeliveries.length} deliveries');
       
       // Filtering handled by API
       // final clientOrders = ...
@@ -121,6 +130,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
       });
       _loadPackaging();
     } catch (e) {
+      print('❌ Error loading client data: $e');
       setState(() => _isLoading = false);
     }
   }
