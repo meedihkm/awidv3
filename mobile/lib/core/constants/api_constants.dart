@@ -27,7 +27,7 @@ class ApiConstants {
   
   // Financial endpoints
   static const String dailyFinancial = '$baseUrl/financial/daily';
-  static const String debts = '$baseUrl/financial/debts';
+  static const String debts = '$baseUrl/debt/debts';
   
   // Debt endpoints (Feature 1)
   static const String debtBase = '$baseUrl/debt';

@@ -312,22 +312,22 @@ class DebtService {
         let paramIndex = 2;
 
         if (customer_id) {
-            conditions.push(`dp.customer_id = $${paramIndex++}`);
+conditions.push(`dp.customer_id = \$${paramIndex++}::uuid`);
             params.push(customer_id);
         }
 
         if (collector_id) {
-            conditions.push(`dp.collected_by = $${paramIndex++}`);
+conditions.push(`dp.collected_by = \$${paramIndex++}::uuid`);
             params.push(collector_id);
         }
 
         if (from) {
-            conditions.push(`dp.created_at >= $${paramIndex++}`);
+conditions.push(`dp.created_at >= \$${paramIndex++}`);
             params.push(from);
         }
 
         if (to) {
-            conditions.push(`dp.created_at <= $${paramIndex++}`);
+conditions.push(`dp.created_at <= \$${paramIndex++}`);
             params.push(to);
         }
 
@@ -343,7 +343,7 @@ class DebtService {
       JOIN users col ON dp.collected_by = col.id
       WHERE ${whereClause}
       ORDER BY dp.created_at DESC
-      LIMIT $${paramIndex++} OFFSET $${paramIndex}
+LIMIT \$${paramIndex++} OFFSET \$${paramIndex}
     `, [...params, limit, offset]);
 
         // Count total
