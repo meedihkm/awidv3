@@ -655,25 +655,6 @@ class _ProductsPageState extends State<ProductsPage> {
       ),
     );
   }
-                        children: [
-                          Icon(Icons.local_offer, color: Colors.white, size: 12),
-                          SizedBox(width: 2),
-                          Text('Promo', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ])),
-          Expanded(flex: 2, child: Padding(padding: EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text(product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 2, overflow: TextOverflow.ellipsis),
-            _buildProductActions(product),
-          ]))),
-        ]),
-      ),
-    );
-  }
 
   Widget _buildProductActions(Product product) {
     return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
