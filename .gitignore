@@ -185,7 +185,7 @@ scripts/
 
 # Docker et déploiement
 docker-compose*.yml
-Dockerfile
+# Dockerfile - Commenté pour permettre le déploiement Coolify
 
 # Documentation
 docs/
