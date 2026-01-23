@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../core/services/print_service.dart';
 import '../../../../core/services/location_service.dart';
+import '../../../../core/services/route_service.dart';
 import '../../../../core/database/sync_service.dart';
 import '../../../../core/models/delivery_model.dart';
 
@@ -17,15 +19,107 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
   final ApiService _apiService = ApiService();
   final PrintService _printService = PrintService();
   final LocationService _locationService = LocationService();
+  final RouteService _routeService = RouteService();
   List<Delivery> _deliveries = [];
   bool _isLoading = true;
   bool _showMap = false; // Toggle state
   final MapController _mapController = MapController();
+  RouteResult? _optimizedRoute;
+  LatLng? _currentPosition;
+  bool _isCalculatingRoute = false;
 
   @override
   void initState() {
     super.initState();
     _loadDeliveries();
+    _getCurrentPosition();
+  }
+  
+  Future<void> _getCurrentPosition() async {
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      if (mounted) {
+        setState(() => _currentPosition = LatLng(position.latitude, position.longitude));
+      }
+    } catch (e) {
+      print('Error getting position: $e');
+    }
+  }
+  
+  Future<void> _calculateOptimizedRoute() async {
+    if (_deliveries.isEmpty) return;
+    
+    setState(() => _isCalculatingRoute = true);
+    
+    try {
+      // Position de départ (position actuelle ou premier client)
+      final start = _currentPosition ?? LatLng(
+        _deliveries.first.order.cafeteria!.latitude!,
+        _deliveries.first.order.cafeteria!.longitude!,
+      );
+      
+      // Liste des destinations (clients avec coordonnées valides)
+      final destinations = _deliveries
+          .where((d) => d.order.cafeteria != null && d.order.cafeteria!.hasLocation)
+          .map((d) => LatLng(
+                d.order.cafeteria!.latitude!,
+                d.order.cafeteria!.longitude!,
+              ))
+          .toList();
+      
+      if (destinations.isEmpty) {
+        throw Exception('Aucune livraison avec coordonnées GPS');
+      }
+      
+      // Calculer l'itinéraire optimisé
+      final route = await _routeService.calculateOptimizedRoute(
+        start: start,
+        destinations: destinations,
+      );
+      
+      if (route != null && mounted) {
+        setState(() => _optimizedRoute = route);
+        
+        // Centrer la carte sur l'itinéraire
+        if (route.routePoints.isNotEmpty) {
+          _fitBounds(route.routePoints);
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Itinéraire: ${route.formattedDistance}, ${route.formattedDuration}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur calcul itinéraire: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCalculatingRoute = false);
+    }
+  }
+  
+  void _fitBounds(List<LatLng> points) {
+    if (points.isEmpty) return;
+    
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+    
+    for (var point in points) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+    
+    final center = LatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2);
+    _mapController.move(center, 12);
   }
 
   Future<void> _loadDeliveries() async {
@@ -76,32 +170,198 @@ class _DeliveryRoutePageState extends State<DeliveryRoutePage> {
       d.order.cafeteria != null && d.order.cafeteria!.hasLocation
     ).toList();
 
-    return FlutterMap(
-      mapController: _mapController,
-      options: MapOptions(
-        initialCenter: validDeliveries.isNotEmpty 
-          ? LatLng(validDeliveries.first.order.cafeteria!.latitude!, validDeliveries.first.order.cafeteria!.longitude!)
-          : LatLng(36.75, 3.05), // Default Algiers
-        initialZoom: 13.0,
-      ),
+    return Stack(
       children: [
-        TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.awid.delivery',
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: validDeliveries.isNotEmpty 
+              ? LatLng(validDeliveries.first.order.cafeteria!.latitude!, validDeliveries.first.order.cafeteria!.longitude!)
+              : LatLng(36.75, 3.05), // Default Algiers
+            initialZoom: 13.0,
+            interactionOptions: InteractionOptions(
+              flags: InteractiveFlag.all,
+            ),
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.awid.delivery',
+            ),
+            // Route optimisée
+            if (_optimizedRoute != null)
+              PolylineLayer(
+                polylines: [
+                  Polyline(
+                    points: _optimizedRoute!.routePoints,
+                    strokeWidth: 4,
+                    color: Colors.orange,
+                    borderStrokeWidth: 2,
+                    borderColor: Colors.white,
+                  ),
+                ],
+              ),
+            // Position actuelle
+            if (_currentPosition != null)
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _currentPosition!,
+                    width: 40,
+                    height: 40,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blue.withValues(alpha: 0.5),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Icon(Icons.navigation, color: Colors.white, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            // Marqueurs des livraisons
+            MarkerLayer(
+              markers: validDeliveries.asMap().entries.map((entry) {
+                final index = entry.key;
+                final d = entry.value;
+                return Marker(
+                  point: LatLng(d.order.cafeteria!.latitude!, d.order.cafeteria!.longitude!),
+                  width: 60,
+                  height: 60,
+                  child: GestureDetector(
+                    onTap: () => _confirmDelivery(d),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: Colors.orange,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${index + 1}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 2)],
+                          ),
+                          child: Text(
+                            d.order.cafeteria!.name,
+                            style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ),
-        MarkerLayer(
-          markers: validDeliveries.map((d) {
-             return Marker(
-               point: LatLng(d.order.cafeteria!.latitude!, d.order.cafeteria!.longitude!),
-               width: 40,
-               height: 40,
-               child: GestureDetector(
-                 onTap: () => _confirmDelivery(d), // Quick access to action
-                 child: Icon(Icons.location_on, color: Colors.orange, size: 40),
-               ),
-             );
-          }).toList(),
+        // Boutons de contrôle
+        Positioned(
+          top: 16,
+          right: 16,
+          child: Column(
+            children: [
+              FloatingActionButton.small(
+                heroTag: 'gps',
+                onPressed: () async {
+                  await _getCurrentPosition();
+                  if (_currentPosition != null) {
+                    _mapController.move(_currentPosition!, 15);
+                  }
+                },
+                backgroundColor: Colors.white,
+                child: Icon(Icons.my_location, color: Colors.blue),
+              ),
+              SizedBox(height: 8),
+              FloatingActionButton.small(
+                heroTag: 'route',
+                onPressed: _isCalculatingRoute ? null : _calculateOptimizedRoute,
+                backgroundColor: Colors.white,
+                child: _isCalculatingRoute
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(Icons.route, color: Colors.orange),
+              ),
+            ],
+          ),
         ),
+        // Info itinéraire
+        if (_optimizedRoute != null)
+          Positioned(
+            bottom: 16,
+            left: 16,
+            right: 16,
+            child: Card(
+              elevation: 8,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.straighten, color: Colors.orange, size: 20),
+                        SizedBox(height: 4),
+                        Text(_optimizedRoute!.formattedDistance,
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                      ],
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.access_time, color: Colors.orange, size: 20),
+                        SizedBox(height: 4),
+                        Text(_optimizedRoute!.formattedDuration,
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                      ],
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.location_on, color: Colors.orange, size: 20),
+                        SizedBox(height: 4),
+                        Text('${validDeliveries.length} arrêts',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
