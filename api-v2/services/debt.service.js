@@ -86,86 +86,78 @@ class DebtService {
             ? "u.name ASC"
             : "total_debt DESC";
 
-    // Construire les conditions WHERE dynamiques
-    const conditions = [];
+    // Construire les conditions et paramètres
     const params = [organizationId, minDebt, limit, offset];
+    const conditions = [];
     let paramIndex = 5;
 
+    // Filtre par client spécifique
     if (customerId) {
       conditions.push(`u.id = $${paramIndex}`);
-      params.splice(paramIndex - 1, 0, customerId);
+      params.push(customerId);
       paramIndex++;
     }
 
+    // Filtre par livreur - uniquement clients avec livraisons actives
     if (delivererId) {
-      conditions.push(`EXISTS (
-                SELECT 1 FROM deliveries d 
-                WHERE d.order_id = o.id 
-                AND d.deliverer_id = $${paramIndex}
+      conditions.push(`u.id IN (
+                SELECT DISTINCT ord.customer_id
+                FROM deliveries d 
+                JOIN orders ord ON d.order_id = ord.id
+                WHERE d.deliverer_id = $${paramIndex}
+                AND d.status IN ('assigned', 'in_progress')
             )`);
-      params.splice(paramIndex - 1, 0, delivererId);
+      params.push(delivererId);
       paramIndex++;
     }
 
+    // Filtre par date
     if (dateFrom) {
       conditions.push(`o.created_at >= $${paramIndex}::timestamp`);
-      params.splice(paramIndex - 1, 0, dateFrom);
+      params.push(dateFrom);
       paramIndex++;
     }
 
     if (dateTo) {
       conditions.push(`o.created_at <= $${paramIndex}::timestamp`);
-      params.splice(paramIndex - 1, 0, dateTo);
+      params.push(dateTo);
       paramIndex++;
     }
 
-    const additionalWhere =
+    const whereConditions =
       conditions.length > 0 ? `AND ${conditions.join(" AND ")}` : "";
 
-    // Condition spéciale pour delivererId - doit filtrer les users, pas les orders
-    let delivererFilter = "";
-    if (delivererId) {
-      delivererFilter = `AND u.id IN (
-                SELECT DISTINCT ord.customer_id
-                FROM deliveries d 
-                JOIN orders ord ON d.order_id = ord.id
-                WHERE d.deliverer_id = $${paramIndex - 1}
-                AND d.status IN ('assigned', 'in_progress')
-            )`;
-    }
-
-    // Données paginées
+    // Requête principale
     const result = await db.query(
       `
-      SELECT 
-        u.id as customer_id,
-        u.name,
-        u.phone,
-        u.email,
-        COALESCE(SUM(o.total) - SUM(o.amount_paid), 0)::numeric as total_debt,
-        COUNT(*) FILTER (WHERE o.payment_status != 'paid') as unpaid_orders,
-        MAX(o.created_at) as last_order_date
-      FROM users u
-      LEFT JOIN orders o ON u.id = o.customer_id 
-        AND o.organization_id = $1 
-        AND o.status != 'cancelled'
-        ${additionalWhere}
-      WHERE u.organization_id = $1 
-        AND u.role = 'cafeteria'
-        AND u.active = true
-        ${delivererFilter}
-      GROUP BY u.id, u.name, u.phone, u.email
-      HAVING COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) >= $2
-      ORDER BY ${orderBy}
-      LIMIT $3 OFFSET $4
-    `,
+            SELECT 
+                u.id as customer_id,
+                u.name,
+                u.phone,
+                u.email,
+                COALESCE(SUM(o.total) - SUM(o.amount_paid), 0)::numeric as total_debt,
+                COUNT(*) FILTER (WHERE o.payment_status != 'paid') as unpaid_orders,
+                MAX(o.created_at) as last_order_date
+            FROM users u
+            LEFT JOIN orders o ON u.id = o.customer_id 
+                AND o.organization_id = $1 
+                AND o.status != 'cancelled'
+            WHERE u.organization_id = $1 
+                AND u.role = 'cafeteria'
+                AND u.active = true
+                ${whereConditions}
+            GROUP BY u.id, u.name, u.phone, u.email
+            HAVING COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) >= $2
+            ORDER BY ${orderBy}
+            LIMIT $3 OFFSET $4
+        `,
       params,
     );
 
-    // Total pour pagination (avec les mêmes filtres)
+    // Count pour pagination
     const countParams = [organizationId, minDebt];
-    let countParamIndex = 3;
     const countConditions = [];
+    let countParamIndex = 3;
 
     if (customerId) {
       countConditions.push(`u.id = $${countParamIndex}`);
@@ -174,10 +166,12 @@ class DebtService {
     }
 
     if (delivererId) {
-      countConditions.push(`EXISTS (
-                SELECT 1 FROM deliveries d 
-                WHERE d.order_id = o.id 
-                AND d.deliverer_id = $${countParamIndex}
+      countConditions.push(`u.id IN (
+                SELECT DISTINCT ord.customer_id
+                FROM deliveries d 
+                JOIN orders ord ON d.order_id = ord.id
+                WHERE d.deliverer_id = $${countParamIndex}
+                AND d.status IN ('assigned', 'in_progress')
             )`);
       countParams.push(delivererId);
       countParamIndex++;
@@ -195,372 +189,302 @@ class DebtService {
       countParamIndex++;
     }
 
-    const countAdditionalWhere =
+    const countWhereConditions =
       countConditions.length > 0 ? `AND ${countConditions.join(" AND ")}` : "";
-
-    // Condition spéciale pour delivererId dans le count
-    let countDelivererFilter = "";
-    if (delivererId) {
-      countDelivererFilter = `AND u.id IN (
-            SELECT DISTINCT ord.customer_id
-            FROM deliveries d 
-            JOIN orders ord ON d.order_id = ord.id
-            WHERE d.deliverer_id = $${countParamIndex - 1}
-            AND d.status IN ('assigned', 'in_progress')
-        )`;
-    }
 
     const countResult = await db.query(
       `
-      SELECT COUNT(*) as total
-      FROM (
-        SELECT u.id
-        FROM users u
-        LEFT JOIN orders o ON u.id = o.customer_id 
-          AND o.organization_id = $1 
-          AND o.status != 'cancelled'
-          ${countAdditionalWhere}
-        WHERE u.organization_id = $1 
-          AND u.role = 'cafeteria'
-          AND u.active = true
-          ${countDelivererFilter}
-        GROUP BY u.id
-        HAVING COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) >= $2
-      ) as subquery
-    `,
+            SELECT COUNT(*) as total
+            FROM (
+                SELECT u.id
+                FROM users u
+                LEFT JOIN orders o ON u.id = o.customer_id 
+                    AND o.organization_id = $1 
+                    AND o.status != 'cancelled'
+                WHERE u.organization_id = $1 
+                    AND u.role = 'cafeteria'
+                    AND u.active = true
+                    ${countWhereConditions}
+                GROUP BY u.id
+                HAVING COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) >= $2
+            ) as subquery
+        `,
       countParams,
     );
 
     // Résumé global
     const summaryResult = await db.query(
       `
-      SELECT 
-        COUNT(DISTINCT o.customer_id) as total_customers_with_debt,
-        COALESCE(SUM(o.total) - SUM(o.amount_paid), 0)::numeric as total_debt_amount
-      FROM orders o
-      WHERE o.organization_id = $1 
-        AND o.payment_status != 'paid'
-        AND o.status != 'cancelled'
-    `,
+            SELECT 
+                COUNT(DISTINCT o.customer_id) as total_customers_with_debt,
+                COALESCE(SUM(o.total) - SUM(o.amount_paid), 0)::numeric as total_debt_amount
+            FROM orders o
+            WHERE o.organization_id = $1 
+                AND o.payment_status != 'paid'
+                AND o.status != 'cancelled'
+        `,
       [organizationId],
     );
 
     const total = parseInt(countResult.rows[0]?.total || 0);
 
     return {
-      data: result.rows.map((r) => ({
-        ...r,
-        total_debt: parseFloat(r.total_debt) || 0,
+      data: result.rows.map((row) => ({
+        id: row.customer_id,
+        name: row.name,
+        phone: row.phone,
+        email: row.email,
+        debt: parseFloat(row.total_debt),
+        order_count: parseInt(row.unpaid_orders),
+        last_order: row.last_order_date,
       })),
       summary: {
-        total_customers_with_debt:
-          parseInt(summaryResult.rows[0]?.total_customers_with_debt) || 0,
-        total_debt_amount:
-          parseFloat(summaryResult.rows[0]?.total_debt_amount) || 0,
+        total_customers: parseInt(
+          summaryResult.rows[0]?.total_customers_with_debt || 0,
+        ),
+        total_debt: parseFloat(summaryResult.rows[0]?.total_debt_amount || 0),
       },
       pagination: {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit),
-        hasNext: page * limit < total,
-        hasPrev: page > 1,
+        pages: Math.ceil(total / limit),
       },
     };
   }
 
   /**
+   * Récupérer les commandes impayées d'un client
+   */
+  async getUnpaidOrders(customerId, organizationId) {
+    const result = await db.query(
+      `
+            SELECT 
+                o.id,
+                o.order_number,
+                o.created_at,
+                o.total,
+                o.amount_paid,
+                (o.total - o.amount_paid) as remaining,
+                o.status,
+                o.payment_status
+            FROM orders o
+            WHERE o.customer_id = $1
+                AND o.organization_id = $2
+                AND o.payment_status != 'paid'
+                AND o.status != 'cancelled'
+            ORDER BY o.created_at ASC
+        `,
+      [customerId, organizationId],
+    );
+
+    return result.rows;
+  }
+
+  /**
    * Enregistrer un paiement de dette
-   * @param {Object} data - { customer_id, amount, payment_type, delivery_id?, note? }
-   * @param {string} collectorId - ID de celui qui collecte
-   * @param {string} collectorRole - 'admin' ou 'deliverer'
-   * @param {string} organizationId
-   * @returns {Promise<Object>} Paiement créé + nouvelle dette
    */
   async recordDebtPayment(data, collectorId, collectorRole, organizationId) {
-    const {
-      customer_id,
-      amount,
-      payment_type = "cash",
-      delivery_id,
-      note,
-    } = data;
+    const { customer_id, amount, payment_type = "cash", note } = data;
 
-    // Validation
     if (!customer_id || !amount || amount <= 0) {
-      throw new Error("customer_id et amount (> 0) sont requis");
+      throw new Error("Données invalides");
     }
 
     // Vérifier que le client existe et a une dette
     const debt = await this.getCustomerDebt(customer_id, organizationId);
-    if (!debt) {
-      throw new Error("Client non trouvé");
-    }
-
-    if (debt.total_debt <= 0) {
+    if (!debt || debt.total_debt <= 0) {
       throw new Error("Ce client n'a pas de dette");
     }
 
     if (amount > debt.total_debt) {
-      throw new Error(
-        `Montant supérieur à la dette (${debt.total_debt.toFixed(2)} DA)`,
-      );
+      throw new Error("Le montant est supérieur à la dette totale");
     }
 
-    // Transaction pour atomicité
-    const client = await db.getClient();
-
-    try {
-      await client.query("BEGIN");
-
-      // 1. Créer le paiement
-      const paymentResult = await client.query(
-        `
-        INSERT INTO debt_payments 
-          (organization_id, customer_id, amount, payment_type, collected_by, collector_role, delivery_id, note)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING *
-      `,
-        [
-          organizationId,
-          customer_id,
-          amount,
-          payment_type,
-          collectorId,
-          collectorRole,
-          delivery_id,
-          note,
-        ],
-      );
-
-      const payment = paymentResult.rows[0];
-
-      // 2. Appliquer le paiement aux commandes (FIFO)
-      await this.applyPaymentToOrders(
-        client,
-        customer_id,
-        amount,
-        organizationId,
-      );
-
-      await client.query("COMMIT");
-
-      // 3. Récupérer nouvelle dette
-      const newDebt = await this.getCustomerDebt(customer_id, organizationId);
-
-      // 4. Audit log
-      await auditService.log({
-        action: "DEBT_PAYMENT_RECORDED",
-        user_id: collectorId,
-        organization_id: organizationId,
-        entity_type: "debt_payment",
-        entity_id: payment.id,
-        details: {
-          customer_id,
-          amount,
-          payment_type,
-          delivery_id,
-          previous_debt: debt.total_debt,
-          new_debt: newDebt.total_debt,
-        },
-      });
-
-      // 5. Notification à l'admin (si collecté par livreur)
-      if (collectorRole === "deliverer") {
-        const collector = await db.query(
-          "SELECT name FROM users WHERE id = $1",
-          [collectorId],
-        );
-        await notificationService.sendToRole("admin", organizationId, {
-          title: "Paiement dette reçu",
-          message: `${amount.toFixed(0)} DA reçus de ${debt.customer_name} par ${collector.rows[0]?.name || "Livreur"}`,
-          data: {
-            type: "debt_payment",
-            customer_id,
-            payment_id: payment.id,
-          },
-        });
-      }
-
-      logger.info("Debt payment recorded", {
-        paymentId: payment.id,
-        customerId: customer_id,
-        amount,
-        collectorId,
-      });
-
-      return {
-        payment,
-        previous_debt: debt.total_debt,
-        new_debt: newDebt.total_debt,
-        customer_name: debt.customer_name,
-      };
-    } catch (error) {
-      await client.query("ROLLBACK");
-      logger.error("Error recording debt payment", {
-        error: error.message,
-        data,
-      });
-      throw error;
-    } finally {
-      client.release();
-    }
-  }
-
-  /**
-   * Appliquer un paiement aux commandes (FIFO - plus anciennes d'abord)
-   * @private
-   */
-  async applyPaymentToOrders(client, customerId, amount, organizationId) {
-    let remaining = parseFloat(amount);
-
-    // Récupérer commandes non payées, plus anciennes d'abord
-    const orders = await client.query(
+    // Enregistrer le paiement
+    const paymentResult = await db.query(
       `
-      SELECT id, total, amount_paid, (total - amount_paid) as due
-      FROM orders
-      WHERE customer_id = $1 
-        AND organization_id = $2 
-        AND payment_status != 'paid'
-        AND status != 'cancelled'
-      ORDER BY created_at ASC
-    `,
-      [customerId, organizationId],
+            INSERT INTO debt_payments (
+                customer_id, 
+                organization_id, 
+                amount, 
+                payment_type, 
+                collected_by, 
+                note
+            ) VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *
+        `,
+      [customer_id, organizationId, amount, payment_type, collectorId, note],
     );
 
-    for (const order of orders.rows) {
-      if (remaining <= 0) break;
+    // Répartir le paiement sur les commandes impayées (FIFO)
+    const unpaidOrders = await this.getUnpaidOrders(
+      customer_id,
+      organizationId,
+    );
+    let remainingAmount = amount;
+    const ordersAffected = [];
 
-      const due = parseFloat(order.due);
-      const toApply = Math.min(remaining, due);
-      const newAmountPaid = parseFloat(order.amount_paid) + toApply;
-      const newStatus =
-        newAmountPaid >= parseFloat(order.total) ? "paid" : "partial";
+    for (const order of unpaidOrders) {
+      if (remainingAmount <= 0) break;
 
-      await client.query(
+      const orderRemaining = parseFloat(order.remaining);
+      const amountToApply = Math.min(remainingAmount, orderRemaining);
+
+      await db.query(
         `
-        UPDATE orders 
-        SET amount_paid = $1, payment_status = $2, updated_at = NOW()
-        WHERE id = $3
-      `,
-        [newAmountPaid, newStatus, order.id],
+                UPDATE orders 
+                SET amount_paid = amount_paid + $1,
+                    payment_status = CASE 
+                        WHEN (amount_paid + $1) >= total THEN 'paid'
+                        ELSE 'partial'
+                    END
+                WHERE id = $2
+            `,
+        [amountToApply, order.id],
       );
 
-      remaining -= toApply;
-
-      logger.debug("Applied payment to order", {
-        orderId: order.id,
-        applied: toApply,
-        newStatus,
+      ordersAffected.push({
+        order_id: order.id,
+        order_number: order.order_number,
+        amount_applied: amountToApply,
       });
+
+      remainingAmount -= amountToApply;
     }
+
+    // Audit
+    await auditService.logAudit(
+      "DEBT_PAYMENT_RECORDED",
+      collectorId,
+      organizationId,
+      { customerId: customer_id, amount, ordersAffected },
+      null,
+    );
+
+    // Notification
+    try {
+      await notificationService.sendNotification({
+        userId: customer_id,
+        organizationId,
+        type: "payment_received",
+        title: "Paiement reçu",
+        message: `Paiement de ${amount} DA enregistré`,
+        data: { amount, payment_id: paymentResult.rows[0].id },
+      });
+    } catch (err) {
+      logger.error("Notification error:", err);
+    }
+
+    // Nouvelle dette
+    const newDebt = await this.getCustomerDebt(customer_id, organizationId);
+
+    return {
+      success: true,
+      data: {
+        payment_id: paymentResult.rows[0].id,
+        amount_applied: amount,
+        orders_affected: ordersAffected,
+        debt_before: debt.total_debt,
+        debt_after: newDebt?.total_debt || 0,
+        debt_cleared: (newDebt?.total_debt || 0) === 0,
+      },
+    };
   }
 
   /**
-   * Historique des paiements
-   * @param {string} organizationId
-   * @param {Object} options - { customer_id?, collector_id?, from?, to?, page, limit }
+   * Historique des paiements de dette
    */
-  async getPaymentHistory(organizationId, options = {}) {
+  async getDebtPaymentHistory(organizationId, options = {}) {
     const {
-      customer_id,
-      collector_id,
-      from,
-      to,
+      customerId = null,
+      collectedBy = null,
+      dateFrom = null,
+      dateTo = null,
       page = 1,
       limit = 50,
     } = options;
 
     const offset = (page - 1) * limit;
-    const conditions = ["dp.organization_id = $1"];
-    const params = [organizationId];
-    let paramIndex = 2;
+    const params = [organizationId, limit, offset];
+    const conditions = [];
+    let paramIndex = 4;
 
-    if (customer_id) {
-      conditions.push(`dp.customer_id = \$${paramIndex++}`);
-      params.push(customer_id);
+    if (customerId) {
+      conditions.push(`dp.customer_id = $${paramIndex}`);
+      params.push(customerId);
+      paramIndex++;
     }
 
-    if (collector_id) {
-      conditions.push(`dp.collected_by = \$${paramIndex++}`);
-      params.push(collector_id);
+    if (collectedBy) {
+      conditions.push(`dp.collected_by = $${paramIndex}`);
+      params.push(collectedBy);
+      paramIndex++;
     }
 
-    if (from) {
-      conditions.push(`dp.created_at >= \$${paramIndex++}`);
-      params.push(from);
+    if (dateFrom) {
+      conditions.push(`dp.created_at >= $${paramIndex}::timestamp`);
+      params.push(dateFrom);
+      paramIndex++;
     }
 
-    if (to) {
-      conditions.push(`dp.created_at <= \$${paramIndex++}`);
-      params.push(to);
+    if (dateTo) {
+      conditions.push(`dp.created_at <= $${paramIndex}::timestamp`);
+      params.push(dateTo);
+      paramIndex++;
     }
 
-    const whereClause = conditions.join(" AND ");
+    const whereClause =
+      conditions.length > 0 ? `AND ${conditions.join(" AND ")}` : "";
 
     const result = await db.query(
       `
-      SELECT 
-        dp.*,
-        c.name as customer_name,
-        col.name as collector_name
-      FROM debt_payments dp
-      JOIN users c ON dp.customer_id = c.id
-      JOIN users col ON dp.collected_by = col.id
-      WHERE ${whereClause}
-      ORDER BY dp.created_at DESC
-LIMIT \$${paramIndex++} OFFSET \$${paramIndex}
-    `,
-      [...params, limit, offset],
-    );
-
-    // Count total
-    const countResult = await db.query(
-      `
-      SELECT COUNT(*) as total FROM debt_payments dp WHERE ${whereClause}
-    `,
+            SELECT 
+                dp.*,
+                c.name as client_name,
+                c.phone as client_phone,
+                u.name as collector_name
+            FROM debt_payments dp
+            JOIN users c ON dp.customer_id = c.id
+            LEFT JOIN users u ON dp.collected_by = u.id
+            WHERE dp.organization_id = $1
+                ${whereClause}
+            ORDER BY dp.created_at DESC
+            LIMIT $2 OFFSET $3
+        `,
       params,
     );
 
-    const total = parseInt(countResult.rows[0].total);
-
     return {
+      success: true,
       data: result.rows,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-        hasNext: page * limit < total,
-        hasPrev: page > 1,
-      },
     };
   }
 
   /**
-   * Commandes impayées d'un client (pour détail)
+   * Mes collectes (pour livreur)
    */
-  async getUnpaidOrders(customerId, organizationId) {
+  async getMyCollections(collectorId, organizationId) {
     const result = await db.query(
       `
-      SELECT 
-        id, 
-        created_at, 
-        total, 
-        amount_paid, 
-        (total - amount_paid) as due,
-        payment_status
-      FROM orders
-      WHERE customer_id = $1 
-        AND organization_id = $2 
-        AND payment_status != 'paid'
-        AND status != 'cancelled'
-      ORDER BY created_at ASC
-    `,
-      [customerId, organizationId],
+            SELECT 
+                dp.*,
+                c.name as client_name,
+                c.phone as client_phone
+            FROM debt_payments dp
+            JOIN users c ON dp.customer_id = c.id
+            WHERE dp.collected_by = $1
+                AND dp.organization_id = $2
+            ORDER BY dp.created_at DESC
+            LIMIT 100
+        `,
+      [collectorId, organizationId],
     );
 
-    return result.rows;
+    return {
+      success: true,
+      data: result.rows,
+    };
   }
 }
 
