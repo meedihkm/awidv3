@@ -43,7 +43,10 @@ class _ProductsPageState extends State<ProductsPage> {
     try {
       final response = await _apiService.getProducts();
       if (response['success']) {
-        final products = (response['data'] as List).map((json) => Product.fromJson(json)).toList();
+        // Filtrer uniquement les produits actifs
+        final allProducts = (response['data'] as List).map((json) => Product.fromJson(json)).toList();
+        final products = allProducts.where((p) => p.active).toList();
+        
         // Extraire les catégories uniques
         final cats = products.map((p) => p.category).where((c) => c != null && c.isNotEmpty).toSet().toList();
         setState(() {
@@ -673,9 +676,38 @@ class _ProductsPageState extends State<ProductsPage> {
         GestureDetector(onTap: () async { await _apiService.toggleProduct(product.id); _loadProducts(); }, child: Icon(product.active ? Icons.visibility : Icons.visibility_off, color: product.active ? Colors.green : Colors.grey, size: 22)),
         SizedBox(width: 8),
         GestureDetector(onTap: () async {
-          final confirm = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: Text('Archiver ce produit?'), content: Text('Le produit "${product.name}" sera désactivé mais restera dans l\'historique des commandes.'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler')), TextButton(onPressed: () => Navigator.pop(context, true), child: Text('Archiver', style: TextStyle(color: Colors.orange)))]));
-          if (confirm == true) { await _apiService.deleteProduct(product.id); _loadProducts(); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Produit archivé'), backgroundColor: Colors.orange)); }
-        }, child: Icon(Icons.archive_outlined, color: Colors.orange, size: 22)),
+          final confirm = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+            title: Text('Supprimer ce produit?'), 
+            content: Text('Le produit "${product.name}" sera supprimé définitivement.\n\nSi le produit est utilisé dans des commandes, il sera archivé au lieu d\'être supprimé.'), 
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler')), 
+              TextButton(
+                onPressed: () => Navigator.pop(context, true), 
+                child: Text('Supprimer', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
+              )
+            ]
+          ));
+          if (confirm == true) { 
+            try {
+              final result = await _apiService.deleteProduct(product.id);
+              _loadProducts();
+              
+              // Afficher le message approprié
+              final message = result['archived'] == true 
+                ? 'Produit archivé (utilisé dans des commandes)'
+                : 'Produit supprimé';
+              final color = result['archived'] == true ? Colors.orange : Colors.green;
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(message), backgroundColor: color)
+              );
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Erreur: ${e.toString()}'), backgroundColor: Colors.red)
+              );
+            }
+          }
+        }, child: Icon(Icons.delete_outline, color: Colors.red, size: 22)),
       ]),
     ]);
   }

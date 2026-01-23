@@ -157,21 +157,52 @@ router.put('/:id/toggle', authenticate, requireAdmin, validateUUID('id'), async 
   }
 });
 
-// DELETE /api/products/:id (Soft Delete)
+// DELETE /api/products/:id (Hard Delete)
 router.delete('/:id', authenticate, requireAdmin, validateUUID('id'), async (req, res) => {
   try {
-    // Soft delete: désactiver le produit au lieu de le supprimer physiquement
-    // Cela évite les erreurs de clé étrangère (order_items)
+    // Vérifier si le produit est utilisé dans des commandes
+    const usageCheck = await pool.query(
+      'SELECT COUNT(*) as count FROM order_items WHERE product_id = $1',
+      [req.params.id]
+    );
+    
+    const isUsed = parseInt(usageCheck.rows[0].count) > 0;
+    
+    if (isUsed) {
+      // Si le produit est utilisé, on le désactive au lieu de le supprimer
+      await pool.query(
+        'UPDATE products SET active = false WHERE id = $1 AND organization_id = $2',
+        [req.params.id, req.user.organization_id]
+      );
+      
+      await logAudit('PRODUCT_ARCHIVED', req.user.id, req.user.organization_id, { 
+        productId: req.params.id, 
+        reason: 'used_in_orders' 
+      }, req);
+      
+      await cacheService.invalidate(`cache:products:${req.user.organization_id}*`);
+      
+      return res.json({ 
+        success: true, 
+        message: 'Produit archivé (utilisé dans des commandes)',
+        archived: true 
+      });
+    }
+    
+    // Sinon, suppression physique
     await pool.query(
-      'UPDATE products SET active = false WHERE id = $1 AND organization_id = $2',
+      'DELETE FROM products WHERE id = $1 AND organization_id = $2',
       [req.params.id, req.user.organization_id]
     );
 
-    await logAudit('PRODUCT_DELETED', req.user.id, req.user.organization_id, { productId: req.params.id, type: 'soft_delete' }, req);
+    await logAudit('PRODUCT_DELETED', req.user.id, req.user.organization_id, { 
+      productId: req.params.id, 
+      type: 'hard_delete' 
+    }, req);
 
     await cacheService.invalidate(`cache:products:${req.user.organization_id}*`);
 
-    res.json({ success: true, message: 'Produit archivé avec succès' });
+    res.json({ success: true, message: 'Produit supprimé définitivement' });
   } catch (error) {
     console.error('Delete product error:', error);
     res.status(500).json({ error: 'Erreur serveur' });
