@@ -25,12 +25,29 @@ class ApiConstants {
   static const String deliveries = '$baseUrl/deliveries';
   static const String deliveryRoute = '$baseUrl/deliveries/route';
   
+  // Deliverers/Location endpoints (dans deliveries.routes.js)
+  static const String deliverersLocation = '$baseUrl/deliveries/location';
+  static const String deliverersLocations = '$baseUrl/deliveries/locations';
+  
   // Financial endpoints
   static const String dailyFinancial = '$baseUrl/financial/daily';
   static const String debts = '$baseUrl/debt/debts';
+  static const String financialDebts = '$baseUrl/financial/debts'; // Alias pour compatibilité
+  
+  // Audit logs
+  static const String auditLogs = '$baseUrl/audit-logs';
   
   // Debt endpoints (Feature 1)
   static const String debtBase = '$baseUrl/debt';
+  
+  // Favorites endpoints (Phase 2)
+  static const String favorites = '$baseUrl/favorites';
+  
+  // Payments endpoints (Phase 1)
+  static const String payments = '$baseUrl/payments';
+  
+  // Notifications endpoints (Phase 3)
+  static const String notifications = '$baseUrl/notifications';
   
   // Super admin endpoints
   static const String superAdminTest = '$baseUrl/super-admin/test';

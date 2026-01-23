@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 const db = require('../config/database');
 
 // ============================================
@@ -8,9 +8,9 @@ const db = require('../config/database');
 // ============================================
 // Récupère les notifications de l'utilisateur
 
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const { limit = 50, unreadOnly = false } = req.query;
     
     const result = await db.query(
@@ -37,9 +37,9 @@ router.get('/', authenticateToken, async (req, res) => {
 // ============================================
 // Compte les notifications non lues
 
-router.get('/unread-count', authenticateToken, async (req, res) => {
+router.get('/unread-count', authenticate, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     
     const result = await db.query(
       'SELECT get_unread_count($1) as count',
@@ -65,10 +65,10 @@ router.get('/unread-count', authenticateToken, async (req, res) => {
 // ============================================
 // Marque une notification comme lue
 
-router.put('/:id/read', authenticateToken, async (req, res) => {
+router.put('/:id/read', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.userId;
+    const userId = req.user.id;
     
     const result = await db.query(
       'SELECT mark_notification_read($1, $2) as success',
@@ -101,9 +101,9 @@ router.put('/:id/read', authenticateToken, async (req, res) => {
 // ============================================
 // Marque toutes les notifications comme lues
 
-router.put('/read-all', authenticateToken, async (req, res) => {
+router.put('/read-all', authenticate, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     
     const result = await db.query(
       'SELECT mark_all_notifications_read($1) as count',
@@ -130,10 +130,10 @@ router.put('/read-all', authenticateToken, async (req, res) => {
 // ============================================
 // Supprime une notification
 
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.userId;
+    const userId = req.user.id;
     
     const result = await db.query(
       'DELETE FROM notifications WHERE id = $1 AND user_id = $2 RETURNING id',
@@ -166,9 +166,9 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 // ============================================
 // Récupère les préférences de notification
 
-router.get('/preferences', authenticateToken, async (req, res) => {
+router.get('/preferences', authenticate, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     
     let result = await db.query(
       'SELECT * FROM notification_preferences WHERE user_id = $1',
@@ -204,9 +204,9 @@ router.get('/preferences', authenticateToken, async (req, res) => {
 // ============================================
 // Met à jour les préférences de notification
 
-router.put('/preferences', authenticateToken, async (req, res) => {
+router.put('/preferences', authenticate, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const {
       payment_notifications,
       debt_notifications,
@@ -271,17 +271,9 @@ router.put('/preferences', authenticateToken, async (req, res) => {
 // ============================================
 // Envoie les rappels de dette
 
-router.post('/send-debt-reminders', authenticateToken, async (req, res) => {
+router.post('/send-debt-reminders', authenticate, requireAdmin, async (req, res) => {
   try {
-    // Vérifier que c'est un admin
-    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Accès non autorisé'
-      });
-    }
-    
-    const organizationId = req.user.organizationId;
+    const organizationId = req.user.organization_id;
     
     // Récupérer clients avec dettes et préférences activées
     const clientsResult = await db.query(
@@ -345,17 +337,9 @@ router.post('/send-debt-reminders', authenticateToken, async (req, res) => {
 // ============================================
 // Statistiques sur les notifications
 
-router.get('/stats', authenticateToken, async (req, res) => {
+router.get('/stats', authenticate, requireAdmin, async (req, res) => {
   try {
-    // Vérifier que c'est un admin
-    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Accès non autorisé'
-      });
-    }
-    
-    const organizationId = req.user.organizationId;
+    const organizationId = req.user.organization_id;
     
     const result = await db.query(
       `SELECT

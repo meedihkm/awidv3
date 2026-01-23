@@ -354,10 +354,10 @@ class ApiService {
   }
 
   // ===== LOCATION =====
-  Future<Map<String, dynamic>> updateDelivererLocation(double lat, double lng) async => _request('POST', '${ApiConstants.baseUrl}/deliverers/location', body: {'latitude': lat, 'longitude': lng});
-  Future<Map<String, dynamic>> getDeliverersLocations() async => _request('GET', '${ApiConstants.baseUrl}/deliverers/locations');
+  Future<Map<String, dynamic>> updateDelivererLocation(double lat, double lng) async => _request('POST', ApiConstants.deliverersLocation, body: {'latitude': lat, 'longitude': lng});
+  Future<Map<String, dynamic>> getDeliverersLocations() async => _request('GET', ApiConstants.deliverersLocations);
   Future<Map<String, dynamic>> getClientsLocations() async => _request('GET', '${ApiConstants.baseUrl}/users/clients-locations');
-  Future<Map<String, dynamic>> getDelivererHistory(String delivererId, String date) async => _request('GET', '${ApiConstants.baseUrl}/deliverers/$delivererId/history?date=$date');
+  Future<Map<String, dynamic>> getDelivererHistory(String delivererId, String date) async => _request('GET', '${ApiConstants.deliveries}/$delivererId/history?date=$date');
 
   // ===== ORGANIZATION =====
   Future<Map<String, dynamic>> getOrganizationSettings() async => _request('GET', '${ApiConstants.baseUrl}/organization/settings');
@@ -369,7 +369,7 @@ class ApiService {
 
   // ===== AUDIT =====
   Future<Map<String, dynamic>> getAuditLogs({int limit = 100, int offset = 0, String? action}) async {
-    String url = '${ApiConstants.baseUrl}/audit-logs?limit=$limit&offset=$offset';
+    String url = '${ApiConstants.auditLogs}?limit=$limit&offset=$offset';
     if (action != null) url += '&action=$action';
     return _request('GET', url);
   }
@@ -402,26 +402,10 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> recordDebtPayment(Map<String, dynamic> paymentData) async {
-    final result = await _request('POST', '${ApiConstants.debtBase}/debt-payments', body: paymentData);
-    // Invalider cache (optionnel si utilisé pour getDebts)
+    final result = await _request('POST', '${ApiConstants.baseUrl}/payments/record', body: paymentData);
+    // Invalider cache
+    await _cache.clearCache('cache_debts');
     return result;
-  }
-
-  Future<Map<String, dynamic>> getPaymentHistory({
-    String? customerId,
-    String? collectorId,
-    String? from,
-    String? to,
-    int page = 1,
-    int limit = 50
-  }) async {
-    String query = 'page=$page&limit=$limit';
-    if (customerId != null) query += '&customer_id=$customerId';
-    if (collectorId != null) query += '&collector_id=$collectorId';
-    if (from != null) query += '&from=$from';
-    if (to != null) query += '&to=$to';
-    
-    return _request('GET', '${ApiConstants.debtBase}/debt-payments?$query');
   }
 
   // ===== PACKAGING (Feature 3) =====
@@ -471,13 +455,27 @@ class ApiService {
     return _request('GET', '${ApiConstants.baseUrl}/recurring/admin/all$query');
   }
 
-  // ===== PAYMENT SERVICE STUBS =====
-  Future<Map<String, dynamic>> getClientDebtDetails(String clientId) async => {'success': true, 'data': {}};
-  Future<Map<String, dynamic>> getMyCollections() async => {'success': true, 'data': []};
-  Future<Map<String, dynamic>> getMyPayments() async => {'success': true, 'data': []};
-  Future<Map<String, dynamic>> getPaymentStats() async => {'success': true, 'data': {}};
+  // ===== PAYMENT SERVICE (Phase 1) =====
+  Future<Map<String, dynamic>> getClientDebtDetails(String clientId) async => 
+      _request('GET', '${ApiConstants.baseUrl}/payments/client/$clientId/details');
+  
+  Future<Map<String, dynamic>> getMyCollections() async => 
+      _request('GET', '${ApiConstants.baseUrl}/payments/my-collections');
+  
+  Future<Map<String, dynamic>> getMyPayments() async => 
+      _request('GET', '${ApiConstants.baseUrl}/payments/my-payments');
+  
+  Future<Map<String, dynamic>> getPaymentStats() async => 
+      _request('GET', '${ApiConstants.baseUrl}/payments/stats');
+  
+  Future<Map<String, dynamic>> getPaymentHistory({
+    int page = 1,
+    int limit = 50,
+  }) async => 
+      _request('GET', '${ApiConstants.baseUrl}/payments/history?page=$page&limit=$limit');
   
   // Alias for legacy or mismatched calls
-  Future<Map<String, dynamic>> recordPayment(Map<String, dynamic> data) async => recordDebtPayment(data);
+  Future<Map<String, dynamic>> recordPayment(Map<String, dynamic> data) async => 
+      _request('POST', '${ApiConstants.baseUrl}/payments/record', body: data);
 }
 

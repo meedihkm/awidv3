@@ -3,7 +3,10 @@ import 'package:provider/provider.dart';
 import '../../../auth/providers/auth_provider.dart';
 import 'order_history_page.dart';
 import 'new_order_page.dart';
+import 'recurring_orders_page.dart';
+import 'settings_page.dart';
 import '../../../../core/widgets/sync_indicator.dart';
+import '../../../../core/widgets/notification_badge.dart';
 
 class CafeteriaDashboard extends StatefulWidget {
   @override
@@ -16,6 +19,7 @@ class _CafeteriaDashboardState extends State<CafeteriaDashboard> {
   final List<Widget> _pages = [
     NewOrderPage(),
     OrderHistoryPage(),
+    RecurringOrdersPage(),
   ];
 
   @override
@@ -39,6 +43,7 @@ class _CafeteriaDashboardState extends State<CafeteriaDashboard> {
         backgroundColor: Colors.green.shade600,
         foregroundColor: Colors.white,
         actions: [
+          NotificationBadge(),
           SyncIndicator(),
           Consumer<AuthProvider>(
             builder: (context, authProvider, child) {
@@ -57,6 +62,16 @@ class _CafeteriaDashboardState extends State<CafeteriaDashboard> {
                   ),
                   const PopupMenuDivider(),
                   PopupMenuItem<String>(
+                    value: 'settings',
+                    child: Row(
+                      children: [
+                        Icon(Icons.settings, size: 20),
+                        SizedBox(width: 8),
+                        Text('Paramètres'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
                     value: 'logout',
                     child: Row(
                       children: [
@@ -70,6 +85,11 @@ class _CafeteriaDashboardState extends State<CafeteriaDashboard> {
                 onSelected: (value) {
                   if (value == 'logout') {
                     authProvider.logout();
+                  } else if (value == 'settings') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SettingsPage()),
+                    );
                   }
                 },
               );
@@ -91,6 +111,10 @@ class _CafeteriaDashboardState extends State<CafeteriaDashboard> {
           BottomNavigationBarItem(
             icon: Icon(Icons.history),
             label: 'Historique',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.repeat),
+            label: 'Récurrentes',
           ),
         ],
       ),

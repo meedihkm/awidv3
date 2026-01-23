@@ -20,6 +20,9 @@ const superAdminRoutes = require('./routes/superAdmin.routes');
 const debtRoutes = require('./routes/debt.routes');
 const packagingRoutes = require('./routes/packaging.routes');
 const recurringRoutes = require('./routes/recurring.routes');
+const favoritesRoutes = require('./routes/favorites.routes');
+const paymentsRoutes = require('./routes/payments.routes');
+const notificationsRoutes = require('./routes/notifications.routes');
 
 const { initSentry, getHandlers } = require('./config/sentry');
 const logger = require('./config/logger');
@@ -123,6 +126,9 @@ app.use('/api/financial', organizationRoutes); // Routes financières dans organ
 app.use('/api/debt', debtRoutes); // Routes de gestion de la dette
 app.use('/api/packaging', packagingRoutes); // Routes de gestion des consignes
 app.use('/api/recurring', recurringRoutes); // Routes commandes récurrentes
+app.use('/api/favorites', favoritesRoutes); // Routes favoris (Phase 2)
+app.use('/api/payments', paymentsRoutes); // Routes paiements (Phase 1)
+app.use('/api/notifications', notificationsRoutes); // Routes notifications (Phase 3)
 app.use('/api/audit-logs', organizationRoutes); // Routes audit dans organization
 // BullMQ & Bull Board
 const { createBullBoard } = require('@bull-board/api');

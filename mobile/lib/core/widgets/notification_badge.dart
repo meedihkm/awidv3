@@ -21,7 +21,7 @@ class _NotificationBadgeState extends State<NotificationBadge> {
 
   Future<void> _loadUnreadCount() async {
     try {
-      final count = _notificationService.unreadCount;
+      final count = await _notificationService.getUnreadCount();
       if (mounted) {
         setState(() => _unreadCount = count);
       }
