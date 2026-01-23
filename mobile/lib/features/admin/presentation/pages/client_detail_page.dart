@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../core/services/cache_service.dart';
 import '../../../../core/services/settings_service.dart';
+import '../../../../core/services/payment_service.dart';
 import '../../../../core/models/debt_model.dart';
 import '../../../../core/models/packaging_model.dart';
 import '../widgets/record_debt_payment_modal.dart';
@@ -29,6 +30,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
   late final ApiService _apiService;
   late final CacheService _cacheService;
   late final SettingsService _settings;
+  late final PaymentService _paymentService;
   late TabController _tabController;
   
   List<dynamic> _orders = [];
@@ -49,6 +51,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
     _apiService = widget.apiService ?? ApiService();
     _cacheService = widget.cacheService ?? CacheService();
     _settings = widget.settingsService ?? SettingsService();
+    _paymentService = PaymentService();
     _tabController = TabController(length: 4, vsync: this);
     _notesController.text = widget.client['notes'] ?? '';
     _addressController.text = widget.client['address'] ?? '';
@@ -89,13 +92,14 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
         _apiService.getOrders(cafeteriaId: widget.client['id'], limit: 100),
         _apiService.getDeliveries(cafeteriaId: widget.client['id'], limit: 100),
         _apiService.getCustomerDebt(widget.client['id']),
-        _apiService.getPaymentHistory(customerId: widget.client['id']),
+        _paymentService.getClientDebtDetails(widget.client['id']),
       ]);
       
       final clientOrders = (results[0] as Map<String, dynamic>)['data'] as List? ?? [];
       final clientDeliveries = (results[1] as Map<String, dynamic>)['data'] as List? ?? [];
       final debtInfo = results[2] as CustomerDebt?;
-      final paymentHistory = (results[3] as Map<String, dynamic>)['data'] as List? ?? [];
+      final debtDetails = results[3] as Map<String, dynamic>;
+      final paymentHistory = (debtDetails['data']?['payment_history'] as List?) ?? [];
       
       // Filtering handled by API
       // final clientOrders = ...
