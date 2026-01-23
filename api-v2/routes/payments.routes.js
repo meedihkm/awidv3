@@ -90,15 +90,60 @@ router.get('/client/:clientId/details', authenticate, validateUUID('clientId'), 
       return res.status(404).json({ error: 'Client non trouvé' });
     }
     
-    // Obtenir les détails via la fonction PostgreSQL
+    // Obtenir les détails de dette du client
     const result = await pool.query(
-      'SELECT get_client_debt_details($1::UUID) as details',
+      `SELECT 
+        jsonb_build_object(
+          'client', jsonb_build_object(
+            'id', u.id,
+            'name', u.name,
+            'email', u.email,
+            'phone', u.phone
+          ),
+          'total_debt', COALESCE(SUM(o.total - o.amount_paid) FILTER (WHERE o.total > o.amount_paid), 0),
+          'unpaid_orders', jsonb_agg(
+            jsonb_build_object(
+              'id', o.id,
+              'order_number', o.order_number,
+              'date', o.created_at,
+              'total', o.total,
+              'amount_paid', o.amount_paid,
+              'remaining', o.total - o.amount_paid,
+              'payment_status', o.payment_status
+            ) ORDER BY o.created_at ASC
+          ) FILTER (WHERE o.total > o.amount_paid),
+          'payment_history', (
+            SELECT jsonb_agg(
+              jsonb_build_object(
+                'id', pt.id,
+                'date', pt.created_at,
+                'amount', pt.amount,
+                'payment_type', pt.payment_type,
+                'payment_mode', pt.payment_mode,
+                'orders_affected', pt.orders_affected,
+                'recorded_by', jsonb_build_object(
+                  'id', rec.id,
+                  'name', rec.name,
+                  'role', pt.recorded_by_role
+                ),
+                'notes', pt.notes
+              ) ORDER BY pt.created_at DESC
+            )
+            FROM payment_transactions pt
+            LEFT JOIN users rec ON pt.recorded_by = rec.id
+            WHERE pt.client_id = $1
+          )
+        ) as details
+       FROM users u
+       LEFT JOIN orders o ON u.id = o.customer_id
+       WHERE u.id = $1
+       GROUP BY u.id, u.name, u.email, u.phone`,
       [req.params.clientId]
     );
     
     res.json({
       success: true,
-      data: result.rows[0].details
+      data: result.rows[0]?.details || null
     });
   } catch (error) {
     console.error('Get client debt details error:', error);
