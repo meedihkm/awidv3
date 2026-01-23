@@ -148,16 +148,17 @@ router.get('/', authenticate, async (req, res) => {
                   json_build_object(
                     'id', oi.id,
                     'productId', oi.product_id,
-                    'productName', oi.product_name,
+                    'productName', p.name,
                     'quantity', oi.quantity,
-                    'price', oi.price
-                  )
+                    'unitPrice', oi.price
+                  ) ORDER BY oi.created_at
                 ) FILTER (WHERE oi.id IS NOT NULL), 
                 '[]'
               ) as items
        FROM orders o 
        JOIN users u ON o.cafeteria_id = u.id 
        LEFT JOIN order_items oi ON o.id = oi.order_id
+       LEFT JOIN products p ON oi.product_id = p.id
        ${whereClause}
        GROUP BY o.id, u.id
        ORDER BY o.created_at DESC
