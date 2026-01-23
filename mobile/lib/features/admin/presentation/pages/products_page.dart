@@ -545,50 +545,116 @@ class _ProductsPageState extends State<ProductsPage> {
     return GestureDetector(
       onTap: () => _showProductDialog(product),
       child: Card(
-        elevation: 4, shadowColor: Colors.black26,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 2, 
+        shadowColor: Colors.black12,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Expanded(flex: 3, child: Stack(children: [
             Container(
-              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+              decoration: BoxDecoration(
+                color: Colors.grey[50], 
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                border: Border(bottom: BorderSide(color: Colors.grey[200]!, width: 1)),
+              ),
               child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                  ? ClipRRect(borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                  ? ClipRRect(borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                       child: product.imageUrl!.startsWith('data:')
                           ? Image.memory(base64Decode(product.imageUrl!.split(',').last), fit: BoxFit.cover, width: double.infinity, height: double.infinity)
-                          : Image.network(product.imageUrl!, fit: BoxFit.cover, width: double.infinity, height: double.infinity, errorBuilder: (_, __, ___) => Center(child: Icon(Icons.fastfood, size: 40, color: Colors.grey[400]))))
-                  : Center(child: Icon(Icons.fastfood, size: 40, color: Colors.grey[400])),
+                          : Image.network(product.imageUrl!, fit: BoxFit.cover, width: double.infinity, height: double.infinity, errorBuilder: (_, __, ___) => Center(child: Icon(Icons.fastfood, size: 50, color: Colors.grey[300]))))
+                  : Center(child: Icon(Icons.fastfood, size: 50, color: Colors.grey[300])),
             ),
-            // Badge statut
-            Positioned(top: 8, right: 8, child: Container(padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: product.active ? Colors.green : Colors.red, borderRadius: BorderRadius.circular(12)), child: Text(product.active ? 'Actif' : 'Inactif', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))),
-            // Badge catégorie
+            // Badge statut - Plus visible
+            Positioned(top: 10, right: 10, child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6), 
+              decoration: BoxDecoration(
+                color: product.active ? Colors.green : Colors.grey[600], 
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+              ), 
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(product.active ? Icons.check_circle : Icons.block, color: Colors.white, size: 12),
+                  SizedBox(width: 4),
+                  Text(product.active ? 'Actif' : 'Inactif', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            )),
+            // Badge catégorie - Design amélioré
             if (product.category != null)
-              Positioned(top: 8, left: 8, child: Container(padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(12)), child: Text(product.category!, style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))),
-            // Badges Nouveau / Promo
+              Positioned(top: 10, left: 10, child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6), 
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.95), 
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+                ), 
+                child: Text(product.category!, style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+              )),
+            // Badges Nouveau / Promo - Plus visibles
             Positioned(
-              bottom: 8,
-              left: 8,
+              bottom: 10,
+              left: 10,
               child: Row(
                 children: [
                   if (product.isNew)
                     Container(
-                      margin: EdgeInsets.only(right: 4),
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.green[600], borderRadius: BorderRadius.circular(12)),
+                      margin: EdgeInsets.only(right: 6),
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green[600], 
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.fiber_new, color: Colors.white, size: 12),
-                          SizedBox(width: 2),
-                          Text('Nouveau', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                          Icon(Icons.fiber_new, color: Colors.white, size: 14),
+                          SizedBox(width: 4),
+                          Text('Nouveau', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
                   if (product.isPromo)
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.red[600], borderRadius: BorderRadius.circular(12)),
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.red[600], 
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.local_offer, color: Colors.white, size: 14),
+                          SizedBox(width: 4),
+                          Text('Promo', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ])),
+          Expanded(flex: 2, child: Container(
+            padding: EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, 
+              mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+              children: [
+                Text(product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis),
+                _buildProductActions(product),
+              ],
+            ),
+          )),
+        ]),
+      ),
+    );
+  }
                         children: [
                           Icon(Icons.local_offer, color: Colors.white, size: 12),
                           SizedBox(width: 2),
@@ -611,24 +677,24 @@ class _ProductsPageState extends State<ProductsPage> {
 
   Widget _buildProductActions(Product product) {
     return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      // Prix avec promo
+      // Prix avec promo - Taille augmentée
       product.isPromo && product.promoPrice != null
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('${product.price.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.grey, fontSize: 12, decoration: TextDecoration.lineThrough)),
-                Text('${product.promoPrice!.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.red[700], fontWeight: FontWeight.bold, fontSize: 14)),
+                Text('${product.price.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.grey, fontSize: 13, decoration: TextDecoration.lineThrough)),
+                Text('${product.promoPrice!.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.red[700], fontWeight: FontWeight.bold, fontSize: 18)),
               ],
             )
-          : Text('${product.price.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.bold, fontSize: 16)),
+          : Text('${product.price.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.bold, fontSize: 20)),
       Row(mainAxisSize: MainAxisSize.min, children: [
-        GestureDetector(onTap: () async { await _apiService.toggleProduct(product.id); _loadProducts(); }, child: Icon(product.active ? Icons.visibility : Icons.visibility_off, color: product.active ? Colors.green : Colors.grey, size: 20)),
+        GestureDetector(onTap: () async { await _apiService.toggleProduct(product.id); _loadProducts(); }, child: Icon(product.active ? Icons.visibility : Icons.visibility_off, color: product.active ? Colors.green : Colors.grey, size: 22)),
         SizedBox(width: 8),
         GestureDetector(onTap: () async {
-          final confirm = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: Text('Supprimer?'), content: Text('Supprimer "${product.name}"?'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler')), TextButton(onPressed: () => Navigator.pop(context, true), child: Text('Supprimer', style: TextStyle(color: Colors.red)))]));
-          if (confirm == true) { await _apiService.deleteProduct(product.id); _loadProducts(); }
-        }, child: Icon(Icons.delete_outline, color: Colors.red, size: 20)),
+          final confirm = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: Text('Archiver ce produit?'), content: Text('Le produit "${product.name}" sera désactivé mais restera dans l\'historique des commandes.'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler')), TextButton(onPressed: () => Navigator.pop(context, true), child: Text('Archiver', style: TextStyle(color: Colors.orange)))]));
+          if (confirm == true) { await _apiService.deleteProduct(product.id); _loadProducts(); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Produit archivé'), backgroundColor: Colors.orange)); }
+        }, child: Icon(Icons.archive_outlined, color: Colors.orange, size: 22)),
       ]),
     ]);
   }
