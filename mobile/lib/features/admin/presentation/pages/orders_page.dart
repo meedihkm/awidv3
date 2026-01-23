@@ -453,7 +453,7 @@ class _OrdersPageState extends State<OrdersPage> with SingleTickerProviderStateM
 
   Future<void> _lockOrder(Order order) async {
     try {
-      await _apiService.updateOrder(order.id, {'status': 'locked'});
+      await _apiService.lockOrder(order.id);
       _loadData();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));

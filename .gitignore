@@ -189,3 +189,6 @@ Dockerfile
 
 # Documentation
 docs/
+
+# Kiro steering files (documentation locale)
+.kiro/steering/*.md
