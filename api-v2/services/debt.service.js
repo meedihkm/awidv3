@@ -82,7 +82,7 @@ class DebtService {
         let paramIndex = 5;
 
         if (customerId) {
-            conditions.push(`u.id = $${paramIndex}::uuid`);
+            conditions.push(`u.id = $${paramIndex}`);
             params.splice(paramIndex - 1, 0, customerId);
             paramIndex++;
         }
@@ -91,7 +91,7 @@ class DebtService {
             conditions.push(`EXISTS (
                 SELECT 1 FROM deliveries d 
                 WHERE d.order_id = o.id 
-                AND d.deliverer_id = $${paramIndex}::uuid
+                AND d.deliverer_id = $${paramIndex}
             )`);
             params.splice(paramIndex - 1, 0, delivererId);
             paramIndex++;
@@ -141,7 +141,7 @@ class DebtService {
         const countConditions = [];
 
         if (customerId) {
-            countConditions.push(`u.id = $${countParamIndex}::uuid`);
+            countConditions.push(`u.id = $${countParamIndex}`);
             countParams.push(customerId);
             countParamIndex++;
         }
@@ -150,7 +150,7 @@ class DebtService {
             countConditions.push(`EXISTS (
                 SELECT 1 FROM deliveries d 
                 WHERE d.order_id = o.id 
-                AND d.deliverer_id = $${countParamIndex}::uuid
+                AND d.deliverer_id = $${countParamIndex}
             )`);
             countParams.push(delivererId);
             countParamIndex++;
@@ -391,12 +391,12 @@ class DebtService {
         let paramIndex = 2;
 
         if (customer_id) {
-conditions.push(`dp.customer_id = \$${paramIndex++}::uuid`);
+conditions.push(`dp.customer_id = \$${paramIndex++}`);
             params.push(customer_id);
         }
 
         if (collector_id) {
-conditions.push(`dp.collected_by = \$${paramIndex++}::uuid`);
+conditions.push(`dp.collected_by = \$${paramIndex++}`);
             params.push(collector_id);
         }
 
