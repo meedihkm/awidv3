@@ -68,7 +68,11 @@ router.get('/debts',
                     sort: req.query.sort,
                     minDebt: parseFloat(req.query.min_debt) || 0,
                     page: parseInt(req.query.page) || 1,
-                    limit: parseInt(req.query.limit) || 50
+                    limit: parseInt(req.query.limit) || 50,
+                    customerId: req.query.customer_id || null,
+                    delivererId: req.query.deliverer_id || null,
+                    dateFrom: req.query.date_from || null,
+                    dateTo: req.query.date_to || null
                 }
             );
             res.json(result);

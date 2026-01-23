@@ -25,6 +25,12 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   Map<String, dynamic> _clients = {};
   bool _isLoading = true;
   
+  // Filtres dettes
+  String? _selectedCustomerId;
+  String? _selectedDelivererId;
+  DateTime? _debtDateFrom;
+  DateTime? _debtDateTo;
+  
   // Filtres période
   String _selectedPeriod = 'day';
   DateTime _selectedDate = DateTime.now();
@@ -63,7 +69,13 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       // Charger depuis le serveur
       final results = await Future.wait([
         _apiService.getOrders(limit: 500),
-        _apiService.getDebtsList(limit: 100),
+        _apiService.getDebtsList(
+          limit: 100,
+          customerId: _selectedCustomerId,
+          delivererId: _selectedDelivererId,
+          dateFrom: _debtDateFrom?.toIso8601String(),
+          dateTo: _debtDateTo?.toIso8601String(),
+        ),
         _apiService.getDeliveries(limit: 500),
         _apiService.getDeliverers(),
         _apiService.getUsers(),
@@ -912,7 +924,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   }
 
   Widget _buildDebtsTab() {
-    if (_debts.isEmpty) {
+    if (_debts.isEmpty && _selectedCustomerId == null && _selectedDelivererId == null && _debtDateFrom == null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -933,6 +945,9 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       color: Color(0xFF2E7D32),
       child: Column(
         children: [
+          // Filtres
+          _buildDebtsFilters(),
+          
           // Total dettes
           Container(
             margin: EdgeInsets.all(12),
@@ -965,88 +980,288 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
 
           // Liste des dettes
           Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              itemCount: _debts.length,
-              itemBuilder: (context, index) {
-                final debt = _debts[index];
-                return Card(
-                  margin: EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: ExpansionTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.red.shade100,
-                      child: Text((debt['name'] ?? 'C')[0].toUpperCase(), 
-                        style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold)),
+            child: _debts.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.filter_alt_off, size: 64, color: Colors.grey[400]),
+                        SizedBox(height: 16),
+                        Text('Aucun résultat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text('Essayez de modifier les filtres', style: TextStyle(color: Colors.grey[600])),
+                      ],
                     ),
-                    title: Text(debt['name'] ?? 'Client', style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('${debt['unpaid_orders'] ?? 0} commande(s) impayée(s)'),
-                    trailing: Text('${_parseDouble(debt['total_debt']).toStringAsFixed(0)} DA', 
-                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Column(
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    itemCount: _debts.length,
+                    itemBuilder: (context, index) {
+                      final debt = _debts[index];
+                      return Card(
+                        margin: EdgeInsets.only(bottom: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: ExpansionTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.red.shade100,
+                            child: Text((debt['name'] ?? 'C')[0].toUpperCase(), 
+                              style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold)),
+                          ),
+                          title: Text(debt['name'] ?? 'Client', style: TextStyle(fontWeight: FontWeight.w600)),
+                          subtitle: Text('${debt['unpaid_orders'] ?? 0} commande(s) impayée(s)'),
+                          trailing: Text('${_parseDouble(debt['total_debt']).toStringAsFixed(0)} DA', 
+                            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
                           children: [
-                            if (debt['email'] != null)
-                              Row(
+                            Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Column(
                                 children: [
-                                  Icon(Icons.email, size: 18, color: Colors.grey),
-                                  SizedBox(width: 8),
-                                  Text(debt['email'], style: TextStyle(color: Colors.grey[700])),
+                                  if (debt['email'] != null)
+                                    Row(
+                                      children: [
+                                        Icon(Icons.email, size: 18, color: Colors.grey),
+                                        SizedBox(width: 8),
+                                        Text(debt['email'], style: TextStyle(color: Colors.grey[700])),
+                                      ],
+                                    ),
+                                  if (debt['phone'] != null) ...[
+                                    SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.phone, size: 18, color: Colors.grey),
+                                        SizedBox(width: 8),
+                                        Text(debt['phone'], style: TextStyle(color: Colors.grey[700])),
+                                      ],
+                                    ),
+                                  ],
+                                  if (debt['last_order_date'] != null) ...[
+                                    SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.access_time, size: 18, color: Colors.grey),
+                                        SizedBox(width: 8),
+                                        Text('Dernière: ${_formatDate(debt['last_order_date'])}', 
+                                          style: TextStyle(color: Colors.grey[700])),
+                                      ],
+                                    ),
+                                  ],
+                                  SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () {
+                                        final clientData = _clients.values.firstWhere(
+                                          (c) => c['name'] == debt['name'],
+                                          orElse: () => debt,
+                                        );
+                                        Navigator.push(context, MaterialPageRoute(
+                                          builder: (_) => ClientDetailPage(client: clientData),
+                                        ));
+                                      },
+                                      icon: Icon(Icons.visibility),
+                                      label: Text('Voir fiche client'),
+                                      style: OutlinedButton.styleFrom(foregroundColor: Color(0xFF2E7D32)),
+                                    ),
+                                  ),
                                 ],
-                              ),
-                            if (debt['phone'] != null) ...[
-                              SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Icon(Icons.phone, size: 18, color: Colors.grey),
-                                  SizedBox(width: 8),
-                                  Text(debt['phone'], style: TextStyle(color: Colors.grey[700])),
-                                ],
-                              ),
-                            ],
-                            if (debt['last_order_date'] != null) ...[
-                              SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Icon(Icons.access_time, size: 18, color: Colors.grey),
-                                  SizedBox(width: 8),
-                                  Text('Dernière: ${_formatDate(debt['last_order_date'])}', 
-                                    style: TextStyle(color: Colors.grey[700])),
-                                ],
-                              ),
-                            ],
-                            SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  final clientData = _clients.values.firstWhere(
-                                    (c) => c['name'] == debt['name'],
-                                    orElse: () => debt,
-                                  );
-                                  Navigator.push(context, MaterialPageRoute(
-                                    builder: (_) => ClientDetailPage(client: clientData),
-                                  ));
-                                },
-                                icon: Icon(Icons.visibility),
-                                label: Text('Voir fiche client'),
-                                style: OutlinedButton.styleFrom(foregroundColor: Color(0xFF2E7D32)),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildDebtsFilters() {
+    final hasFilters = _selectedCustomerId != null || _selectedDelivererId != null || _debtDateFrom != null || _debtDateTo != null;
+    
+    return Container(
+      padding: EdgeInsets.all(12),
+      color: Colors.grey[100],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.filter_list, size: 20, color: Colors.grey[700]),
+              SizedBox(width: 8),
+              Text('Filtres', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Spacer(),
+              if (hasFilters)
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _selectedCustomerId = null;
+                      _selectedDelivererId = null;
+                      _debtDateFrom = null;
+                      _debtDateTo = null;
+                    });
+                    _loadData(forceRefresh: true);
+                  },
+                  icon: Icon(Icons.clear, size: 18),
+                  label: Text('Réinitialiser'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              // Filtre par client
+              _buildFilterChip(
+                label: _selectedCustomerId == null 
+                  ? 'Client' 
+                  : _clients[_selectedCustomerId]?['name'] ?? 'Client',
+                icon: Icons.person,
+                isSelected: _selectedCustomerId != null,
+                onTap: () => _showClientFilter(),
+              ),
+              // Filtre par livreur
+              _buildFilterChip(
+                label: _selectedDelivererId == null 
+                  ? 'Livreur' 
+                  : _deliverers.firstWhere((d) => d['id'] == _selectedDelivererId, orElse: () => {'name': 'Livreur'})['name'],
+                icon: Icons.delivery_dining,
+                isSelected: _selectedDelivererId != null,
+                onTap: () => _showDelivererFilter(),
+              ),
+              // Filtre par date
+              _buildFilterChip(
+                label: _debtDateFrom == null && _debtDateTo == null
+                  ? 'Période'
+                  : '${_debtDateFrom != null ? _formatDate(_debtDateFrom.toString()) : '...'} - ${_debtDateTo != null ? _formatDate(_debtDateTo.toString()) : '...'}',
+                icon: Icons.date_range,
+                isSelected: _debtDateFrom != null || _debtDateTo != null,
+                onTap: () => _showDateFilter(),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Color(0xFF2E7D32) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? Color(0xFF2E7D32) : Colors.grey[300]!),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey[700]),
+            SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey[700],
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showClientFilter() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Filtrer par client', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            Expanded(
+              child: ListView(
+                children: _clients.values.map((client) => ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Color(0xFF2E7D32).withValues(alpha: 0.1),
+                    child: Text(client['name'][0].toUpperCase(), style: TextStyle(color: Color(0xFF2E7D32))),
+                  ),
+                  title: Text(client['name']),
+                  trailing: _selectedCustomerId == client['id'] ? Icon(Icons.check, color: Color(0xFF2E7D32)) : null,
+                  onTap: () {
+                    setState(() => _selectedCustomerId = client['id']);
+                    Navigator.pop(context);
+                    _loadData(forceRefresh: true);
+                  },
+                )).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDelivererFilter() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Filtrer par livreur', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            Expanded(
+              child: ListView(
+                children: _deliverers.map((deliverer) => ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.orange.withValues(alpha: 0.1),
+                    child: Icon(Icons.delivery_dining, color: Colors.orange),
+                  ),
+                  title: Text(deliverer['name']),
+                  trailing: _selectedDelivererId == deliverer['id'] ? Icon(Icons.check, color: Colors.orange) : null,
+                  onTap: () {
+                    setState(() => _selectedDelivererId = deliverer['id']);
+                    Navigator.pop(context);
+                    _loadData(forceRefresh: true);
+                  },
+                )).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDateFilter() async {
+    final result = await showDialog<Map<String, DateTime?>>(
+      context: context,
+      builder: (context) => _DateRangeDialog(
+        dateFrom: _debtDateFrom,
+        dateTo: _debtDateTo,
+      ),
+    );
+    
+    if (result != null) {
+      setState(() {
+        _debtDateFrom = result['from'];
+        _debtDateTo = result['to'];
+      });
+      _loadData(forceRefresh: true);
+    }
   }
 
   String _formatDate(String? dateStr) {
@@ -1054,5 +1269,88 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
     final date = DateTime.tryParse(dateStr);
     if (date == null) return 'N/A';
     return '${date.day}/${date.month}/${date.year}';
+  }
+}
+
+// Dialog pour sélectionner une plage de dates
+class _DateRangeDialog extends StatefulWidget {
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+
+  _DateRangeDialog({this.dateFrom, this.dateTo});
+
+  @override
+  _DateRangeDialogState createState() => _DateRangeDialogState();
+}
+
+class _DateRangeDialogState extends State<_DateRangeDialog> {
+  DateTime? _from;
+  DateTime? _to;
+
+  @override
+  void initState() {
+    super.initState();
+    _from = widget.dateFrom;
+    _to = widget.dateTo;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Filtrer par période'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: Icon(Icons.calendar_today, color: Color(0xFF2E7D32)),
+            title: Text('Du'),
+            subtitle: Text(_from != null ? '${_from!.day}/${_from!.month}/${_from!.year}' : 'Non défini'),
+            onTap: () async {
+              final date = await showDatePicker(
+                context: context,
+                initialDate: _from ?? DateTime.now(),
+                firstDate: DateTime(2020),
+                lastDate: DateTime.now(),
+              );
+              if (date != null) setState(() => _from = date);
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.calendar_today, color: Color(0xFF2E7D32)),
+            title: Text('Au'),
+            subtitle: Text(_to != null ? '${_to!.day}/${_to!.month}/${_to!.year}' : 'Non défini'),
+            onTap: () async {
+              final date = await showDatePicker(
+                context: context,
+                initialDate: _to ?? DateTime.now(),
+                firstDate: _from ?? DateTime(2020),
+                lastDate: DateTime.now(),
+              );
+              if (date != null) setState(() => _to = date);
+            },
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Annuler'),
+        ),
+        TextButton(
+          onPressed: () {
+            setState(() {
+              _from = null;
+              _to = null;
+            });
+          },
+          child: Text('Effacer', style: TextStyle(color: Colors.red)),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, {'from': _from, 'to': _to}),
+          style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF2E7D32)),
+          child: Text('Appliquer', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    );
   }
 }

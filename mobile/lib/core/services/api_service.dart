@@ -397,9 +397,16 @@ class ApiService {
     double minDebt = 0,
     int page = 1,
     int limit = 50,
+    String? customerId,
+    String? delivererId,
+    String? dateFrom,
+    String? dateTo,
   }) async {
-    // Use the financial endpoint which is more reliably deployed
     String url = '${ApiConstants.debts}?sort=$sort&min_debt=$minDebt&page=$page&limit=$limit';
+    if (customerId != null) url += '&customer_id=$customerId';
+    if (delivererId != null) url += '&deliverer_id=$delivererId';
+    if (dateFrom != null) url += '&date_from=$dateFrom';
+    if (dateTo != null) url += '&date_to=$dateTo';
     return _request('GET', url);
   }
 

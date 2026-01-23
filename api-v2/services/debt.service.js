@@ -56,7 +56,7 @@ class DebtService {
     /**
      * Liste des clients avec dette > 0
      * @param {string} organizationId 
-     * @param {Object} options - { sort, minDebt, page, limit }
+     * @param {Object} options - { sort, minDebt, page, limit, customerId, delivererId, dateFrom, dateTo }
      * @returns {Promise<Object>} { data, summary, pagination }
      */
     async getCustomersWithDebt(organizationId, options = {}) {
@@ -64,7 +64,11 @@ class DebtService {
             sort = 'amount_desc',
             minDebt = 0,
             page = 1,
-            limit = 50
+            limit = 50,
+            customerId = null,
+            delivererId = null,
+            dateFrom = null,
+            dateTo = null
         } = options;
 
         const offset = (page - 1) * limit;
@@ -72,12 +76,48 @@ class DebtService {
             sort === 'amount_asc' ? 'total_debt ASC' :
                 sort === 'name' ? 'u.name ASC' : 'total_debt DESC';
 
+        // Construire les conditions WHERE dynamiques
+        const conditions = [];
+        const params = [organizationId, minDebt, limit, offset];
+        let paramIndex = 5;
+
+        if (customerId) {
+            conditions.push(`u.id = $${paramIndex}::uuid`);
+            params.splice(paramIndex - 1, 0, customerId);
+            paramIndex++;
+        }
+
+        if (delivererId) {
+            conditions.push(`EXISTS (
+                SELECT 1 FROM deliveries d 
+                WHERE d.order_id = o.id 
+                AND d.deliverer_id = $${paramIndex}::uuid
+            )`);
+            params.splice(paramIndex - 1, 0, delivererId);
+            paramIndex++;
+        }
+
+        if (dateFrom) {
+            conditions.push(`o.created_at >= $${paramIndex}::timestamp`);
+            params.splice(paramIndex - 1, 0, dateFrom);
+            paramIndex++;
+        }
+
+        if (dateTo) {
+            conditions.push(`o.created_at <= $${paramIndex}::timestamp`);
+            params.splice(paramIndex - 1, 0, dateTo);
+            paramIndex++;
+        }
+
+        const additionalWhere = conditions.length > 0 ? `AND ${conditions.join(' AND ')}` : '';
+
         // Données paginées
         const result = await db.query(`
       SELECT 
         u.id as customer_id,
         u.name,
         u.phone,
+        u.email,
         COALESCE(SUM(o.total) - SUM(o.amount_paid), 0)::numeric as total_debt,
         COUNT(*) FILTER (WHERE o.payment_status != 'paid') as unpaid_orders,
         MAX(o.created_at) as last_order_date
@@ -85,16 +125,51 @@ class DebtService {
       LEFT JOIN orders o ON u.id = o.customer_id 
         AND o.organization_id = $1 
         AND o.status != 'cancelled'
+        ${additionalWhere}
       WHERE u.organization_id = $1 
         AND u.role = 'cafeteria'
         AND u.active = true
-      GROUP BY u.id, u.name, u.phone
+      GROUP BY u.id, u.name, u.phone, u.email
       HAVING COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) >= $2
       ORDER BY ${orderBy}
       LIMIT $3 OFFSET $4
-    `, [organizationId, minDebt, limit, offset]);
+    `, params);
 
-        // Total pour pagination
+        // Total pour pagination (avec les mêmes filtres)
+        const countParams = [organizationId, minDebt];
+        let countParamIndex = 3;
+        const countConditions = [];
+
+        if (customerId) {
+            countConditions.push(`u.id = $${countParamIndex}::uuid`);
+            countParams.push(customerId);
+            countParamIndex++;
+        }
+
+        if (delivererId) {
+            countConditions.push(`EXISTS (
+                SELECT 1 FROM deliveries d 
+                WHERE d.order_id = o.id 
+                AND d.deliverer_id = $${countParamIndex}::uuid
+            )`);
+            countParams.push(delivererId);
+            countParamIndex++;
+        }
+
+        if (dateFrom) {
+            countConditions.push(`o.created_at >= $${countParamIndex}::timestamp`);
+            countParams.push(dateFrom);
+            countParamIndex++;
+        }
+
+        if (dateTo) {
+            countConditions.push(`o.created_at <= $${countParamIndex}::timestamp`);
+            countParams.push(dateTo);
+            countParamIndex++;
+        }
+
+        const countAdditionalWhere = countConditions.length > 0 ? `AND ${countConditions.join(' AND ')}` : '';
+
         const countResult = await db.query(`
       SELECT COUNT(*) as total
       FROM (
@@ -103,13 +178,14 @@ class DebtService {
         LEFT JOIN orders o ON u.id = o.customer_id 
           AND o.organization_id = $1 
           AND o.status != 'cancelled'
+          ${countAdditionalWhere}
         WHERE u.organization_id = $1 
           AND u.role = 'cafeteria'
           AND u.active = true
         GROUP BY u.id
         HAVING COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) >= $2
       ) as subquery
-    `, [organizationId, minDebt]);
+    `, countParams);
 
         // Résumé global
         const summaryResult = await db.query(`
