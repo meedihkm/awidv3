@@ -103,7 +103,7 @@ class DebtService {
         AND o.status != 'cancelled'
       WHERE u.organization_id = $1 
         AND u.role = 'cafeteria'
-        AND u.is_active = true
+        AND u.active = true
       GROUP BY u.id
       HAVING COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) >= $2
     `, [organizationId, minDebt]);
