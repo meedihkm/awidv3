@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'core/database/hive_service.dart';
+import 'core/providers/theme_provider.dart';
+import 'core/services/notification_service.dart';
+import 'core/services/sentry_service.dart';
 import 'core/storage/secure_storage.dart';
-import 'features/auth/providers/auth_provider.dart';
-import 'features/auth/presentation/pages/login_page.dart';
+import 'core/theme/app_theme.dart';
 import 'features/admin/presentation/pages/admin_dashboard.dart';
-import 'features/customer/presentation/pages/cafeteria_dashboard.dart';
+import 'features/auth/presentation/pages/login_page.dart';
+import 'features/auth/providers/auth_provider.dart';
+import 'features/customer/presentation/pages/customer_dashboard.dart';
 import 'features/deliverer/presentation/pages/deliverer_dashboard.dart';
 import 'features/kitchen/presentation/pages/kitchen_dashboard.dart';
 import 'features/onboarding/presentation/pages/onboarding_page.dart';
-
-import 'core/services/sentry_service.dart';
-import 'core/services/notification_service.dart';
-import 'core/database/hive_service.dart';
-import 'core/theme/app_theme.dart';
-import 'core/providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,17 +43,16 @@ void main() async {
     );
   };
 
-  
   // Initialisation Hive
   await HiveService().init();
-  
+
   // Initialisation OneSignal
   await NotificationService().init();
 
   // Check Onboarding status
   final prefs = await SharedPreferences.getInstance();
   final bool showOnboarding = !(prefs.getBool('onboarding_complete') ?? false);
-  
+
   // Initialisation de Sentry qui va wrapper l'application
   await SentryService.init(() async {
     runApp(MyApp(showOnboarding: showOnboarding));
@@ -110,14 +109,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<void> _checkAuthStatus() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final isLoggedIn = await _storage.isLoggedIn();
-    
+
     if (isLoggedIn) {
       final user = await _storage.getUser();
       if (user != null) {
         authProvider.setUser(user);
       }
     }
-    
+
     setState(() {
       _isLoading = false;
     });
