@@ -6,6 +6,8 @@ import '../../../../core/services/report_service.dart';
 import 'client_detail_page.dart';
 
 class FinancialPage extends StatefulWidget {
+  const FinancialPage({super.key});
+
   @override
   _FinancialPageState createState() => _FinancialPageState();
 }
@@ -89,8 +91,8 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       
       // Créer map des clients
       final clientsMap = <String, dynamic>{};
-      for (var user in users) {
-        if (user['role'] == 'customer') {
+      for (final user in users) {
+        if (user['role'] == 'cafeteria' || user['role'] == 'customer') {
           clientsMap[user['id']] = user;
         }
       }
@@ -142,14 +144,14 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   Map<String, dynamic> _calculateStats(List<dynamic> orders) {
     double totalCA = 0;
     double totalCollected = 0;
-    int deliveredCount = 0;
-    int pendingCount = 0;
-    int failedCount = 0;
-    Map<String, double> caByClient = {};
-    Map<String, double> caByProduct = {};
-    Map<String, Map<String, dynamic>> statsByDeliverer = {};
+    var deliveredCount = 0;
+    var pendingCount = 0;
+    var failedCount = 0;
+    final caByClient = <String, double>{};
+    final var caByProduct = <String, double>{};
+    final var statsByDeliverer = <String, Map<String, dynamic>>{};
 
-    for (var order in orders) {
+    for (final order in orders) {
       final total = _parseDouble(order['total']);
       final paid = _parseDouble(order['amountPaid']);
       final status = order['status'] ?? '';
@@ -164,7 +166,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       
       caByClient[clientName] = (caByClient[clientName] ?? 0) + total;
       
-      for (var item in (order['items'] ?? [])) {
+      for (final item in (order['items'] ?? [])) {
         final productName = item['productName'] ?? 'Produit';
         final itemTotal = _parseDouble(item['quantity']) * _parseDouble(item['unitPrice']);
         caByProduct[productName] = (caByProduct[productName] ?? 0) + itemTotal;
@@ -172,14 +174,14 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
     }
 
     // Stats par livreur depuis les livraisons
-    for (var delivery in _allDeliveries) {
+    for (final delivery in _allDeliveries) {
       final deliveryDate = DateTime.tryParse(delivery['createdAt'] ?? '');
       if (deliveryDate == null) continue;
       
       final deliveryDay = DateTime(deliveryDate.year, deliveryDate.month, deliveryDate.day);
       final selected = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
       
-      bool inPeriod = false;
+      var inPeriod = false;
       switch (_selectedPeriod) {
         case 'day':
           inPeriod = deliveryDay.isAtSameMomentAs(selected);
@@ -214,7 +216,10 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       statsByDeliverer[delivererId]!['deliveries']++;
       if (status == 'delivered') {
         statsByDeliverer[delivererId]!['delivered']++;
-        statsByDeliverer[delivererId]!['collected'] += collected;
+        // Ajouter au collecté seulement si de l'argent a été collecté
+        if (collected > 0) {
+          statsByDeliverer[delivererId]!['collected'] += collected;
+        }
       } else if (status == 'failed') {
         statsByDeliverer[delivererId]!['failed']++;
       }
@@ -235,11 +240,11 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   }
 
   double _parseDouble(dynamic value) {
-    if (value == null) return 0.0;
+    if (value == null) return 0;
     if (value is double) return value;
     if (value is int) return value.toDouble();
     if (value is String) return double.tryParse(value) ?? 0.0;
-    return 0.0;
+    return 0;
   }
 
   String _getPeriodLabel() {
@@ -353,7 +358,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
             labelColor: Theme.of(context).primaryColor,
             unselectedLabelColor: Colors.grey,
             indicatorColor: Theme.of(context).primaryColor,
-            tabs: [
+            tabs: const [
               Tab(icon: Icon(Icons.dashboard, size: 20), text: 'Résumé'),
               Tab(icon: Icon(Icons.people, size: 20), text: 'Clients'),
               Tab(icon: Icon(Icons.delivery_dining, size: 20), text: 'Livreurs'),
@@ -456,7 +461,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
           _selectedDate = _selectedDate.add(Duration(days: 7 * direction));
           break;
         case 'month':
-          _selectedDate = DateTime(_selectedDate.year, _selectedDate.month + direction, 1);
+          _selectedDate = DateTime(_selectedDate.year, _selectedDate.month + direction);
           break;
       }
       _focusedDay = _selectedDate;
@@ -471,7 +476,6 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
         lastDay: DateTime.now().add(Duration(days: 1)),
         focusedDay: _focusedDay,
         selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
-        calendarFormat: CalendarFormat.month,
         headerStyle: HeaderStyle(
           formatButtonVisible: false,
           titleCentered: true,
@@ -1120,7 +1124,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                   : _clients[_selectedCustomerId]?['name'] ?? 'Client',
                 icon: Icons.person,
                 isSelected: _selectedCustomerId != null,
-                onTap: () => _showClientFilter(),
+                onTap: _showClientFilter,
               ),
               // Filtre par livreur
               _buildFilterChip(
@@ -1129,7 +1133,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                   : _deliverers.firstWhere((d) => d['id'] == _selectedDelivererId, orElse: () => {'name': 'Livreur'})['name'],
                 icon: Icons.delivery_dining,
                 isSelected: _selectedDelivererId != null,
-                onTap: () => _showDelivererFilter(),
+                onTap: _showDelivererFilter,
               ),
               // Filtre par date
               _buildFilterChip(
@@ -1138,7 +1142,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                   : '${_debtDateFrom != null ? _formatDate(_debtDateFrom.toString()) : '...'} - ${_debtDateTo != null ? _formatDate(_debtDateTo.toString()) : '...'}',
                 icon: Icons.date_range,
                 isSelected: _debtDateFrom != null || _debtDateTo != null,
-                onTap: () => _showDateFilter(),
+                onTap: _showDateFilter,
               ),
             ],
           ),
@@ -1246,7 +1250,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
     );
   }
 
-  void _showDateFilter() async {
+  Future<void> _showDateFilter() async {
     final result = await showDialog<Map<String, DateTime?>>(
       context: context,
       builder: (context) => _DateRangeDialog(
@@ -1274,10 +1278,10 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
 
 // Dialog pour sélectionner une plage de dates
 class _DateRangeDialog extends StatefulWidget {
+
+  const _DateRangeDialog({this.dateFrom, this.dateTo});
   final DateTime? dateFrom;
   final DateTime? dateTo;
-
-  _DateRangeDialog({this.dateFrom, this.dateTo});
 
   @override
   _DateRangeDialogState createState() => _DateRangeDialogState();

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/services/api_service.dart';
 import '../../../../core/services/settings_service.dart';
 import 'client_detail_page.dart';
 import 'deliverer_detail_page.dart';
 
 class UsersPage extends StatefulWidget {
+  const UsersPage({super.key});
+
   @override
   _UsersPageState createState() => _UsersPageState();
 }
@@ -53,12 +56,12 @@ class _UsersPageState extends State<UsersPage> {
     final passwordController = TextEditingController();
     final phoneController = TextEditingController();
     final addressController = TextEditingController();
-    String selectedRole = 'cafeteria';
+    var selectedRole = 'cafeteria';
     String? selectedClientType;
 
     final clientTypes = [
       'Restaurant',
-      'Pizzeria', 
+      'Pizzeria',
       'Café',
       'Cafétéria',
       'Épicerie',
@@ -123,13 +126,18 @@ class _UsersPageState extends State<UsersPage> {
                                 decoration: BoxDecoration(
                                   color: selectedRole == 'cafeteria' ? Colors.green.shade50 : Colors.grey[100],
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: selectedRole == 'cafeteria' ? Colors.green : Colors.grey[300]!, width: 2),
+                                  border: Border.all(
+                                      color: selectedRole == 'cafeteria' ? Colors.green : Colors.grey[300]!, width: 2),
                                 ),
                                 child: Column(
                                   children: [
-                                    Icon(Icons.store, color: selectedRole == 'cafeteria' ? Colors.green : Colors.grey, size: 32),
+                                    Icon(Icons.store,
+                                        color: selectedRole == 'cafeteria' ? Colors.green : Colors.grey, size: 32),
                                     SizedBox(height: 8),
-                                    Text('Client', style: TextStyle(fontWeight: FontWeight.bold, color: selectedRole == 'cafeteria' ? Colors.green : Colors.grey)),
+                                    Text('Client',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: selectedRole == 'cafeteria' ? Colors.green : Colors.grey)),
                                   ],
                                 ),
                               ),
@@ -144,13 +152,18 @@ class _UsersPageState extends State<UsersPage> {
                                 decoration: BoxDecoration(
                                   color: selectedRole == 'deliverer' ? Colors.orange.shade50 : Colors.grey[100],
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: selectedRole == 'deliverer' ? Colors.orange : Colors.grey[300]!, width: 2),
+                                  border: Border.all(
+                                      color: selectedRole == 'deliverer' ? Colors.orange : Colors.grey[300]!, width: 2),
                                 ),
                                 child: Column(
                                   children: [
-                                    Icon(Icons.delivery_dining, color: selectedRole == 'deliverer' ? Colors.orange : Colors.grey, size: 32),
+                                    Icon(Icons.delivery_dining,
+                                        color: selectedRole == 'deliverer' ? Colors.orange : Colors.grey, size: 32),
                                     SizedBox(height: 8),
-                                    Text('Livreur', style: TextStyle(fontWeight: FontWeight.bold, color: selectedRole == 'deliverer' ? Colors.orange : Colors.grey)),
+                                    Text('Livreur',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: selectedRole == 'deliverer' ? Colors.orange : Colors.grey)),
                                   ],
                                 ),
                               ),
@@ -168,14 +181,19 @@ class _UsersPageState extends State<UsersPage> {
                             decoration: BoxDecoration(
                               color: selectedRole == 'kitchen' ? Colors.purple.shade50 : Colors.grey[100],
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: selectedRole == 'kitchen' ? Colors.purple : Colors.grey[300]!, width: 2),
+                              border: Border.all(
+                                  color: selectedRole == 'kitchen' ? Colors.purple : Colors.grey[300]!, width: 2),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.kitchen, color: selectedRole == 'kitchen' ? Colors.purple : Colors.grey, size: 32),
+                                Icon(Icons.kitchen,
+                                    color: selectedRole == 'kitchen' ? Colors.purple : Colors.grey, size: 32),
                                 SizedBox(width: 12),
-                                Text('Atelier / Cuisine', style: TextStyle(fontWeight: FontWeight.bold, color: selectedRole == 'kitchen' ? Colors.purple : Colors.grey)),
+                                Text('Atelier / Cuisine',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: selectedRole == 'kitchen' ? Colors.purple : Colors.grey)),
                               ],
                             ),
                           ),
@@ -185,22 +203,28 @@ class _UsersPageState extends State<UsersPage> {
 
                       // Type de client (si client sélectionné)
                       if (selectedRole == 'cafeteria') ...[
-                        Text('Type d\'établissement', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
+                        Text('Type d\'établissement',
+                            style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
                         SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: clientTypes.map((type) => GestureDetector(
-                            onTap: () => setModalState(() => selectedClientType = type),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: selectedClientType == type ? Colors.green : Colors.grey[100],
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(type, style: TextStyle(color: selectedClientType == type ? Colors.white : Colors.grey[700], fontWeight: FontWeight.w500)),
-                            ),
-                          )).toList(),
+                          children: clientTypes
+                              .map((type) => GestureDetector(
+                                    onTap: () => setModalState(() => selectedClientType = type),
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: selectedClientType == type ? Colors.green : Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(type,
+                                          style: TextStyle(
+                                              color: selectedClientType == type ? Colors.white : Colors.grey[700],
+                                              fontWeight: FontWeight.w500)),
+                                    ),
+                                  ))
+                              .toList(),
                         ),
                         SizedBox(height: 20),
                       ],
@@ -214,7 +238,8 @@ class _UsersPageState extends State<UsersPage> {
                           hintText: selectedRole == 'cafeteria' ? 'Ex: Pizzeria Bella' : 'Ex: Ahmed',
                           filled: true,
                           fillColor: Colors.grey[100],
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          border:
+                              OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           prefixIcon: Icon(selectedRole == 'cafeteria' ? Icons.store : Icons.person),
                         ),
                       ),
@@ -230,7 +255,8 @@ class _UsersPageState extends State<UsersPage> {
                           hintText: 'email@exemple.com',
                           filled: true,
                           fillColor: Colors.grey[100],
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          border:
+                              OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           prefixIcon: Icon(Icons.email),
                         ),
                       ),
@@ -246,7 +272,8 @@ class _UsersPageState extends State<UsersPage> {
                           hintText: 'Min 6 caractères',
                           filled: true,
                           fillColor: Colors.grey[100],
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          border:
+                              OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           prefixIcon: Icon(Icons.lock),
                         ),
                       ),
@@ -262,7 +289,8 @@ class _UsersPageState extends State<UsersPage> {
                           hintText: '0555 00 00 00',
                           filled: true,
                           fillColor: Colors.grey[100],
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          border:
+                              OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           prefixIcon: Icon(Icons.phone),
                         ),
                       ),
@@ -278,7 +306,8 @@ class _UsersPageState extends State<UsersPage> {
                             hintText: 'Rue, quartier, ville',
                             filled: true,
                             fillColor: Colors.grey[100],
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                             prefixIcon: Icon(Icons.location_on),
                           ),
                         ),
@@ -290,23 +319,29 @@ class _UsersPageState extends State<UsersPage> {
               ),
               Container(
                 padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))]),
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))]),
                 child: SafeArea(
                   child: SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
                       onPressed: () async {
-                        if (nameController.text.isEmpty || emailController.text.isEmpty || passwordController.text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Remplir tous les champs obligatoires')));
+                        if (nameController.text.isEmpty ||
+                            emailController.text.isEmpty ||
+                            passwordController.text.isEmpty) {
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(SnackBar(content: Text('Remplir tous les champs obligatoires')));
                           return;
                         }
                         if (passwordController.text.length < 6) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Mot de passe: min 6 caractères')));
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(SnackBar(content: Text('Mot de passe: min 6 caractères')));
                           return;
                         }
 
-                        String finalName = nameController.text;
+                        var finalName = nameController.text;
                         if (selectedRole == 'cafeteria' && selectedClientType != null) {
                           finalName = '[$selectedClientType] ${nameController.text}';
                         }
@@ -323,9 +358,11 @@ class _UsersPageState extends State<UsersPage> {
                           await _apiService.createUser(data);
                           Navigator.pop(context);
                           _loadUsers();
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Utilisateur créé!'), backgroundColor: Colors.green));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Utilisateur créé!'), backgroundColor: Colors.green));
                         } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}')));
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -347,31 +384,46 @@ class _UsersPageState extends State<UsersPage> {
 
   String _getRoleText(String role) {
     switch (role) {
-      case 'cafeteria': return 'Client';
-      case 'deliverer': return 'Livreur';
-      case 'admin': return 'Admin';
-      case 'kitchen': return 'Atelier';
-      default: return role;
+      case 'cafeteria':
+        return 'Client';
+      case 'deliverer':
+        return 'Livreur';
+      case 'admin':
+        return 'Admin';
+      case 'kitchen':
+        return 'Atelier';
+      default:
+        return role;
     }
   }
 
   Color _getRoleColor(String role) {
     switch (role) {
-      case 'cafeteria': return Colors.green;
-      case 'deliverer': return Colors.orange;
-      case 'admin': return Colors.blue;
-      case 'kitchen': return Colors.purple;
-      default: return Colors.grey;
+      case 'cafeteria':
+        return Colors.green;
+      case 'deliverer':
+        return Colors.orange;
+      case 'admin':
+        return Colors.blue;
+      case 'kitchen':
+        return Colors.purple;
+      default:
+        return Colors.grey;
     }
   }
 
   IconData _getRoleIcon(String role) {
     switch (role) {
-      case 'cafeteria': return Icons.store;
-      case 'deliverer': return Icons.delivery_dining;
-      case 'admin': return Icons.admin_panel_settings;
-      case 'kitchen': return Icons.kitchen;
-      default: return Icons.person;
+      case 'cafeteria':
+        return Icons.store;
+      case 'deliverer':
+        return Icons.delivery_dining;
+      case 'admin':
+        return Icons.admin_panel_settings;
+      case 'kitchen':
+        return Icons.kitchen;
+      default:
+        return Icons.person;
     }
   }
 
@@ -406,8 +458,7 @@ class _UsersPageState extends State<UsersPage> {
                   children: [
                     Text(user['email']),
                     Text(_getRoleText(user['role'])),
-                    if (user['phone'] != null && user['phone'].isNotEmpty)
-                      Text(user['phone']),
+                    if (user['phone'] != null && user['phone'].isNotEmpty) Text(user['phone']),
                   ],
                 ),
                 trailing: Row(
@@ -430,7 +481,7 @@ class _UsersPageState extends State<UsersPage> {
                       itemBuilder: (context) => [
                         PopupMenuItem(
                           child: Row(
-                            children: [
+                            children: const [
                               Icon(Icons.info_outline, size: 20),
                               SizedBox(width: 8),
                               Text('Voir fiche'),
@@ -440,7 +491,7 @@ class _UsersPageState extends State<UsersPage> {
                         ),
                         PopupMenuItem(
                           child: Row(
-                            children: [
+                            children: const [
                               Icon(Icons.delete, color: Colors.red, size: 20),
                               SizedBox(width: 8),
                               Text('Supprimer', style: TextStyle(color: Colors.red)),
@@ -464,14 +515,16 @@ class _UsersPageState extends State<UsersPage> {
     );
   }
 
-  void _openUserDetail(Map<String, dynamic> user) async {
+  Future<void> _openUserDetail(Map<String, dynamic> user) async {
     Widget page;
     if (user['role'] == 'deliverer') {
       page = DelivererDetailPage(deliverer: user);
+    } else if (user['role'] == 'kitchen') {
+      page = KitchenDetailPage(kitchen: user);
     } else {
       page = ClientDetailPage(client: user);
     }
-    
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => page),
@@ -484,7 +537,8 @@ class _UsersPageState extends State<UsersPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Supprimer ${user['name']}?'),
-        content: Text('Cette action est irréversible. Si l\'utilisateur a des commandes, il sera désactivé au lieu d\'être supprimé.'),
+        content: Text(
+            'Cette action est irréversible. Si l\'utilisateur a des commandes, il sera désactivé au lieu d\'être supprimé.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler')),
           ElevatedButton(
@@ -500,9 +554,8 @@ class _UsersPageState extends State<UsersPage> {
       try {
         final response = await _apiService.deleteUser(user['id']);
         _loadUsers();
-        final message = response['deactivated'] == true 
-          ? 'Utilisateur désactivé (commandes existantes)'
-          : 'Utilisateur supprimé';
+        final message =
+            response['deactivated'] == true ? 'Utilisateur désactivé (commandes existantes)' : 'Utilisateur supprimé';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.green),
         );
