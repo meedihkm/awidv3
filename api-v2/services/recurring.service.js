@@ -225,7 +225,7 @@ async function getRecurringOrders(customerId, organizationId) {
          'productName', p.name,
          'quantity', roi.quantity
        )) FROM recurring_order_items roi 
-       JOIN products p ON roi.product_id = p.id
+       JOIN products p ON roi.product_id::text = p.id::text
        WHERE roi.recurring_order_id = ro.id) as items
      FROM recurring_orders ro
      WHERE ro.customer_id = $1::text AND ro.organization_id = $2::text
@@ -248,7 +248,7 @@ async function getRecurringOrderById(id, organizationId) {
          'productName', p.name,
          'quantity', roi.quantity
        )) FROM recurring_order_items roi 
-       JOIN products p ON roi.product_id = p.id
+       JOIN products p ON roi.product_id::text = p.id::text
        WHERE roi.recurring_order_id = ro.id) as items
      FROM recurring_orders ro
      WHERE ro.id = $1::text AND ro.organization_id = $2::text`,
