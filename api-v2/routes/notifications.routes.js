@@ -291,7 +291,7 @@ router.post('/send-debt-reminders', authenticate, requireAdmin, async (req, res)
        LEFT JOIN notification_preferences np ON np.user_id = u.id
        LEFT JOIN notifications n ON n.user_id = u.id AND n.type = 'debt_reminder'
        WHERE u.organization_id = $1
-         AND u.role = 'cafeteria'
+         AND u.role = 'customer'
          AND cd.debt > 0
          AND COALESCE(np.debt_reminders_enabled, false) = true
        GROUP BY u.id, u.name, u.organization_id, cd.debt, cd.order_count, np.debt_reminders_enabled, np.debt_reminder_frequency`,

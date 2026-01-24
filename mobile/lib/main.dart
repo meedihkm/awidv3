@@ -5,7 +5,7 @@ import 'core/storage/secure_storage.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/admin/presentation/pages/admin_dashboard.dart';
-import 'features/cafeteria/presentation/pages/cafeteria_dashboard.dart';
+import 'features/customer/presentation/pages/cafeteria_dashboard.dart';
 import 'features/deliverer/presentation/pages/deliverer_dashboard.dart';
 import 'features/kitchen/presentation/pages/kitchen_dashboard.dart';
 import 'features/onboarding/presentation/pages/onboarding_page.dart';
@@ -142,8 +142,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
         switch (authProvider.user!['role']) {
           case 'admin':
             return AdminDashboard();
-          case 'cafeteria':
-            return CafeteriaDashboard();
+          case 'customer':
+            return CustomerDashboard();
           case 'deliverer':
             return DelivererDashboard();
           case 'kitchen':

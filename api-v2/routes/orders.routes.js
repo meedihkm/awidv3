@@ -56,7 +56,7 @@ const { getPagination, getPagingData } = require('../utils/pagination.helper');
  *           type: array
  *           items:
  *             $ref: '#/components/schemas/OrderItem'
- *         cafeteria:
+ *         customer:
  *           type: object
  *           properties:
  *             name: 
@@ -241,7 +241,7 @@ router.get('/kitchen', authenticate, requireKitchen, async (req, res) => {
         status: order.status,
         createdAt: order.created_at,
         items,
-        cafeteria: {
+        customer: {
           id: order.customer_id,
           name: order.customer_name,
           phone: order.customer_phone

@@ -41,7 +41,7 @@ const {
  *           type: string
  *         role:
  *           type: string
- *           enum: [admin, user, deliverer, cafeteria]
+ *           enum: [admin, user, deliverer, customer]
  *         organizationId:
  *           type: string
  *           format: uuid

@@ -104,7 +104,7 @@ router.get("/", authenticate, async (req, res) => {
     }
 
     // Compter le total
-    // Si on filtre par cafeteria, il faut faire le JOIN
+    // Si on filtre par customer, il faut faire le JOIN
     const countQuery = customerId
       ? `SELECT COUNT(*) FROM deliveries d LEFT JOIN orders o ON d.order_id = o.id ${whereClause}`
       : `SELECT COUNT(*) FROM deliveries d ${whereClause}`;
@@ -116,7 +116,7 @@ router.get("/", authenticate, async (req, res) => {
       `SELECT d.*,
               u.name as deliverer_name,
               to_jsonb(o.*) as order_data,
-              ou.name as cafeteria_name, ou.phone as cafeteria_phone,
+              ou.name as customer_name, ou.phone as customer_phone,
               COALESCE(
                 json_agg(
                   json_build_object(
@@ -147,7 +147,7 @@ router.get("/", authenticate, async (req, res) => {
         ? {
             ...d.order_data,
             items: d.order_items,
-            cafeteria: { name: d.cafeteria_name, phone: d.cafeteria_phone }, // Basic info
+            customer: { name: d.customer_name, phone: d.customer_phone }, // Basic info
           }
         : null;
 

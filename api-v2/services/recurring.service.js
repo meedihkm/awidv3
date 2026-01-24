@@ -68,7 +68,7 @@ async function createRecurringOrder(data) {
     await client.query("COMMIT");
 
     logger.info(
-      `Recurring order created: ${recurringOrder.id} for cafeteria ${customerId}`,
+      `Recurring order created: ${recurringOrder.id} for customer ${customerId}`,
     );
     return formatRecurringOrder(recurringOrder);
   } catch (error) {
@@ -279,7 +279,7 @@ async function getAllRecurringOrders(organizationId, options = {}) {
   const { active } = options;
 
   let query = `
-    SELECT ro.*, u.name as cafeteria_name,
+    SELECT ro.*, u.name as customer_name,
       (SELECT COUNT(*) FROM recurring_order_items WHERE recurring_order_id = ro.id) as items_count
     FROM recurring_orders ro
     JOIN users u ON ro.customer_id = u.id
@@ -297,7 +297,7 @@ async function getAllRecurringOrders(organizationId, options = {}) {
   const result = await pool.query(query, params);
   return result.rows.map((row) => ({
     ...formatRecurringOrder(row),
-    cafeteriaName: row.cafeteria_name,
+    customerName: row.customer_name,
     itemsCount: parseInt(row.items_count) || 0,
   }));
 }

@@ -46,7 +46,7 @@ class User {
   }
 
   bool get isAdmin => role == 'admin';
-  bool get isCafeteria => role == 'cafeteria';
+  bool get isCafeteria => role == 'customer';
   bool get isDeliverer => role == 'deliverer';
 }
 

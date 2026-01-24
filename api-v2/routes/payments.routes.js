@@ -15,7 +15,7 @@ router.post('/record', authenticate, validate('recordPayment'), async (req, res)
     // Vérifier que le client appartient à la même organisation
     const clientCheck = await pool.query(
       'SELECT id, name FROM users WHERE id = $1 AND organization_id = $2 AND role = $3',
-      [clientId, req.user.organization_id, 'cafeteria']
+      [clientId, req.user.organization_id, 'customer']
     );
     
     if (clientCheck.rows.length === 0) {
@@ -234,7 +234,7 @@ router.get('/my-collections', authenticate, async (req, res) => {
 // Historique des paiements du client connecté
 router.get('/my-payments', authenticate, async (req, res) => {
   try {
-    if (req.user.role !== 'cafeteria') {
+    if (req.user.role !== 'customer') {
       return res.status(403).json({ error: 'Accès réservé aux clients' });
     }
     

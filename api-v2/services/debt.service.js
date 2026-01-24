@@ -143,7 +143,7 @@ class DebtService {
                 AND o.organization_id = $1 
                 AND o.status != 'cancelled'
             WHERE u.organization_id = $1 
-                AND (u.role = 'cafeteria' OR u.role = 'customer')
+                AND (u.role = 'customer')
                 AND u.active = true
                 ${whereConditions}
             GROUP BY u.id, u.name, u.phone, u.email
@@ -202,7 +202,7 @@ class DebtService {
                     AND o.organization_id = $1 
                     AND o.status != 'cancelled'
                 WHERE u.organization_id = $1 
-                    AND u.role = 'cafeteria'
+                    AND u.role = 'customer'
                     AND u.active = true
                     ${countWhereConditions}
                 GROUP BY u.id

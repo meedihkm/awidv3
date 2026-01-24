@@ -101,7 +101,7 @@ router.get('/debts', authenticate, async (req, res) => {
               MAX(o.created_at) as last_order
        FROM users u
        LEFT JOIN orders o ON u.id = o.customer_id AND o.total > o.amount_paid
-       WHERE u.organization_id = $1 AND u.role = 'cafeteria'
+       WHERE u.organization_id = $1 AND u.role = 'customer'
        GROUP BY u.id, u.name, u.email
        HAVING COALESCE(SUM(o.total - o.amount_paid), 0) > 0
        ORDER BY debt DESC`,

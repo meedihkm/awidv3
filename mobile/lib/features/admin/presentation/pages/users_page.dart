@@ -57,7 +57,7 @@ class _UsersPageState extends State<UsersPage> {
     final passwordController = TextEditingController();
     final phoneController = TextEditingController();
     final addressController = TextEditingController();
-    var selectedRole = 'cafeteria';
+    var selectedRole = 'customer';
     String? selectedClientType;
 
     final clientTypes = [
@@ -121,24 +121,24 @@ class _UsersPageState extends State<UsersPage> {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => setModalState(() => selectedRole = 'cafeteria'),
+                              onTap: () => setModalState(() => selectedRole = 'customer'),
                               child: Container(
                                 padding: EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: selectedRole == 'cafeteria' ? Colors.green.shade50 : Colors.grey[100],
+                                  color: selectedRole == 'customer' ? Colors.green.shade50 : Colors.grey[100],
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                      color: selectedRole == 'cafeteria' ? Colors.green : Colors.grey[300]!, width: 2),
+                                      color: selectedRole == 'customer' ? Colors.green : Colors.grey[300]!, width: 2),
                                 ),
                                 child: Column(
                                   children: [
                                     Icon(Icons.store,
-                                        color: selectedRole == 'cafeteria' ? Colors.green : Colors.grey, size: 32),
+                                        color: selectedRole == 'customer' ? Colors.green : Colors.grey, size: 32),
                                     SizedBox(height: 8),
                                     Text('Client',
                                         style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: selectedRole == 'cafeteria' ? Colors.green : Colors.grey)),
+                                            color: selectedRole == 'customer' ? Colors.green : Colors.grey)),
                                   ],
                                 ),
                               ),
@@ -203,7 +203,7 @@ class _UsersPageState extends State<UsersPage> {
                       SizedBox(height: 20),
 
                       // Type de client (si client sélectionné)
-                      if (selectedRole == 'cafeteria') ...[
+                      if (selectedRole == 'customer') ...[
                         Text('Type d\'établissement',
                             style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
                         SizedBox(height: 8),
@@ -236,12 +236,12 @@ class _UsersPageState extends State<UsersPage> {
                       TextField(
                         controller: nameController,
                         decoration: InputDecoration(
-                          hintText: selectedRole == 'cafeteria' ? 'Ex: Pizzeria Bella' : 'Ex: Ahmed',
+                          hintText: selectedRole == 'customer' ? 'Ex: Pizzeria Bella' : 'Ex: Ahmed',
                           filled: true,
                           fillColor: Colors.grey[100],
                           border:
                               OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          prefixIcon: Icon(selectedRole == 'cafeteria' ? Icons.store : Icons.person),
+                          prefixIcon: Icon(selectedRole == 'customer' ? Icons.store : Icons.person),
                         ),
                       ),
                       SizedBox(height: 16),
@@ -298,7 +298,7 @@ class _UsersPageState extends State<UsersPage> {
                       SizedBox(height: 16),
 
                       // Adresse (pour clients)
-                      if (selectedRole == 'cafeteria') ...[
+                      if (selectedRole == 'customer') ...[
                         Text('Adresse', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
                         SizedBox(height: 8),
                         TextField(
@@ -343,7 +343,7 @@ class _UsersPageState extends State<UsersPage> {
                         }
 
                         var finalName = nameController.text;
-                        if (selectedRole == 'cafeteria' && selectedClientType != null) {
+                        if (selectedRole == 'customer' && selectedClientType != null) {
                           finalName = '[$selectedClientType] ${nameController.text}';
                         }
 
@@ -367,7 +367,7 @@ class _UsersPageState extends State<UsersPage> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedRole == 'cafeteria' ? Colors.green : Colors.orange,
+                        backgroundColor: selectedRole == 'customer' ? Colors.green : Colors.orange,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
@@ -385,7 +385,7 @@ class _UsersPageState extends State<UsersPage> {
 
   String _getRoleText(String role) {
     switch (role) {
-      case 'cafeteria':
+      case 'customer':
         return 'Client';
       case 'deliverer':
         return 'Livreur';
@@ -400,7 +400,7 @@ class _UsersPageState extends State<UsersPage> {
 
   Color _getRoleColor(String role) {
     switch (role) {
-      case 'cafeteria':
+      case 'customer':
         return Colors.green;
       case 'deliverer':
         return Colors.orange;
@@ -415,7 +415,7 @@ class _UsersPageState extends State<UsersPage> {
 
   IconData _getRoleIcon(String role) {
     switch (role) {
-      case 'cafeteria':
+      case 'customer':
         return Icons.store;
       case 'deliverer':
         return Icons.delivery_dining;

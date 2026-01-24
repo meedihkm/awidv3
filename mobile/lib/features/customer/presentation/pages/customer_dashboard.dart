@@ -8,12 +8,12 @@ import 'settings_page.dart';
 import '../../../../core/widgets/sync_indicator.dart';
 import '../../../../core/widgets/notification_badge.dart';
 
-class CafeteriaDashboard extends StatefulWidget {
+class CustomerDashboard extends StatefulWidget {
   @override
-  _CafeteriaDashboardState createState() => _CafeteriaDashboardState();
+  _CustomerDashboardState createState() => _CustomerDashboardState();
 }
 
-class _CafeteriaDashboardState extends State<CafeteriaDashboard> {
+class _CustomerDashboardState extends State<CustomerDashboard> {
   int _currentIndex = 0;
   
   final List<Widget> _pages = [

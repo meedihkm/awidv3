@@ -17,7 +17,7 @@ const schemas = {
     password: z.string().min(6, "Mot de passe: minimum 6 caractères").max(128),
     name: z.string().min(1, "Nom requis").max(100),
     phone: z.string().max(20).optional(),
-    role: z.enum(["cafeteria", "deliverer", "kitchen"], {
+    role: z.enum(["customer", "deliverer", "kitchen"], {
       errorMap: () => ({ message: "Rôle invalide" }),
     }),
   }),
