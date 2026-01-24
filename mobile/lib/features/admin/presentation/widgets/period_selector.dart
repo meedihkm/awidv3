@@ -25,7 +25,7 @@ class PeriodSelector extends StatelessWidget {
   final VoidCallback onExport;
   final VoidCallback onPreviousPeriod;
   final VoidCallback onNextPeriod;
-  final Function(PeriodFilter) onPeriodChanged;
+  final void Function(PeriodFilter) onPeriodChanged;
   final Color primaryColor;
 
   @override

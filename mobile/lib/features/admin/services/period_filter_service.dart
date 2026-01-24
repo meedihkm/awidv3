@@ -15,7 +15,7 @@ class PeriodFilterService {
     final selected = _normalizeDate(selectedDate);
 
     return orders.where((order) {
-      final orderDate = DateTime.tryParse(order['createdAt'] ?? '');
+      final orderDate = DateTime.tryParse((order['createdAt'] ?? '').toString());
       if (orderDate == null) return false;
 
       final orderDay = _normalizeDate(orderDate);
@@ -42,7 +42,7 @@ class PeriodFilterService {
     final selected = _normalizeDate(selectedDate);
 
     return deliveries.where((delivery) {
-      final deliveryDate = DateTime.tryParse(delivery['createdAt'] ?? '');
+      final deliveryDate = DateTime.tryParse((delivery['createdAt'] ?? '').toString());
       if (deliveryDate == null) return false;
 
       final deliveryDay = _normalizeDate(deliveryDate);

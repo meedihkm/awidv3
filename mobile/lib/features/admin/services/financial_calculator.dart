@@ -30,7 +30,7 @@ class FinancialCalculator {
       final total = _parseDouble(order['total']);
       final paid = _parseDouble(order['amountPaid']);
       final status = order['status'] ?? '';
-      final clientName = order['customer']?['name'] ?? 'Inconnu';
+      final clientName = (order['customer']?['name'] ?? 'Inconnu').toString();
 
       // Totaux
       totalRevenue += total;
@@ -56,7 +56,7 @@ class FinancialCalculator {
       // CA par produit
       final items = order['items'] as List? ?? [];
       for (final item in items) {
-        final productName = item['productName'] ?? 'Produit';
+        final productName = (item['productName'] ?? 'Produit').toString();
         final quantity = _parseDouble(item['quantity']);
         final unitPrice = _parseDouble(item['unitPrice']);
         final itemTotal = quantity * unitPrice;
@@ -66,8 +66,8 @@ class FinancialCalculator {
 
     // Calculer les stats des livreurs
     for (final delivery in deliveries) {
-      final delivererId = delivery['delivererId'] ?? '';
-      final delivererName = delivery['deliverer']?['name'] ?? 'Livreur';
+      final delivererId = (delivery['delivererId'] ?? '').toString();
+      final delivererName = (delivery['deliverer']?['name'] ?? 'Livreur').toString();
       final status = delivery['status'] ?? '';
       final collected = _parseDouble(delivery['amountCollected']);
 
