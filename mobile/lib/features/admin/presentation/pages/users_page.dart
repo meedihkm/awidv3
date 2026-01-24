@@ -4,6 +4,7 @@ import '../../../../core/services/api_service.dart';
 import '../../../../core/services/settings_service.dart';
 import 'client_detail_page.dart';
 import 'deliverer_detail_page.dart';
+import 'kitchen_detail_page.dart';
 
 class UsersPage extends StatefulWidget {
   const UsersPage({super.key});

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+
 import '../../../../core/services/api_service.dart';
 import '../../../../core/services/cache_service.dart';
 import '../../../../core/services/report_service.dart';
@@ -17,7 +18,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   final CacheService _cacheService = CacheService();
   final ReportService _reportService = ReportService();
   late TabController _tabController;
-  
+
   // Data
   List<dynamic> _allOrders = [];
   List<dynamic> _allDeliveries = [];
@@ -26,13 +27,13 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   List<dynamic> _deliverers = [];
   Map<String, dynamic> _clients = {};
   bool _isLoading = true;
-  
+
   // Filtres dettes
   String? _selectedCustomerId;
   String? _selectedDelivererId;
   DateTime? _debtDateFrom;
   DateTime? _debtDateTo;
-  
+
   // Filtres période
   String _selectedPeriod = 'day';
   DateTime _selectedDate = DateTime.now();
@@ -67,7 +68,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
           });
         }
       }
-      
+
       // Charger depuis le serveur
       final results = await Future.wait([
         _apiService.getOrders(limit: 500),
@@ -82,13 +83,13 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
         _apiService.getDeliverers(),
         _apiService.getUsers(),
       ]);
-      
+
       final orders = results[0]['data'] ?? [];
       final debts = results[1]['data'] ?? [];
       final deliveries = results[2]['data'] ?? [];
       final deliverers = results[3]['data'] ?? [];
       final users = results[4]['data'] ?? [];
-      
+
       // Créer map des clients
       final clientsMap = <String, dynamic>{};
       for (final user in users) {
@@ -96,11 +97,11 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
           clientsMap[user['id']] = user;
         }
       }
-      
+
       // Mettre en cache
       await _cacheService.cacheOrders(orders);
       await _cacheService.cacheDebts(debts);
-      
+
       setState(() {
         _allOrders = orders;
         _debts = List<Map<String, dynamic>>.from(debts);
@@ -121,11 +122,11 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
     final now = DateTime.now();
     // final today = DateTime(now.year, now.month, now.day);
     final selected = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
-    
+
     return _allOrders.where((order) {
       final orderDate = DateTime.tryParse(order['createdAt'] ?? '') ?? now;
       final orderDay = DateTime(orderDate.year, orderDate.month, orderDate.day);
-      
+
       switch (_selectedPeriod) {
         case 'day':
           return orderDay.isAtSameMomentAs(selected);
@@ -148,24 +149,26 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
     var pendingCount = 0;
     var failedCount = 0;
     final caByClient = <String, double>{};
-    final var caByProduct = <String, double>{};
-    final var statsByDeliverer = <String, Map<String, dynamic>>{};
+    final caByProduct = <String, double>{};
+    final statsByDeliverer = <String, Map<String, dynamic>>{};
 
     for (final order in orders) {
       final total = _parseDouble(order['total']);
       final paid = _parseDouble(order['amountPaid']);
       final status = order['status'] ?? '';
       final clientName = order['customer']?['name'] ?? 'Inconnu';
-      
+
       totalCA += total;
       totalCollected += paid;
-      
-      if (status == 'delivered') deliveredCount++;
-      else if (status == 'pending') pendingCount++;
+
+      if (status == 'delivered')
+        deliveredCount++;
+      else if (status == 'pending')
+        pendingCount++;
       else if (status == 'failed' || status == 'locked') failedCount++;
-      
+
       caByClient[clientName] = (caByClient[clientName] ?? 0) + total;
-      
+
       for (final item in (order['items'] ?? [])) {
         final productName = item['productName'] ?? 'Produit';
         final itemTotal = _parseDouble(item['quantity']) * _parseDouble(item['unitPrice']);
@@ -177,10 +180,10 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
     for (final delivery in _allDeliveries) {
       final deliveryDate = DateTime.tryParse(delivery['createdAt'] ?? '');
       if (deliveryDate == null) continue;
-      
+
       final deliveryDay = DateTime(deliveryDate.year, deliveryDate.month, deliveryDate.day);
       final selected = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
-      
+
       var inPeriod = false;
       switch (_selectedPeriod) {
         case 'day':
@@ -195,14 +198,14 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
           inPeriod = deliveryDate.year == selected.year && deliveryDate.month == selected.month;
           break;
       }
-      
+
       if (!inPeriod) continue;
-      
+
       final delivererId = delivery['delivererId'] ?? '';
       final delivererName = delivery['deliverer']?['name'] ?? 'Livreur';
       final status = delivery['status'] ?? '';
       final collected = _parseDouble(delivery['amountCollected']);
-      
+
       if (!statsByDeliverer.containsKey(delivererId)) {
         statsByDeliverer[delivererId] = {
           'name': delivererName,
@@ -212,7 +215,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
           'collected': 0.0,
         };
       }
-      
+
       statsByDeliverer[delivererId]!['deliveries']++;
       if (status == 'delivered') {
         statsByDeliverer[delivererId]!['delivered']++;
@@ -261,8 +264,21 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
         final weekEnd = weekStart.add(Duration(days: 6));
         return '${weekStart.day}/${weekStart.month} - ${weekEnd.day}/${weekEnd.month}';
       case 'month':
-        final months = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
-                       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+        final months = [
+          '',
+          'Janvier',
+          'Février',
+          'Mars',
+          'Avril',
+          'Mai',
+          'Juin',
+          'Juillet',
+          'Août',
+          'Septembre',
+          'Octobre',
+          'Novembre',
+          'Décembre'
+        ];
         return '${months[d.month]} ${d.year}';
       default:
         return '';
@@ -315,7 +331,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   Future<void> _exportDailyReport() async {
     final filteredOrders = _getFilteredOrders();
     final stats = _calculateStats(filteredOrders);
-    
+
     await _reportService.generateDailyReport(
       date: _selectedDate,
       stats: stats,
@@ -346,7 +362,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
       children: [
         // Barre de période avec calendrier
         _buildPeriodSelector(),
-        
+
         // Calendrier (si ouvert)
         if (_showCalendar) _buildCalendar(),
 
@@ -407,8 +423,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Color(0xFF2E7D32)),
                   ),
-                  child: Icon(Icons.calendar_month, 
-                    color: _showCalendar ? Colors.white : Color(0xFF2E7D32), size: 20),
+                  child: Icon(Icons.calendar_month, color: _showCalendar ? Colors.white : Color(0xFF2E7D32), size: 20),
                 ),
               ),
               SizedBox(width: 8),
@@ -429,7 +444,8 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
             children: [
               Icon(Icons.date_range, color: Theme.of(context).primaryColor, size: 18),
               SizedBox(width: 8),
-              Text(_getPeriodLabel(), style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor)),
+              Text(_getPeriodLabel(),
+                  style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor)),
               Spacer(),
               // Navigation rapide
               IconButton(
@@ -483,7 +499,8 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
         ),
         calendarStyle: CalendarStyle(
           selectedDecoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
-          todayDecoration: BoxDecoration(color: Theme.of(context).primaryColor.withValues(alpha: 0.3), shape: BoxShape.circle),
+          todayDecoration:
+              BoxDecoration(color: Theme.of(context).primaryColor.withValues(alpha: 0.3), shape: BoxShape.circle),
         ),
         onDaySelected: (selectedDay, focusedDay) {
           setState(() {
@@ -506,7 +523,8 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
               return Positioned(
                 bottom: 1,
                 child: Container(
-                  width: 6, height: 6,
+                  width: 6,
+                  height: 6,
                   decoration: BoxDecoration(color: Color(0xFF2E7D32), shape: BoxShape.circle),
                 ),
               );
@@ -529,10 +547,11 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Theme.of(context).primaryColor),
         ),
-        child: Text(label, style: TextStyle(
-          color: isSelected ? Colors.white : Theme.of(context).primaryColor, 
-          fontWeight: FontWeight.w500,
-        )),
+        child: Text(label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Theme.of(context).primaryColor,
+              fontWeight: FontWeight.w500,
+            )),
       ),
     );
   }
@@ -556,14 +575,13 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
               crossAxisSpacing: 12,
               childAspectRatio: 1.5,
               children: [
-                _buildStatCard('Chiffre d\'affaires', '${stats['totalCA'].toStringAsFixed(0)} DA', 
-                  Icons.trending_up, Theme.of(context).primaryColor),
-                _buildStatCard('Collecté', '${stats['totalCollected'].toStringAsFixed(0)} DA', 
-                  Icons.payments, Colors.blue),
-                _buildStatCard('Non payé', '${stats['totalUnpaid'].toStringAsFixed(0)} DA', 
-                  Icons.money_off, Colors.red),
-                _buildStatCard('Commandes', '${stats['orderCount']}', 
-                  Icons.shopping_bag, Colors.purple),
+                _buildStatCard('Chiffre d\'affaires', '${stats['totalCA'].toStringAsFixed(0)} DA', Icons.trending_up,
+                    Theme.of(context).primaryColor),
+                _buildStatCard(
+                    'Collecté', '${stats['totalCollected'].toStringAsFixed(0)} DA', Icons.payments, Colors.blue),
+                _buildStatCard(
+                    'Non payé', '${stats['totalUnpaid'].toStringAsFixed(0)} DA', Icons.money_off, Colors.red),
+                _buildStatCard('Commandes', '${stats['orderCount']}', Icons.shopping_bag, Colors.purple),
               ],
             ),
             SizedBox(height: 16),
@@ -631,7 +649,8 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.7)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: LinearGradient(
+            colors: [color, color.withValues(alpha: 0.7)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8, offset: Offset(0, 4))],
       ),
@@ -679,7 +698,8 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
           child: Row(
             children: [
               Container(
-                width: 28, height: 28,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                 child: Center(child: Text('${index + 1}', style: TextStyle(color: color, fontWeight: FontWeight.bold))),
               ),
@@ -688,11 +708,16 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item.key, style: TextStyle(fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(item.key,
+                        style: TextStyle(fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
                     SizedBox(height: 4),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(value: percentage, backgroundColor: Colors.grey[200], valueColor: AlwaysStoppedAnimation(color), minHeight: 6),
+                      child: LinearProgressIndicator(
+                          value: percentage,
+                          backgroundColor: Colors.grey[200],
+                          valueColor: AlwaysStoppedAnimation(color),
+                          minHeight: 6),
                     ),
                   ],
                 ),
@@ -725,10 +750,16 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Taux de recouvrement', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('${rate.toStringAsFixed(1)}%', style: TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 18, 
-                color: rate >= 80 ? Colors.green : rate >= 50 ? Colors.orange : Colors.red,
-              )),
+              Text('${rate.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: rate >= 80
+                        ? Colors.green
+                        : rate >= 50
+                            ? Colors.orange
+                            : Colors.red,
+                  )),
             ],
           ),
           SizedBox(height: 12),
@@ -737,7 +768,11 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
             child: LinearProgressIndicator(
               value: rate / 100,
               backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation(rate >= 80 ? Colors.green : rate >= 50 ? Colors.orange : Colors.red),
+              valueColor: AlwaysStoppedAnimation(rate >= 80
+                  ? Colors.green
+                  : rate >= 50
+                      ? Colors.orange
+                      : Colors.red),
               minHeight: 12,
             ),
           ),
@@ -774,7 +809,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
         itemBuilder: (context, index) {
           final client = sorted[index];
           final percentage = totalCA > 0 ? (client.value / totalCA * 100) : 0.0;
-          
+
           // Trouver les infos du client
           final clientData = _clients.values.firstWhere(
             (c) => c['name'] == client.key,
@@ -787,8 +822,8 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
             child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: Color(0xFF2E7D32).withValues(alpha: 0.1),
-                child: Text(client.key[0].toUpperCase(), 
-                  style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold)),
+                child: Text(client.key[0].toUpperCase(),
+                    style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold)),
               ),
               title: Text(client.key, style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: Row(
@@ -808,13 +843,15 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                   Text('${percentage.toStringAsFixed(1)}%', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                 ],
               ),
-              trailing: Text('${client.value.toStringAsFixed(0)} DA', 
-                style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2E7D32), fontSize: 16)),
+              trailing: Text('${client.value.toStringAsFixed(0)} DA',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2E7D32), fontSize: 16)),
               onTap: () {
                 if (clientData['id'] != null) {
-                  Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => ClientDetailPage(client: clientData),
-                  ));
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ClientDetailPage(client: clientData),
+                      ));
                 }
               },
             ),
@@ -851,9 +888,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
         itemBuilder: (context, index) {
           final entry = delivererList[index];
           final data = entry.value;
-          final successRate = data['deliveries'] > 0 
-            ? (data['delivered'] / data['deliveries'] * 100) 
-            : 0.0;
+          final successRate = data['deliveries'] > 0 ? (data['delivered'] / data['deliveries'] * 100) : 0.0;
 
           return Card(
             margin: EdgeInsets.only(bottom: 12),
@@ -875,18 +910,23 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(data['name'], style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text('${data['deliveries']} livraisons', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                            Text('${data['deliveries']} livraisons',
+                                style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                           ],
                         ),
                       ),
                       Container(
                         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: successRate >= 90 ? Colors.green : successRate >= 70 ? Colors.orange : Colors.red,
+                          color: successRate >= 90
+                              ? Colors.green
+                              : successRate >= 70
+                                  ? Colors.orange
+                                  : Colors.red,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text('${successRate.toStringAsFixed(0)}%', 
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        child: Text('${successRate.toStringAsFixed(0)}%',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -897,7 +937,8 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                       SizedBox(width: 12),
                       _buildDelivererStat('Échouées', data['failed'], Colors.red),
                       SizedBox(width: 12),
-                      _buildDelivererStat('Collecté', '${(data['collected'] as double).toStringAsFixed(0)} DA', Colors.blue),
+                      _buildDelivererStat(
+                          'Collecté', '${(data['collected'] as double).toStringAsFixed(0)} DA', Colors.blue),
                     ],
                   ),
                 ],
@@ -951,7 +992,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
         children: [
           // Filtres
           _buildDebtsFilters(),
-          
+
           // Total dettes
           Container(
             margin: EdgeInsets.all(12),
@@ -969,13 +1010,15 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Total des dettes', style: TextStyle(color: Colors.white.withValues(alpha: 0.9))),
-                      Text('${totalDebt.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                      Text('${totalDebt.toStringAsFixed(0)} DA',
+                          style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
                   child: Text('${_debts.length} clients', style: TextStyle(color: Colors.white)),
                 ),
               ],
@@ -1007,13 +1050,13 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                         child: ExpansionTile(
                           leading: CircleAvatar(
                             backgroundColor: Colors.red.shade100,
-                            child: Text((debt['name'] ?? 'C')[0].toUpperCase(), 
-                              style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold)),
+                            child: Text((debt['name'] ?? 'C')[0].toUpperCase(),
+                                style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold)),
                           ),
                           title: Text(debt['name'] ?? 'Client', style: TextStyle(fontWeight: FontWeight.w600)),
                           subtitle: Text('${debt['unpaid_orders'] ?? 0} commande(s) impayée(s)'),
-                          trailing: Text('${_parseDouble(debt['total_debt']).toStringAsFixed(0)} DA', 
-                            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
+                          trailing: Text('${_parseDouble(debt['total_debt']).toStringAsFixed(0)} DA',
+                              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16)),
                           children: [
                             Padding(
                               padding: EdgeInsets.all(16),
@@ -1043,8 +1086,8 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                                       children: [
                                         Icon(Icons.access_time, size: 18, color: Colors.grey),
                                         SizedBox(width: 8),
-                                        Text('Dernière: ${_formatDate(debt['last_order_date'])}', 
-                                          style: TextStyle(color: Colors.grey[700])),
+                                        Text('Dernière: ${_formatDate(debt['last_order_date'])}',
+                                            style: TextStyle(color: Colors.grey[700])),
                                       ],
                                     ),
                                   ],
@@ -1057,9 +1100,11 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
                                           (c) => c['name'] == debt['name'],
                                           orElse: () => debt,
                                         );
-                                        Navigator.push(context, MaterialPageRoute(
-                                          builder: (_) => ClientDetailPage(client: clientData),
-                                        ));
+                                        Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => ClientDetailPage(client: clientData),
+                                            ));
                                       },
                                       icon: Icon(Icons.visibility),
                                       label: Text('Voir fiche client'),
@@ -1081,8 +1126,9 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
   }
 
   Widget _buildDebtsFilters() {
-    final hasFilters = _selectedCustomerId != null || _selectedDelivererId != null || _debtDateFrom != null || _debtDateTo != null;
-    
+    final hasFilters =
+        _selectedCustomerId != null || _selectedDelivererId != null || _debtDateFrom != null || _debtDateTo != null;
+
     return Container(
       padding: EdgeInsets.all(12),
       color: Colors.grey[100],
@@ -1119,18 +1165,17 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
             children: [
               // Filtre par client
               _buildFilterChip(
-                label: _selectedCustomerId == null 
-                  ? 'Client' 
-                  : _clients[_selectedCustomerId]?['name'] ?? 'Client',
+                label: _selectedCustomerId == null ? 'Client' : _clients[_selectedCustomerId]?['name'] ?? 'Client',
                 icon: Icons.person,
                 isSelected: _selectedCustomerId != null,
                 onTap: _showClientFilter,
               ),
               // Filtre par livreur
               _buildFilterChip(
-                label: _selectedDelivererId == null 
-                  ? 'Livreur' 
-                  : _deliverers.firstWhere((d) => d['id'] == _selectedDelivererId, orElse: () => {'name': 'Livreur'})['name'],
+                label: _selectedDelivererId == null
+                    ? 'Livreur'
+                    : _deliverers.firstWhere((d) => d['id'] == _selectedDelivererId,
+                        orElse: () => {'name': 'Livreur'})['name'],
                 icon: Icons.delivery_dining,
                 isSelected: _selectedDelivererId != null,
                 onTap: _showDelivererFilter,
@@ -1138,8 +1183,8 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
               // Filtre par date
               _buildFilterChip(
                 label: _debtDateFrom == null && _debtDateTo == null
-                  ? 'Période'
-                  : '${_debtDateFrom != null ? _formatDate(_debtDateFrom.toString()) : '...'} - ${_debtDateTo != null ? _formatDate(_debtDateTo.toString()) : '...'}',
+                    ? 'Période'
+                    : '${_debtDateFrom != null ? _formatDate(_debtDateFrom.toString()) : '...'} - ${_debtDateTo != null ? _formatDate(_debtDateTo.toString()) : '...'}',
                 icon: Icons.date_range,
                 isSelected: _debtDateFrom != null || _debtDateTo != null,
                 onTap: _showDateFilter,
@@ -1196,19 +1241,22 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
             SizedBox(height: 16),
             Expanded(
               child: ListView(
-                children: _clients.values.map((client) => ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Color(0xFF2E7D32).withValues(alpha: 0.1),
-                    child: Text(client['name'][0].toUpperCase(), style: TextStyle(color: Color(0xFF2E7D32))),
-                  ),
-                  title: Text(client['name']),
-                  trailing: _selectedCustomerId == client['id'] ? Icon(Icons.check, color: Color(0xFF2E7D32)) : null,
-                  onTap: () {
-                    setState(() => _selectedCustomerId = client['id']);
-                    Navigator.pop(context);
-                    _loadData(forceRefresh: true);
-                  },
-                )).toList(),
+                children: _clients.values
+                    .map((client) => ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Color(0xFF2E7D32).withValues(alpha: 0.1),
+                            child: Text(client['name'][0].toUpperCase(), style: TextStyle(color: Color(0xFF2E7D32))),
+                          ),
+                          title: Text(client['name']),
+                          trailing:
+                              _selectedCustomerId == client['id'] ? Icon(Icons.check, color: Color(0xFF2E7D32)) : null,
+                          onTap: () {
+                            setState(() => _selectedCustomerId = client['id']);
+                            Navigator.pop(context);
+                            _loadData(forceRefresh: true);
+                          },
+                        ))
+                    .toList(),
               ),
             ),
           ],
@@ -1229,19 +1277,22 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
             SizedBox(height: 16),
             Expanded(
               child: ListView(
-                children: _deliverers.map((deliverer) => ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.orange.withValues(alpha: 0.1),
-                    child: Icon(Icons.delivery_dining, color: Colors.orange),
-                  ),
-                  title: Text(deliverer['name']),
-                  trailing: _selectedDelivererId == deliverer['id'] ? Icon(Icons.check, color: Colors.orange) : null,
-                  onTap: () {
-                    setState(() => _selectedDelivererId = deliverer['id']);
-                    Navigator.pop(context);
-                    _loadData(forceRefresh: true);
-                  },
-                )).toList(),
+                children: _deliverers
+                    .map((deliverer) => ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.orange.withValues(alpha: 0.1),
+                            child: Icon(Icons.delivery_dining, color: Colors.orange),
+                          ),
+                          title: Text(deliverer['name']),
+                          trailing:
+                              _selectedDelivererId == deliverer['id'] ? Icon(Icons.check, color: Colors.orange) : null,
+                          onTap: () {
+                            setState(() => _selectedDelivererId = deliverer['id']);
+                            Navigator.pop(context);
+                            _loadData(forceRefresh: true);
+                          },
+                        ))
+                    .toList(),
               ),
             ),
           ],
@@ -1258,7 +1309,7 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
         dateTo: _debtDateTo,
       ),
     );
-    
+
     if (result != null) {
       setState(() {
         _debtDateFrom = result['from'];
@@ -1278,7 +1329,6 @@ class _FinancialPageState extends State<FinancialPage> with SingleTickerProvider
 
 // Dialog pour sélectionner une plage de dates
 class _DateRangeDialog extends StatefulWidget {
-
   const _DateRangeDialog({this.dateFrom, this.dateTo});
   final DateTime? dateFrom;
   final DateTime? dateTo;
