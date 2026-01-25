@@ -5,23 +5,21 @@ import '../../../../core/models/debt_model.dart';
 import '../../../../core/models/packaging_model.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../core/services/cache_service.dart';
-import '../../../../core/services/payment_service.dart';
+import '../../../../core/services/financial_service.dart';
 import '../../../../core/services/settings_service.dart';
-import '../widgets/record_debt_payment_modal.dart';
 
 class ClientDetailPage extends StatefulWidget {
-  final Map<String, dynamic> client;
-  final ApiService? apiService;
-  final CacheService? cacheService;
-  final SettingsService? settingsService;
-
   const ClientDetailPage({
     required this.client,
     this.apiService,
     this.cacheService,
     this.settingsService,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
+  final Map<String, dynamic> client;
+  final ApiService? apiService;
+  final CacheService? cacheService;
+  final SettingsService? settingsService;
 
   @override
   _ClientDetailPageState createState() => _ClientDetailPageState();
@@ -158,15 +156,15 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
 
   double get _totalDebt {
     double debt = 0;
-    for (var o in _orders) {
+    for (final o in _orders) {
       final total = _parseDouble(o['total']);
       final paid = _parseDouble(o['amountPaid']);
-      debt += (total - paid);
+      debt += total - paid;
     }
     return debt < 0 ? 0 : debt;
   }
 
-  double get _totalOrders => _orders.fold(0.0, (sum, o) => sum + _parseDouble(o['total']));
+  double get _totalOrders => _orders.fold(0, (sum, o) => sum + _parseDouble(o['total']));
 
   // ignore: unused_element
   int get _deliveredCount => _deliveries.where((d) => d['status'] == 'delivered').length;
@@ -503,7 +501,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: [
+            children: const [
               Icon(Icons.credit_card, color: Color(0xFF2E7D32), size: 20),
               SizedBox(width: 8),
               Text('Plafond de crédit', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -1152,7 +1150,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      children: [
+                      children: const [
                         Icon(Icons.inventory_2, color: Colors.orange),
                         SizedBox(width: 8),
                         Text('Solde Consignes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),

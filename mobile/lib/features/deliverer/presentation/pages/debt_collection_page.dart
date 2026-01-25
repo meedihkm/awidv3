@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../../../core/services/api_service.dart';
-import '../../../../core/services/payment_service.dart';
+import '../../../../core/services/financial_service.dart';
 
 class DebtCollectionPage extends StatefulWidget {
+  const DebtCollectionPage({super.key});
+
   @override
   _DebtCollectionPageState createState() => _DebtCollectionPageState();
 }
 
 class _DebtCollectionPageState extends State<DebtCollectionPage> {
   final ApiService _apiService = ApiService();
-  final PaymentService _paymentService = PaymentService();
-  
+  final FinancialService _financialService = FinancialService();
+
   List<dynamic> _clientsWithDebts = [];
   List<dynamic> _myCollections = [];
   bool _isLoading = true;
@@ -59,8 +62,7 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Client: ${client['name']}', 
-                style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('Client: ${client['name']}', style: TextStyle(fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
               Container(
                 padding: EdgeInsets.all(12),
@@ -73,7 +75,7 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
                     Icon(Icons.warning_amber, color: Colors.red),
                     SizedBox(width: 12),
                     Text('Dette: ${debt.toStringAsFixed(0)} DA',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: Colors.red.shade700)),
+                        style: TextStyle(fontWeight: FontWeight.w600, color: Colors.red.shade700)),
                   ],
                 ),
               ),
@@ -154,12 +156,12 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
   void _showPaymentResult(Map<String, dynamic> data) {
     final ordersAffected = data['orders_affected'] as List? ?? [];
     final debtCleared = data['debt_cleared'] == true;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
-          children: [
+          children: const [
             Icon(Icons.check_circle, color: Colors.green, size: 28),
             SizedBox(width: 12),
             Text('Paiement enregistré'),
@@ -169,26 +171,25 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Montant: ${data['amount_applied']} DA', 
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text('Montant: ${data['amount_applied']} DA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             SizedBox(height: 12),
             Text('Répartition:', style: TextStyle(fontWeight: FontWeight.w600)),
             SizedBox(height: 8),
             ...ordersAffected.map((order) => Padding(
-              padding: EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: [
-                  Icon(Icons.check, color: Colors.green, size: 16),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Commande #${order['order_number']}: ${order['amount_applied']} DA',
-                      style: TextStyle(fontSize: 14),
-                    ),
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check, color: Colors.green, size: 16),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Commande #${order['order_number']}: ${order['amount_applied']} DA',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )).toList(),
+                )),
             SizedBox(height: 12),
             Container(
               padding: EdgeInsets.all(12),
@@ -205,9 +206,7 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      debtCleared 
-                        ? 'Dette soldée !' 
-                        : 'Nouvelle dette: ${data['debt_after']} DA',
+                      debtCleared ? 'Dette soldée !' : 'Nouvelle dette: ${data['debt_after']} DA',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: debtCleared ? Colors.green.shade700 : Colors.blue.shade700,
@@ -253,10 +252,9 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Section: Clients avec dettes
-            Text('Clients avec dettes', 
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text('Clients avec dettes', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             SizedBox(height: 12),
-            
+
             if (_clientsWithDebts.isEmpty)
               Container(
                 padding: EdgeInsets.all(32),
@@ -269,49 +267,47 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
                     children: [
                       Icon(Icons.check_circle_outline, size: 48, color: Colors.grey[400]),
                       SizedBox(height: 12),
-                      Text('Aucune dette en cours', 
-                        style: TextStyle(color: Colors.grey[600])),
+                      Text('Aucune dette en cours', style: TextStyle(color: Colors.grey[600])),
                     ],
                   ),
                 ),
               )
             else
               ...(_clientsWithDebts.map((client) => Card(
-                margin: EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.red.withValues(alpha: 0.1),
-                    child: Icon(Icons.warning_amber, color: Colors.red),
-                  ),
-                  title: Text(client['name'] ?? 'Client', 
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text('${client['order_count'] ?? 0} commande(s) impayée(s)'),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text('${_parseDouble(client['debt']).toStringAsFixed(0)} DA',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red,
-                          fontSize: 16,
-                        )),
-                      SizedBox(height: 4),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text('Collecter', 
-                          style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                    margin: EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.red.withValues(alpha: 0.1),
+                        child: Icon(Icons.warning_amber, color: Colors.red),
                       ),
-                    ],
-                  ),
-                  onTap: () => _showCollectDebtDialog(client),
-                ),
-              ))),
+                      title: Text(client['name'] ?? 'Client', style: TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text('${client['order_count'] ?? 0} commande(s) impayée(s)'),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text('${_parseDouble(client['debt']).toStringAsFixed(0)} DA',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                                fontSize: 16,
+                              )),
+                          SizedBox(height: 4),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text('Collecter',
+                                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                      onTap: () => _showCollectDebtDialog(client),
+                    ),
+                  ))),
 
             SizedBox(height: 32),
 
@@ -319,8 +315,7 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Mes collectes du jour', 
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text('Mes collectes du jour', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 IconButton(
                   icon: Icon(Icons.refresh),
                   onPressed: _loadData,
@@ -341,8 +336,7 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
                     children: [
                       Icon(Icons.payment, size: 48, color: Colors.grey[400]),
                       SizedBox(height: 12),
-                      Text('Aucune collecte aujourd\'hui', 
-                        style: TextStyle(color: Colors.grey[600])),
+                      Text('Aucune collecte aujourd\'hui', style: TextStyle(color: Colors.grey[600])),
                     ],
                   ),
                 ),
@@ -350,10 +344,10 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
             else
               ...(_myCollections.map((collection) {
                 final date = DateTime.tryParse(collection['created_at'] ?? '');
-                final isToday = date != null && 
-                  date.year == DateTime.now().year &&
-                  date.month == DateTime.now().month &&
-                  date.day == DateTime.now().day;
+                final isToday = date != null &&
+                    date.year == DateTime.now().year &&
+                    date.month == DateTime.now().month &&
+                    date.day == DateTime.now().day;
 
                 if (!isToday) return SizedBox.shrink();
 
@@ -365,8 +359,7 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
                       backgroundColor: Colors.green.withValues(alpha: 0.1),
                       child: Icon(Icons.check_circle, color: Colors.green),
                     ),
-                    title: Text(collection['client_name'] ?? 'Client',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                    title: Text(collection['client_name'] ?? 'Client', style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text(
                       '${date.hour}:${date.minute.toString().padLeft(2, '0')}',
                       style: TextStyle(fontSize: 12),
