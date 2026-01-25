@@ -1,290 +1,509 @@
-const express = require('express');
+// =====================================================
+// ROUTES : Gestion des Paiements (Refactorisé)
+// Architecture propre avec logs et validation
+// =====================================================
+
+const express = require("express");
 const router = express.Router();
+const pool = require("../config/database");
+const { authenticate, authorize } = require("../middleware/auth");
+const { validateUUID } = require("../middleware/validate");
+const { logAudit } = require("../services/audit.service");
 
-const pool = require('../config/database');
-const { authenticate, requireAdmin } = require('../middleware/auth');
-const { validate, validateUUID } = require('../middleware/validate');
-const { logAudit } = require('../services/audit.service');
+// ─────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────
 
-// POST /api/payments/record
+/**
+ * Parse un nombre de manière sécurisée
+ */
+function parseNumber(value, defaultValue = 0) {
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? defaultValue : parsed;
+}
+
+/**
+ * Log une action avec contexte
+ */
+function logAction(action, details) {
+  console.log(`[PAYMENTS] ${action}:`, JSON.stringify(details, null, 2));
+}
+
+/**
+ * Valide les données de paiement
+ */
+function validatePaymentData(data) {
+  const errors = [];
+
+  if (!data.customerId) {
+    errors.push("customerId est requis");
+  }
+
+  if (!data.amount || data.amount <= 0) {
+    errors.push("amount doit être supérieur à 0");
+  }
+
+  if (data.mode && !["cash", "card", "transfer", "check"].includes(data.mode)) {
+    errors.push("mode invalide (cash, card, transfer, check)");
+  }
+
+  return errors;
+}
+
+// ─────────────────────────────────────────────────────
+// POST /api/payments
 // Enregistrer un paiement (Admin ou Livreur)
-router.post('/record', authenticate, validate('recordPayment'), async (req, res) => {
-  try {
-    const { clientId, amount, mode, deliveryId, targetOrders, notes } = req.body;
-    
-    // Vérifier que le client appartient à la même organisation
-    const clientCheck = await pool.query(
-      'SELECT id, name FROM users WHERE id = $1 AND organization_id = $2 AND role = $3',
-      [clientId, req.user.organization_id, 'customer']
-    );
-    
-    if (clientCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Client non trouvé' });
-    }
-    
-    // Si deliveryId fourni, vérifier qu'elle appartient à l'organisation
-    if (deliveryId) {
-      const deliveryCheck = await pool.query(
-        'SELECT id FROM deliveries WHERE id = $1 AND organization_id = $2',
-        [deliveryId, req.user.organization_id]
-      );
-      
-      if (deliveryCheck.rows.length === 0) {
-        return res.status(404).json({ error: 'Livraison non trouvée' });
-      }
-    }
-    
-    // Appeler la fonction PostgreSQL pour appliquer le paiement
-    const result = await pool.query(
-      `SELECT apply_payment_to_client(
-        $1::UUID, $2::DECIMAL, $3::TEXT, $4::UUID, $5::VARCHAR,
-        $6::VARCHAR, $7::UUID, $8::UUID[], $9::TEXT
-      ) as result`,
-      [
-        clientId,
+// Accessible par : admin, deliverer
+// ─────────────────────────────────────────────────────
+router.post(
+  "/",
+  authenticate,
+  authorize(["admin", "deliverer"]),
+  async (req, res) => {
+    const startTime = Date.now();
+    logAction("RECORD_PAYMENT", {
+      userId: req.user.id,
+      role: req.user.role,
+      body: { ...req.body, customerId: req.body.customerId },
+    });
+
+    try {
+      const {
+        customerId,
         amount,
-        req.user.organization_id,
-        req.user.id,
-        req.user.role,
-        mode || 'auto',
-        deliveryId || null,
-        targetOrders || null,
-        notes || null
-      ]
-    );
-    
-    const paymentResult = result.rows[0].result;
-    
-    // Logger l'action
-    await logAudit('PAYMENT_RECORDED', req.user.id, req.user.organization_id, {
-      clientId,
-      clientName: clientCheck.rows[0].name,
-      amount,
-      mode: mode || 'auto',
-      transactionId: paymentResult.transaction_id,
-      debtBefore: paymentResult.debt_before,
-      debtAfter: paymentResult.debt_after
-    }, req);
-    
-    res.json({
-      success: true,
-      data: paymentResult
-    });
-  } catch (error) {
-    console.error('Record payment error:', error);
-    res.status(500).json({ error: 'Erreur serveur: ' + error.message });
-  }
-});
+        mode = "cash",
+        deliveryId,
+        targetOrders,
+        notes,
+      } = req.body;
 
-// GET /api/payments/client/:clientId/details
-// Obtenir les détails de dette d'un client
-router.get('/client/:clientId/details', authenticate, validateUUID('clientId'), async (req, res) => {
-  try {
-    // Vérifier que le client appartient à la même organisation
-    const clientCheck = await pool.query(
-      'SELECT id FROM users WHERE id = $1 AND organization_id = $2',
-      [req.params.clientId, req.user.organization_id]
-    );
-    
-    if (clientCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Client non trouvé' });
-    }
-    
-    // Obtenir les détails de dette du client
-    const result = await pool.query(
-      `SELECT 
-        jsonb_build_object(
-          'client', jsonb_build_object(
-            'id', u.id,
-            'name', u.name,
-            'email', u.email,
-            'phone', u.phone
-          ),
-          'total_debt', COALESCE(SUM(o.total - o.amount_paid) FILTER (WHERE o.total > o.amount_paid), 0),
-          'unpaid_orders', jsonb_agg(
-            jsonb_build_object(
-              'id', o.id,
-              'order_number', o.order_number,
-              'date', o.created_at,
-              'total', o.total,
-              'amount_paid', o.amount_paid,
-              'remaining', o.total - o.amount_paid,
-              'payment_status', o.payment_status
-            ) ORDER BY o.created_at ASC
-          ) FILTER (WHERE o.total > o.amount_paid),
-          'payment_history', (
-            SELECT jsonb_agg(
-              jsonb_build_object(
-                'id', pt.id,
-                'date', pt.created_at,
-                'amount', pt.amount,
-                'payment_type', pt.payment_type,
-                'payment_mode', pt.payment_mode,
-                'orders_affected', pt.orders_affected,
-                'recorded_by', jsonb_build_object(
-                  'id', rec.id,
-                  'name', rec.name,
-                  'role', pt.recorded_by_role
-                ),
-                'notes', pt.notes
-              ) ORDER BY pt.created_at DESC
+      // Validation
+      const validationErrors = validatePaymentData({
+        customerId,
+        amount,
+        mode,
+      });
+      if (validationErrors.length > 0) {
+        logAction("RECORD_PAYMENT_VALIDATION_ERROR", {
+          errors: validationErrors,
+        });
+        return res.status(400).json({ error: validationErrors.join(", ") });
+      }
+
+      // Vérifier que le client existe et appartient à l'organisation
+      const customerCheck = await pool.query(
+        "SELECT id, name FROM users WHERE id = $1::text AND organization_id = $2::text AND role = $3",
+        [customerId, req.user.organization_id, "customer"],
+      );
+
+      if (customerCheck.rows.length === 0) {
+        logAction("RECORD_PAYMENT_CUSTOMER_NOT_FOUND", { customerId });
+        return res.status(404).json({ error: "Client non trouvé" });
+      }
+
+      const customer = customerCheck.rows[0];
+
+      // Si deliveryId fourni, vérifier qu'elle appartient à l'organisation
+      if (deliveryId) {
+        const deliveryCheck = await pool.query(
+          "SELECT id FROM deliveries WHERE id = $1::text AND organization_id = $2::text",
+          [deliveryId, req.user.organization_id],
+        );
+
+        if (deliveryCheck.rows.length === 0) {
+          logAction("RECORD_PAYMENT_DELIVERY_NOT_FOUND", { deliveryId });
+          return res.status(404).json({ error: "Livraison non trouvée" });
+        }
+      }
+
+      // Calculer la dette actuelle
+      const debtResult = await pool.query(
+        `SELECT COALESCE(SUM(total - amount_paid), 0) as current_debt
+       FROM orders
+       WHERE customer_id = $1::text 
+         AND organization_id = $2::text 
+         AND total > amount_paid`,
+        [customerId, req.user.organization_id],
+      );
+
+      const currentDebt = parseNumber(debtResult.rows[0].current_debt);
+
+      if (currentDebt === 0) {
+        logAction("RECORD_PAYMENT_NO_DEBT", {
+          customerId,
+          customerName: customer.name,
+        });
+        return res.status(400).json({ error: "Ce client n'a pas de dette" });
+      }
+
+      if (amount > currentDebt) {
+        logAction("RECORD_PAYMENT_AMOUNT_TOO_HIGH", {
+          customerId,
+          amount,
+          currentDebt,
+        });
+        return res.status(400).json({
+          error: `Le montant (${amount} DA) est supérieur à la dette (${currentDebt} DA)`,
+        });
+      }
+
+      // Créer la transaction de paiement
+      const transactionResult = await pool.query(
+        `INSERT INTO payment_transactions (
+        organization_id, client_id, amount, payment_type, payment_mode,
+        recorded_by, recorded_by_role, delivery_id, notes
+      ) VALUES ($1::text, $2::text, $3, $4, $5, $6::text, $7, $8::text, $9)
+      RETURNING id, created_at`,
+        [
+          req.user.organization_id,
+          customerId,
+          amount,
+          "debt_payment",
+          mode,
+          req.user.id,
+          req.user.role,
+          deliveryId || null,
+          notes || null,
+        ],
+      );
+
+      const transaction = transactionResult.rows[0];
+
+      // Appliquer le paiement aux commandes
+      let remainingAmount = amount;
+      const affectedOrders = [];
+
+      // Si targetOrders est spécifié, appliquer aux commandes ciblées
+      const ordersToUpdate =
+        targetOrders && targetOrders.length > 0
+          ? await pool.query(
+              `SELECT id, total, amount_paid, (total - amount_paid) as remaining
+           FROM orders
+           WHERE id = ANY($1::text[]) 
+             AND customer_id = $2::text 
+             AND organization_id = $3::text
+             AND total > amount_paid
+           ORDER BY created_at ASC`,
+              [targetOrders, customerId, req.user.organization_id],
             )
-            FROM payment_transactions pt
-            LEFT JOIN users rec ON pt.recorded_by = rec.id
-            WHERE pt.client_id = $1
-          )
-        ) as details
-       FROM users u
-       LEFT JOIN orders o ON u.id = o.customer_id
-       WHERE u.id = $1
-       GROUP BY u.id, u.name, u.email, u.phone`,
-      [req.params.clientId]
-    );
-    
-    res.json({
-      success: true,
-      data: result.rows[0]?.details || null
-    });
-  } catch (error) {
-    console.error('Get client debt details error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
+          : await pool.query(
+              `SELECT id, total, amount_paid, (total - amount_paid) as remaining
+           FROM orders
+           WHERE customer_id = $1::text 
+             AND organization_id = $2::text
+             AND total > amount_paid
+           ORDER BY created_at ASC`,
+              [customerId, req.user.organization_id],
+            );
 
+      for (const order of ordersToUpdate.rows) {
+        if (remainingAmount <= 0) break;
+
+        const orderRemaining = parseNumber(order.remaining);
+        const paymentForOrder = Math.min(remainingAmount, orderRemaining);
+        const newAmountPaid = parseNumber(order.amount_paid) + paymentForOrder;
+        const newPaymentStatus =
+          newAmountPaid >= parseNumber(order.total) ? "paid" : "partial";
+
+        await pool.query(
+          `UPDATE orders 
+         SET amount_paid = $1, payment_status = $2, updated_at = NOW()
+         WHERE id = $3::text`,
+          [newAmountPaid, newPaymentStatus, order.id],
+        );
+
+        affectedOrders.push({
+          orderId: order.id,
+          amountApplied: paymentForOrder,
+          newStatus: newPaymentStatus,
+        });
+
+        remainingAmount -= paymentForOrder;
+      }
+
+      // Mettre à jour la transaction avec les commandes affectées
+      await pool.query(
+        `UPDATE payment_transactions 
+       SET orders_affected = $1::text[]
+       WHERE id = $2::text`,
+        [affectedOrders.map((o) => o.orderId), transaction.id],
+      );
+
+      const newDebt = currentDebt - amount;
+
+      // Logger l'audit
+      await logAudit({
+        action: "PAYMENT_RECORDED",
+        performedBy: req.user.id,
+        organizationId: req.user.organization_id,
+        targetType: "payment",
+        targetId: transaction.id,
+        details: {
+          customerId,
+          customerName: customer.name,
+          amount,
+          mode,
+          debtBefore: currentDebt,
+          debtAfter: newDebt,
+          ordersAffected: affectedOrders.length,
+        },
+      });
+
+      const duration = Date.now() - startTime;
+      logAction("RECORD_PAYMENT_SUCCESS", {
+        transactionId: transaction.id,
+        customerId,
+        amount,
+        ordersAffected: affectedOrders.length,
+        duration: `${duration}ms`,
+      });
+
+      res.status(201).json({
+        success: true,
+        data: {
+          transactionId: transaction.id,
+          customerId,
+          customerName: customer.name,
+          amount,
+          mode,
+          debtBefore: currentDebt,
+          debtAfter: newDebt,
+          ordersAffected: affectedOrders,
+          createdAt: transaction.created_at,
+        },
+      });
+    } catch (error) {
+      logAction("RECORD_PAYMENT_ERROR", { error: error.message });
+      console.error("[PAYMENTS] Error:", error);
+      res.status(500).json({ error: "Erreur serveur: " + error.message });
+    }
+  },
+);
+
+// ─────────────────────────────────────────────────────
 // GET /api/payments/history
-// Historique de tous les paiements (Admin uniquement)
-router.get('/history', authenticate, requireAdmin, async (req, res) => {
+// Historique de tous les paiements
+// Accessible par : admin
+// ─────────────────────────────────────────────────────
+router.get("/history", authenticate, authorize(["admin"]), async (req, res) => {
+  logAction("GET_PAYMENT_HISTORY", {
+    userId: req.user.id,
+    query: req.query,
+  });
+
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 50, 100);
     const offset = (page - 1) * limit;
-    
+    const customerId = req.query.customer_id || null;
+    const collectorId = req.query.collector_id || null;
+    const dateFrom = req.query.date_from || null;
+    const dateTo = req.query.date_to || null;
+
+    // Construction de la requête avec filtres
+    let whereClause = "WHERE pt.organization_id = $1::text";
+    const params = [req.user.organization_id];
+    let paramIndex = 2;
+
+    if (customerId) {
+      params.push(customerId);
+      whereClause += ` AND pt.client_id = $${paramIndex++}::text`;
+    }
+
+    if (collectorId) {
+      params.push(collectorId);
+      whereClause += ` AND pt.recorded_by = $${paramIndex++}::text`;
+    }
+
+    if (dateFrom) {
+      params.push(dateFrom);
+      whereClause += ` AND pt.created_at >= $${paramIndex++}`;
+    }
+
+    if (dateTo) {
+      params.push(dateTo);
+      whereClause += ` AND pt.created_at <= $${paramIndex++}`;
+    }
+
     // Compter le total
     const countResult = await pool.query(
-      'SELECT COUNT(*) FROM payment_transactions WHERE organization_id = $1',
-      [req.user.organization_id]
+      `SELECT COUNT(*) FROM payment_transactions pt ${whereClause}`,
+      params,
     );
     const total = parseInt(countResult.rows[0].count);
-    
+
     // Récupérer les transactions
     const result = await pool.query(
       `SELECT 
-        pt.*,
-        c.name as client_name,
-        c.email as client_email,
-        rec.name as recorded_by_name
-       FROM payment_transactions pt
-       JOIN users c ON pt.client_id = c.id
-       LEFT JOIN users rec ON pt.recorded_by = rec.id
-       WHERE pt.organization_id = $1
-       ORDER BY pt.created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [req.user.organization_id, limit, offset]
+        pt.id,
+        pt.amount,
+        pt.payment_type,
+        pt.payment_mode,
+        pt.created_at,
+        pt.notes,
+        pt.orders_affected,
+        c.id as customer_id,
+        c.name as customer_name,
+        c.email as customer_email,
+        rec.id as recorded_by_id,
+        rec.name as recorded_by_name,
+        pt.recorded_by_role
+      FROM payment_transactions pt
+      JOIN users c ON pt.client_id = c.id
+      LEFT JOIN users rec ON pt.recorded_by = rec.id
+      ${whereClause}
+      ORDER BY pt.created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      [...params, limit, offset],
     );
-    
+
+    logAction("GET_PAYMENT_HISTORY_SUCCESS", {
+      count: result.rows.length,
+      total,
+    });
+
     res.json({
       success: true,
-      data: result.rows,
+      data: result.rows.map((row) => ({
+        id: row.id,
+        amount: parseNumber(row.amount),
+        type: row.payment_type,
+        mode: row.payment_mode,
+        date: row.created_at,
+        notes: row.notes,
+        ordersAffected: row.orders_affected,
+        customer: {
+          id: row.customer_id,
+          name: row.customer_name,
+          email: row.customer_email,
+        },
+        recordedBy: {
+          id: row.recorded_by_id,
+          name: row.recorded_by_name,
+          role: row.recorded_by_role,
+        },
+      })),
       pagination: {
         page,
         limit,
         total,
         totalPages: Math.ceil(total / limit),
-        hasMore: page * limit < total
-      }
+        hasMore: page * limit < total,
+      },
     });
   } catch (error) {
-    console.error('Payment history error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    logAction("GET_PAYMENT_HISTORY_ERROR", { error: error.message });
+    console.error("[PAYMENTS] Error:", error);
+    res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
+// ─────────────────────────────────────────────────────
 // GET /api/payments/my-collections
 // Historique des collectes du livreur connecté
-router.get('/my-collections', authenticate, async (req, res) => {
-  try {
-    if (req.user.role !== 'deliverer') {
-      return res.status(403).json({ error: 'Accès réservé aux livreurs' });
-    }
-    
-    const result = await pool.query(
-      `SELECT 
-        pt.*,
-        c.name as client_name,
-        c.email as client_email
-       FROM payment_transactions pt
-       JOIN users c ON pt.client_id = c.id
-       WHERE pt.recorded_by = $1
-       ORDER BY pt.created_at DESC
-       LIMIT 100`,
-      [req.user.id]
-    );
-    
-    res.json({
-      success: true,
-      data: result.rows
-    });
-  } catch (error) {
-    console.error('My collections error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
+// Accessible par : deliverer
+// ─────────────────────────────────────────────────────
+router.get(
+  "/my-collections",
+  authenticate,
+  authorize(["deliverer"]),
+  async (req, res) => {
+    logAction("GET_MY_COLLECTIONS", { userId: req.user.id });
 
-// GET /api/payments/my-payments
-// Historique des paiements du client connecté
-router.get('/my-payments', authenticate, async (req, res) => {
-  try {
-    if (req.user.role !== 'customer') {
-      return res.status(403).json({ error: 'Accès réservé aux clients' });
-    }
-    
-    // Obtenir les détails via la fonction PostgreSQL
-    const result = await pool.query(
-      'SELECT get_client_debt_details($1::UUID) as details',
-      [req.user.id]
-    );
-    
-    res.json({
-      success: true,
-      data: result.rows[0].details
-    });
-  } catch (error) {
-    console.error('My payments error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
+    try {
+      const result = await pool.query(
+        `SELECT 
+        pt.id,
+        pt.amount,
+        pt.payment_mode,
+        pt.created_at,
+        pt.notes,
+        pt.orders_affected,
+        c.name as customer_name,
+        c.phone as customer_phone
+      FROM payment_transactions pt
+      JOIN users c ON pt.client_id = c.id
+      WHERE pt.recorded_by = $1::text
+      ORDER BY pt.created_at DESC
+      LIMIT 100`,
+        [req.user.id],
+      );
 
+      const totalCollected = result.rows.reduce(
+        (sum, row) => sum + parseNumber(row.amount),
+        0,
+      );
+
+      logAction("GET_MY_COLLECTIONS_SUCCESS", {
+        count: result.rows.length,
+        totalCollected,
+      });
+
+      res.json({
+        success: true,
+        data: {
+          collections: result.rows.map((row) => ({
+            id: row.id,
+            amount: parseNumber(row.amount),
+            mode: row.payment_mode,
+            date: row.created_at,
+            notes: row.notes,
+            ordersAffected: row.orders_affected,
+            customer: {
+              name: row.customer_name,
+              phone: row.customer_phone,
+            },
+          })),
+          totalCollected,
+        },
+      });
+    } catch (error) {
+      logAction("GET_MY_COLLECTIONS_ERROR", { error: error.message });
+      console.error("[PAYMENTS] Error:", error);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+);
+
+// ─────────────────────────────────────────────────────
 // GET /api/payments/stats
-// Statistiques des paiements (Admin uniquement)
-router.get('/stats', authenticate, requireAdmin, async (req, res) => {
+// Statistiques des paiements
+// Accessible par : admin
+// ─────────────────────────────────────────────────────
+router.get("/stats", authenticate, authorize(["admin"]), async (req, res) => {
+  logAction("GET_PAYMENT_STATS", { userId: req.user.id });
+
   try {
-    const today = new Date().toISOString().split('T')[0];
-    
     const result = await pool.query(
       `SELECT 
-        COALESCE(SUM(amount), 0) as total_collected_today,
-        COUNT(*) as payments_count_today,
-        (SELECT COALESCE(SUM(amount), 0) FROM payment_transactions 
-         WHERE organization_id = $1 AND DATE(created_at) >= DATE_TRUNC('month', NOW())) as total_collected_month,
-        (SELECT COUNT(DISTINCT client_id) FROM payment_transactions 
-         WHERE organization_id = $1 AND DATE(created_at) = $2) as clients_paid_today
-       FROM payment_transactions
-       WHERE organization_id = $1 AND DATE(created_at) = $2`,
-      [req.user.organization_id, today]
+        COALESCE(SUM(amount) FILTER (WHERE DATE(created_at) = CURRENT_DATE), 0) as collected_today,
+        COUNT(*) FILTER (WHERE DATE(created_at) = CURRENT_DATE) as payments_today,
+        COALESCE(SUM(amount) FILTER (WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)), 0) as collected_month,
+        COUNT(*) FILTER (WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)) as payments_month,
+        COUNT(DISTINCT client_id) FILTER (WHERE DATE(created_at) = CURRENT_DATE) as customers_paid_today
+      FROM payment_transactions
+      WHERE organization_id = $1::text`,
+      [req.user.organization_id],
     );
-    
+
+    const stats = result.rows[0];
+
+    logAction("GET_PAYMENT_STATS_SUCCESS", stats);
+
     res.json({
       success: true,
       data: {
-        total_collected_today: parseFloat(result.rows[0].total_collected_today) || 0,
-        payments_count_today: parseInt(result.rows[0].payments_count_today) || 0,
-        total_collected_month: parseFloat(result.rows[0].total_collected_month) || 0,
-        clients_paid_today: parseInt(result.rows[0].clients_paid_today) || 0
-      }
+        collectedToday: parseNumber(stats.collected_today),
+        paymentsToday: parseInt(stats.payments_today),
+        collectedMonth: parseNumber(stats.collected_month),
+        paymentsMonth: parseInt(stats.payments_month),
+        customersPaidToday: parseInt(stats.customers_paid_today),
+      },
     });
   } catch (error) {
-    console.error('Payment stats error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    logAction("GET_PAYMENT_STATS_ERROR", { error: error.message });
+    console.error("[PAYMENTS] Error:", error);
+    res.status(500).json({ error: "Erreur serveur" });
   }
 });
 

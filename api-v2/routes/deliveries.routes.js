@@ -104,7 +104,7 @@ router.get("/", authenticate, async (req, res) => {
     }
 
     // Compter le total
-    // Si on filtre par customer, il faut faire le JOIN
+    // Si on filtre par cafeteria, il faut faire le JOIN
     const countQuery = customerId
       ? `SELECT COUNT(*) FROM deliveries d LEFT JOIN orders o ON d.order_id = o.id ${whereClause}`
       : `SELECT COUNT(*) FROM deliveries d ${whereClause}`;
@@ -147,7 +147,7 @@ router.get("/", authenticate, async (req, res) => {
         ? {
             ...d.order_data,
             items: d.order_items,
-            customer: { name: d.customer_name, phone: d.customer_phone }, // Basic info
+            customer: { name: d.customer_name, phone: d.customer_phone }, // Uniformisé avec customer
           }
         : null;
 
