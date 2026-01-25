@@ -2,7 +2,11 @@
 FROM node:18-alpine
 
 # Installer les dépendances système
-RUN apk add --no-cache postgresql-client curl
+RUN apk update && \
+  apk add --no-cache \
+  postgresql15-client \
+  curl \
+  bash
 
 # Créer le répertoire de l'app
 WORKDIR /app
