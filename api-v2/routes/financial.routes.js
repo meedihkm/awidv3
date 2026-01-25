@@ -745,4 +745,53 @@ router.get(
   },
 );
 
+// ─────────────────────────────────────────────────────
+// GET /api/financial/payments/my-collections
+// Récupère les paiements collectés par le livreur connecté
+// ─────────────────────────────────────────────────────
+router.get(
+  "/payments/my-collections",
+  authenticate,
+  authorize(["deliverer"]),
+  async (req, res) => {
+    logAction("GET_MY_COLLECTIONS", { userId: req.user.id });
+
+    try {
+      // Récupérer les paiements enregistrés par ce livreur via l'audit
+      const result = await pool.query(
+        `SELECT 
+          al.created_at,
+          al.details->>'customerId' as customer_id,
+          al.details->>'customerName' as client_name,
+          (al.details->>'amount')::numeric as amount,
+          al.details->>'mode' as mode
+        FROM audit_logs al
+        WHERE al.action = 'PAYMENT_RECORDED'
+          AND al.performed_by = $1
+          AND al.organization_id = $2
+          AND DATE(al.created_at) = CURRENT_DATE
+        ORDER BY al.created_at DESC`,
+        [req.user.id, req.user.organization_id],
+      );
+
+      logAction("GET_MY_COLLECTIONS_SUCCESS", { count: result.rows.length });
+
+      res.json({
+        success: true,
+        data: result.rows.map((row) => ({
+          createdAt: row.created_at,
+          customerId: row.customer_id,
+          clientName: row.client_name,
+          amount: parseNumber(row.amount),
+          mode: row.mode,
+        })),
+      });
+    } catch (error) {
+      logAction("GET_MY_COLLECTIONS_ERROR", { error: error.message });
+      console.error("[FINANCIAL] Error:", error);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+);
+
 module.exports = router;

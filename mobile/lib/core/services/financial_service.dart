@@ -126,11 +126,7 @@ class FinancialService {
 
   /// Récupère les collections du livreur connecté
   Future<Map<String, dynamic>> getMyCollections() async {
-    final result = await _apiService.request('GET', '${ApiConstants.baseUrl}/payments/my-collections');
-    final data = result['data'];
-    if (data is Map<String, dynamic>) {
-      return data;
-    }
-    return {};
+    final result = await _apiService.request('GET', '${ApiConstants.baseUrl}/financial/payments/my-collections');
+    return result;
   }
 }
