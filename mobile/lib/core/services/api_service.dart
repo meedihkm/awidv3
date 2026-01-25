@@ -39,6 +39,16 @@ class ApiService {
     return headers;
   }
 
+  // Méthode publique pour les appels API génériques
+  Future<Map<String, dynamic>> request(
+    String method,
+    String url, {
+    Map<String, dynamic>? body,
+    bool includeAuth = true,
+  }) async {
+    return _request(method, url, body: body, includeAuth: includeAuth);
+  }
+
   // Méthode générique avec auto-refresh du token
   Future<Map<String, dynamic>> _request(
     String method,
