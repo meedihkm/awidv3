@@ -29,7 +29,7 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
     setState(() => _isLoading = true);
     try {
       final results = await Future.wait<Map<String, dynamic>>([
-        _apiService.getDebts(),
+        _financialService.getDebts(),
         _financialService.getMyCollections(),
       ]);
 

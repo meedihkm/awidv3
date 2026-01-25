@@ -1,18 +1,22 @@
 // Admin Dashboard - Main navigation
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:fl_chart/fl_chart.dart';
-import '../../../auth/providers/auth_provider.dart';
+
 import '../../../../core/services/api_service.dart';
-import 'orders_page.dart';
-import 'products_page.dart';
-import 'users_page.dart';
+import '../../../../core/services/financial_service.dart';
+import '../../../auth/providers/auth_provider.dart';
+import 'deliverers_map_page.dart';
 import 'deliveries_page.dart';
 import 'financial_page.dart';
-import 'deliverers_map_page.dart';
+import 'orders_page.dart';
+import 'products_page.dart';
 import 'settings_page.dart';
+import 'users_page.dart';
 
 class AdminDashboard extends StatefulWidget {
+  const AdminDashboard({super.key});
+
   @override
   _AdminDashboardState createState() => _AdminDashboardState();
 }
@@ -75,11 +79,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 icon: Icon(Icons.account_circle),
                 itemBuilder: (context) => <PopupMenuEntry<String>>[
                   PopupMenuItem<String>(value: 'name', enabled: false, child: Text('${authProvider.user?['name']}')),
-                  PopupMenuItem<String>(value: 'org', enabled: false, child: Text('${authProvider.user?['organization']['name']}')),
+                  PopupMenuItem<String>(
+                      value: 'org', enabled: false, child: Text('${authProvider.user?['organization']['name']}')),
                   const PopupMenuDivider(),
-                  PopupMenuItem<String>(value: 'logout', child: Row(children: [Icon(Icons.logout, size: 20), SizedBox(width: 8), Text('Déconnexion')])),
+                  PopupMenuItem<String>(
+                      value: 'logout',
+                      child:
+                          Row(children: const [Icon(Icons.logout, size: 20), SizedBox(width: 8), Text('Déconnexion')])),
                 ],
-                onSelected: (value) { if (value == 'logout') authProvider.logout(); },
+                onSelected: (value) {
+                  if (value == 'logout') authProvider.logout();
+                },
               );
             },
           ),
@@ -94,7 +104,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         unselectedItemColor: Colors.grey,
         selectedFontSize: 11,
         unselectedFontSize: 11,
-        items: [
+        items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Accueil'),
           BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Commandes'),
           BottomNavigationBarItem(icon: Icon(Icons.inventory), label: 'Produits'),
@@ -108,19 +118,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   String _getTitle() {
     switch (_currentIndex) {
-      case 1: return 'Commandes';
-      case 2: return 'Produits';
-      case 3: return 'Utilisateurs';
-      case 4: return 'Livraisons';
-      case 5: return 'Finances';
-      default: return 'Admin';
+      case 1:
+        return 'Commandes';
+      case 2:
+        return 'Produits';
+      case 3:
+        return 'Utilisateurs';
+      case 4:
+        return 'Livraisons';
+      case 5:
+        return 'Finances';
+      default:
+        return 'Admin';
     }
   }
 }
 
 class _DashboardHomePage extends StatefulWidget {
+  const _DashboardHomePage({required this.onNavigate});
   final Function(int) onNavigate;
-  _DashboardHomePage({required this.onNavigate});
 
   @override
   _DashboardHomePageState createState() => _DashboardHomePageState();
@@ -128,11 +144,12 @@ class _DashboardHomePage extends StatefulWidget {
 
 class _DashboardHomePageState extends State<_DashboardHomePage> {
   final ApiService _apiService = ApiService();
+  final FinancialService _financialService = FinancialService();
   bool _isLoading = true;
   String? _errorMessage;
   List<dynamic> _allOrders = [];
   List<dynamic> _debts = [];
-  
+
   // Stats calculées
   Map<String, dynamic> _todayStats = {};
   Map<String, dynamic> _weekStats = {};
@@ -148,7 +165,7 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
   Future<void> _loadDashboardData() async {
     try {
       final ordersRes = await _apiService.getOrders();
-      final debtsRes = await _apiService.getDebts();
+      final debtsRes = await _financialService.getDebts();
 
       if (mounted) {
         _allOrders = ordersRes['data'] ?? [];
@@ -170,7 +187,7 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final weekStart = today.subtract(Duration(days: today.weekday - 1));
-    final monthStart = DateTime(now.year, now.month, 1);
+    final monthStart = DateTime(now.year, now.month);
 
     // Stats aujourd'hui
     final todayOrders = _filterOrdersByDate(_allOrders, today, today);
@@ -186,7 +203,7 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
 
     // Données pour graphique (7 derniers jours)
     _weeklyData = [];
-    for (int i = 6; i >= 0; i--) {
+    for (var i = 6; i >= 0; i--) {
       final day = today.subtract(Duration(days: i));
       final dayOrders = _filterOrdersByDate(_allOrders, day, day);
       final stats = _computeStats(dayOrders);
@@ -210,9 +227,9 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
   Map<String, dynamic> _computeStats(List<dynamic> orders) {
     double totalCA = 0;
     double collected = 0;
-    int pending = 0, delivered = 0;
+    var pending = 0, delivered = 0;
 
-    for (var o in orders) {
+    for (final o in orders) {
       totalCA += _parseDouble(o['total']);
       collected += _parseDouble(o['amountPaid']);
       if (o['status'] == 'pending') pending++;
@@ -241,7 +258,6 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
     const days = ['', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
     return days[weekday];
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -291,17 +307,25 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
             SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: _buildStatCard('CA', '${_todayStats['totalCA']?.toStringAsFixed(0) ?? 0} DA', Icons.trending_up, Colors.blue)),
+                Expanded(
+                    child: _buildStatCard(
+                        'CA', '${_todayStats['totalCA']?.toStringAsFixed(0) ?? 0} DA', Icons.trending_up, Colors.blue)),
                 SizedBox(width: 10),
-                Expanded(child: _buildStatCard('Commandes', '${_todayStats['orderCount'] ?? 0}', Icons.shopping_bag, Colors.purple)),
+                Expanded(
+                    child: _buildStatCard(
+                        'Commandes', '${_todayStats['orderCount'] ?? 0}', Icons.shopping_bag, Colors.purple)),
               ],
             ),
             SizedBox(height: 10),
             Row(
               children: [
-                Expanded(child: _buildStatCard('En attente', '${_todayStats['pending'] ?? 0}', Icons.hourglass_empty, Colors.orange)),
+                Expanded(
+                    child: _buildStatCard(
+                        'En attente', '${_todayStats['pending'] ?? 0}', Icons.hourglass_empty, Colors.orange)),
                 SizedBox(width: 10),
-                Expanded(child: _buildStatCard('Livrées', '${_todayStats['delivered'] ?? 0}', Icons.check_circle, Colors.green)),
+                Expanded(
+                    child: _buildStatCard(
+                        'Livrées', '${_todayStats['delivered'] ?? 0}', Icons.check_circle, Colors.green)),
               ],
             ),
 
@@ -360,7 +384,8 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.7)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: LinearGradient(
+            colors: [color, color.withValues(alpha: 0.7)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8, offset: Offset(0, 4))],
       ),
@@ -386,7 +411,7 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
     }
 
     final maxCA = _weeklyData.map((d) => d['ca'] as double).reduce((a, b) => a > b ? a : b);
-    final double maxY = maxCA > 0 ? maxCA * 1.2 : 1000.0;
+    final maxY = maxCA > 0 ? maxCA * 1.2 : 1000.0;
 
     return Container(
       height: 220,
@@ -403,12 +428,12 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
           barTouchData: BarTouchData(
             touchTooltipData: BarTouchTooltipData(
               getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                return BarTooltipItem('${rod.toY.toStringAsFixed(0)} DA', TextStyle(color: Colors.white, fontWeight: FontWeight.bold));
+                return BarTooltipItem(
+                    '${rod.toY.toStringAsFixed(0)} DA', TextStyle(color: Colors.white, fontWeight: FontWeight.bold));
               },
             ),
           ),
           titlesData: FlTitlesData(
-            show: true,
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
@@ -425,9 +450,9 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
                 reservedSize: 30,
               ),
             ),
-            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: AxisTitles(sideTitles: SideTitles()),
+            topTitles: AxisTitles(sideTitles: SideTitles()),
+            rightTitles: AxisTitles(sideTitles: SideTitles()),
           ),
           borderData: FlBorderData(show: false),
           gridData: FlGridData(show: false),
@@ -482,14 +507,15 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
             ],
           ),
           SizedBox(height: 12),
-          Text('${stats['totalCA']?.toStringAsFixed(0) ?? 0} DA', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text('${stats['totalCA']?.toStringAsFixed(0) ?? 0} DA',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           Text('${stats['orderCount'] ?? 0} commandes', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
           SizedBox(height: 8),
           Row(
             children: [
-              _buildMiniStat('Collecté', '${((stats['collected'] ?? 0) as double).toStringAsFixed(0)}', Colors.green),
+              _buildMiniStat('Collecté', ((stats['collected'] ?? 0) as double).toStringAsFixed(0), Colors.green),
               SizedBox(width: 8),
-              _buildMiniStat('Impayé', '${((stats['unpaid'] ?? 0) as double).toStringAsFixed(0)}', Colors.red),
+              _buildMiniStat('Impayé', ((stats['unpaid'] ?? 0) as double).toStringAsFixed(0), Colors.red),
             ],
           ),
         ],
@@ -512,10 +538,9 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
     );
   }
 
-
   Widget _buildPendingOrdersPreview() {
     final pendingOrders = _allOrders.where((o) => o['status'] == 'pending').take(3).toList();
-    
+
     if (pendingOrders.isEmpty) {
       return Container(
         padding: EdgeInsets.all(20),
@@ -534,19 +559,20 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
     return Column(
       children: [
         ...pendingOrders.map((order) => Card(
-          margin: EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.orange.shade100,
-              child: Icon(Icons.shopping_bag, color: Colors.orange),
-            ),
-            title: Text(order['customer']?['name'] ?? 'Client', style: TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text('${(order['items'] as List?)?.length ?? 0} articles'),
-            trailing: Text('${_parseDouble(order['total']).toStringAsFixed(0)} DA', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
-            onTap: () => widget.onNavigate(1),
-          ),
-        )),
+              margin: EdgeInsets.only(bottom: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.orange.shade100,
+                  child: Icon(Icons.shopping_bag, color: Colors.orange),
+                ),
+                title: Text(order['customer']?['name'] ?? 'Client', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text('${(order['items'] as List?)?.length ?? 0} articles'),
+                trailing: Text('${_parseDouble(order['total']).toStringAsFixed(0)} DA',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
+                onTap: () => widget.onNavigate(1),
+              ),
+            )),
         if (_allOrders.where((o) => o['status'] == 'pending').length > 3)
           TextButton(
             onPressed: () => widget.onNavigate(1),
@@ -558,7 +584,7 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
 
   Widget _buildDebtsPreview() {
     final totalDebt = _debts.fold<double>(0, (sum, d) => sum + _parseDouble(d['total_debt']));
-    
+
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -576,35 +602,40 @@ class _DashboardHomePageState extends State<_DashboardHomePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Total des dettes', style: TextStyle(color: Colors.white.withValues(alpha: 0.9))),
-                    Text('${totalDebt.toStringAsFixed(0)} DA', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                    Text('${totalDebt.toStringAsFixed(0)} DA',
+                        style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
+                decoration:
+                    BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
                 child: Text('${_debts.length} clients', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
           SizedBox(height: 12),
           ...(_debts.take(2).map((d) => Container(
-            margin: EdgeInsets.only(top: 8),
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: Colors.white.withValues(alpha: 0.3),
-                  radius: 16,
-                  child: Text((d['name'] ?? 'C')[0], style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                margin: EdgeInsets.only(top: 8),
+                padding: EdgeInsets.all(12),
+                decoration:
+                    BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.white.withValues(alpha: 0.3),
+                      radius: 16,
+                      child: Text((d['name'] ?? 'C')[0],
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(child: Text(d['name'] ?? 'Client', style: TextStyle(color: Colors.white))),
+                    Text('${_parseDouble(d['total_debt']).toStringAsFixed(0)} DA',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ],
                 ),
-                SizedBox(width: 10),
-                Expanded(child: Text(d['name'] ?? 'Client', style: TextStyle(color: Colors.white))),
-                Text('${_parseDouble(d['total_debt']).toStringAsFixed(0)} DA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ))),
+              ))),
           SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
