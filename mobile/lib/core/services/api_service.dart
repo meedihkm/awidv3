@@ -569,24 +569,21 @@ class ApiService {
     return _request('GET', '${ApiConstants.baseUrl}/recurring-orders/admin/all$query');
   }
 
-  // ===== PAYMENT SERVICE (Phase 1) =====
-  Future<Map<String, dynamic>> getClientDebtDetails(String clientId) async =>
-      _request('GET', '${ApiConstants.baseUrl}/payments/client/$clientId/details');
+  // ===== LEGACY METHODS (Déprécié - À supprimer après migration) =====
 
-  Future<Map<String, dynamic>> getMyCollections() async =>
-      _request('GET', '${ApiConstants.baseUrl}/payments/my-collections');
+  @Deprecated('Utiliser getCustomerDebt() à la place')
+  Future<Map<String, dynamic>> getClientDebtDetails(String clientId) async => getCustomerDebt(clientId);
 
-  Future<Map<String, dynamic>> getMyPayments() async => _request('GET', '${ApiConstants.baseUrl}/payments/my-payments');
+  @Deprecated('Utiliser getMyCollections() (déjà défini ci-dessus)')
+  Future<Map<String, dynamic>> getMyPayments() async => getCustomerDebt('me'); // Cette route n'existe plus
 
-  Future<Map<String, dynamic>> getPaymentStats() async => _request('GET', '${ApiConstants.baseUrl}/payments/stats');
-
-  Future<Map<String, dynamic>> getPaymentHistory({
-    int page = 1,
-    int limit = 50,
-  }) async =>
-      _request('GET', '${ApiConstants.baseUrl}/payments/history?page=$page&limit=$limit');
-
-  // Alias for legacy or mismatched calls
-  Future<Map<String, dynamic>> recordPayment(Map<String, dynamic> data) async =>
-      _request('POST', '${ApiConstants.baseUrl}/payments/record', body: data);
+  @Deprecated('Utiliser recordPayment() avec paramètres nommés')
+  Future<Map<String, dynamic>> recordPaymentLegacy(Map<String, dynamic> data) async => recordPayment(
+        customerId: data['customerId'] ?? data['clientId'],
+        amount: (data['amount'] as num).toDouble(),
+        mode: data['mode'] ?? 'cash',
+        deliveryId: data['deliveryId'],
+        targetOrders: data['targetOrders'] != null ? List<String>.from(data['targetOrders']) : null,
+        notes: data['notes'],
+      );
 }

@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/models/debt_model.dart';
 import '../../../../core/services/api_service.dart';
 
 class RecordDebtPaymentModal extends StatefulWidget {
+  const RecordDebtPaymentModal({
+    required this.debt,
+    required this.onSuccess,
+    super.key,
+    this.apiService,
+  });
   final CustomerDebt debt;
   final Function() onSuccess;
   final ApiService? apiService;
-
-  const RecordDebtPaymentModal({
-    Key? key, 
-    required this.debt, 
-    required this.onSuccess,
-    this.apiService,
-  }) : super(key: key);
 
   @override
   _RecordDebtPaymentModalState createState() => _RecordDebtPaymentModalState();
@@ -41,22 +41,22 @@ class _RecordDebtPaymentModalState extends State<RecordDebtPaymentModal> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() => _isLoading = true);
-    
+
     try {
       final amount = double.parse(_amountController.text);
-      await _apiService.recordDebtPayment({
-        'customer_id': widget.debt.customerId,
-        'amount': amount,
-        'payment_type': _paymentType,
-        'note': _noteController.text.trim(),
-      });
-      
+      await _apiService.recordPayment(
+        customerId: widget.debt.customerId,
+        amount: amount,
+        mode: _paymentType,
+        notes: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+      );
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Paiement enregistré avec succès'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Paiement enregistré avec succès'), backgroundColor: Colors.green),
         );
         widget.onSuccess();
       }
@@ -97,10 +97,9 @@ class _RecordDebtPaymentModalState extends State<RecordDebtPaymentModal> {
                 ),
                 SizedBox(height: 8),
                 Text('Client: ${widget.debt.customerName}', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text('Dette actuelle: ${widget.debt.totalDebt.toStringAsFixed(0)} DA', 
-                     style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                Text('Dette actuelle: ${widget.debt.totalDebt.toStringAsFixed(0)} DA',
+                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                 SizedBox(height: 20),
-                
                 TextFormField(
                   controller: _amountController,
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -118,7 +117,6 @@ class _RecordDebtPaymentModalState extends State<RecordDebtPaymentModal> {
                   },
                 ),
                 SizedBox(height: 16),
-                
                 DropdownButtonFormField<String>(
                   initialValue: _paymentType,
                   decoration: InputDecoration(
@@ -126,7 +124,7 @@ class _RecordDebtPaymentModalState extends State<RecordDebtPaymentModal> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     prefixIcon: Icon(Icons.payment),
                   ),
-                  items: [
+                  items: const [
                     DropdownMenuItem(value: 'cash', child: Text('Espèces')),
                     DropdownMenuItem(value: 'check', child: Text('Chèque')),
                     DropdownMenuItem(value: 'transfer', child: Text('Virement')),
@@ -135,7 +133,6 @@ class _RecordDebtPaymentModalState extends State<RecordDebtPaymentModal> {
                   onChanged: (v) => setState(() => _paymentType = v!),
                 ),
                 SizedBox(height: 16),
-                
                 TextFormField(
                   controller: _noteController,
                   decoration: InputDecoration(
@@ -146,7 +143,6 @@ class _RecordDebtPaymentModalState extends State<RecordDebtPaymentModal> {
                   maxLines: 2,
                 ),
                 SizedBox(height: 24),
-                
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -157,9 +153,12 @@ class _RecordDebtPaymentModalState extends State<RecordDebtPaymentModal> {
                       padding: EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: _isLoading 
-                      ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : Text('Enregistrer le paiement', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: _isLoading
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text('Enregistrer le paiement', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
