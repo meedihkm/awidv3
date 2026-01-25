@@ -505,4 +505,244 @@ router.post(
   },
 );
 
+// ─────────────────────────────────────────────────────
+// GET /api/financial/credit/:customerId
+// Statut crédit d'un client
+// ─────────────────────────────────────────────────────
+router.get(
+  "/credit/:customerId",
+  authenticate,
+  authorize(["admin", "deliverer"]),
+  async (req, res) => {
+    logAction("GET_CREDIT_STATUS", { customerId: req.params.customerId });
+
+    try {
+      const { customerId } = req.params;
+
+      // Récupérer limite et dette
+      const result = await pool.query(
+        `SELECT 
+        u.id,
+        u.name,
+        u.email,
+        u.phone,
+        u.credit_limit,
+        COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) as current_debt
+      FROM users u
+      LEFT JOIN orders o ON u.id = o.customer_id 
+        AND o.organization_id = $2 
+        AND o.total > o.amount_paid
+        AND o.status != 'cancelled'
+      WHERE u.id = $1 AND u.organization_id = $2
+      GROUP BY u.id, u.name, u.email, u.phone, u.credit_limit`,
+        [customerId, req.user.organization_id],
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Client non trouvé" });
+      }
+
+      const row = result.rows[0];
+      const debt = parseNumber(row.current_debt);
+      const limit = parseNumber(row.credit_limit);
+
+      let status = "ok";
+      let level = null;
+      let ratio = 0;
+
+      if (limit > 0) {
+        ratio = Math.round((debt / limit) * 100);
+
+        if (ratio >= 120) {
+          status = "critical";
+          level = "urgent";
+        } else if (ratio >= 100) {
+          status = "over_limit";
+          level = "warning";
+        } else if (ratio >= 80) {
+          status = "approaching";
+          level = "info";
+        }
+      } else {
+        status = "no_limit";
+      }
+
+      logAction("GET_CREDIT_STATUS_SUCCESS", { customerId, status, ratio });
+
+      res.json({
+        success: true,
+        data: {
+          customer: {
+            id: row.id,
+            name: row.name,
+            email: row.email,
+            phone: row.phone,
+          },
+          credit: {
+            limit,
+            used: debt,
+            available: Math.max(0, limit - debt),
+            ratio,
+            status,
+            level,
+          },
+        },
+      });
+    } catch (error) {
+      logAction("GET_CREDIT_STATUS_ERROR", { error: error.message });
+      console.error("[FINANCIAL] Error:", error);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+);
+
+// ─────────────────────────────────────────────────────
+// PUT /api/financial/credit/:customerId/limit
+// Modifier la limite de crédit
+// ─────────────────────────────────────────────────────
+router.put(
+  "/credit/:customerId/limit",
+  authenticate,
+  authorize(["admin"]),
+  async (req, res) => {
+    logAction("UPDATE_CREDIT_LIMIT", {
+      customerId: req.params.customerId,
+      body: req.body,
+    });
+
+    try {
+      const { customerId } = req.params;
+      const { limit } = req.body;
+
+      if (limit === undefined || limit < 0) {
+        return res.status(400).json({ error: "Limite invalide" });
+      }
+
+      // Vérifier que le client existe
+      const customerCheck = await pool.query(
+        "SELECT id, name FROM users WHERE id = $1 AND organization_id = $2 AND role = 'customer'",
+        [customerId, req.user.organization_id],
+      );
+
+      if (customerCheck.rows.length === 0) {
+        return res.status(404).json({ error: "Client non trouvé" });
+      }
+
+      // Mettre à jour la limite
+      await pool.query(
+        "UPDATE users SET credit_limit = $1, updated_at = NOW() WHERE id = $2",
+        [limit, customerId],
+      );
+
+      // Logger l'audit
+      await logAudit({
+        action: "CREDIT_LIMIT_UPDATED",
+        performedBy: req.user.id,
+        organizationId: req.user.organization_id,
+        targetType: "customer",
+        targetId: customerId,
+        details: { newLimit: limit },
+      });
+
+      logAction("UPDATE_CREDIT_LIMIT_SUCCESS", { customerId, limit });
+
+      res.json({
+        success: true,
+        data: {
+          customerId,
+          customerName: customerCheck.rows[0].name,
+          newLimit: limit,
+        },
+      });
+    } catch (error) {
+      logAction("UPDATE_CREDIT_LIMIT_ERROR", { error: error.message });
+      console.error("[FINANCIAL] Error:", error);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+);
+
+// ─────────────────────────────────────────────────────
+// GET /api/financial/credit/alerts
+// Liste des clients en alerte crédit
+// ─────────────────────────────────────────────────────
+router.get(
+  "/credit/alerts",
+  authenticate,
+  authorize(["admin"]),
+  async (req, res) => {
+    logAction("GET_CREDIT_ALERTS", { userId: req.user.id });
+
+    try {
+      const result = await pool.query(
+        `SELECT 
+        u.id,
+        u.name,
+        u.email,
+        u.phone,
+        u.credit_limit,
+        COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) as current_debt,
+        ROUND((COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) / NULLIF(u.credit_limit, 0)) * 100) as ratio
+      FROM users u
+      LEFT JOIN orders o ON u.id = o.customer_id 
+        AND o.organization_id = $1 
+        AND o.total > o.amount_paid
+        AND o.status != 'cancelled'
+      WHERE u.organization_id = $1 
+        AND u.role = 'customer'
+        AND u.credit_limit > 0
+      GROUP BY u.id, u.name, u.email, u.phone, u.credit_limit
+      HAVING COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) >= (u.credit_limit * 0.8)
+      ORDER BY ratio DESC`,
+        [req.user.organization_id],
+      );
+
+      const alerts = result.rows.map((row) => {
+        const debt = parseNumber(row.current_debt);
+        const limit = parseNumber(row.credit_limit);
+        const ratio = parseInt(row.ratio) || 0;
+
+        let status = "approaching";
+        let level = "info";
+
+        if (ratio >= 120) {
+          status = "critical";
+          level = "urgent";
+        } else if (ratio >= 100) {
+          status = "over_limit";
+          level = "warning";
+        }
+
+        return {
+          customer: {
+            id: row.id,
+            name: row.name,
+            email: row.email,
+            phone: row.phone,
+          },
+          credit: {
+            limit,
+            used: debt,
+            available: Math.max(0, limit - debt),
+            ratio,
+            status,
+            level,
+          },
+        };
+      });
+
+      logAction("GET_CREDIT_ALERTS_SUCCESS", { count: alerts.length });
+
+      res.json({
+        success: true,
+        data: alerts,
+      });
+    } catch (error) {
+      logAction("GET_CREDIT_ALERTS_ERROR", { error: error.message });
+      console.error("[FINANCIAL] Error:", error);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+);
+
 module.exports = router;

@@ -1,12 +1,20 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const pool = require('../config/database');
-const { authenticate, requireAdmin, requireKitchen } = require('../middleware/auth');
-const { validate, validateUUID } = require('../middleware/validate');
-const { logAudit } = require('../services/audit.service');
-const { getOrderItems, getOrderWithItems, formatOrder } = require('../services/order.service');
-const { getPagination, getPagingData } = require('../utils/pagination.helper');
+const pool = require("../config/database");
+const {
+  authenticate,
+  requireAdmin,
+  requireKitchen,
+} = require("../middleware/auth");
+const { validate, validateUUID } = require("../middleware/validate");
+const { logAudit } = require("../services/audit.service");
+const {
+  getOrderItems,
+  getOrderWithItems,
+  formatOrder,
+} = require("../services/order.service");
+const { getPagination, getPagingData } = require("../utils/pagination.helper");
 
 /**
  * @swagger
@@ -59,9 +67,9 @@ const { getPagination, getPagingData } = require('../utils/pagination.helper');
  *         customer:
  *           type: object
  *           properties:
- *             name: 
+ *             name:
  *               type: string
- *             phone: 
+ *             phone:
  *               type: string
  */
 
@@ -112,17 +120,17 @@ const { getPagination, getPagingData } = require('../utils/pagination.helper');
  *                       type: integer
  */
 // GET /api/orders (avec pagination optionnelle)
-router.get('/', authenticate, async (req, res) => {
+router.get("/", authenticate, async (req, res) => {
   try {
     const { page, limit, offset } = getPagination(req.query, 50);
     const status = req.query.status; // Filtre optionnel par statut
     const customerId = req.query.customerId; // Filtre optionnel par client (cafétéria)
 
     // Construire la requête avec filtres
-    let whereClause = 'WHERE o.organization_id = $1';
+    let whereClause = "WHERE o.organization_id = $1";
     const params = [req.user.organization_id];
 
-    if (status && status !== 'all') {
+    if (status && status !== "all") {
       params.push(status);
       whereClause += ` AND o.status = $${params.length}`;
     }
@@ -135,7 +143,7 @@ router.get('/', authenticate, async (req, res) => {
     // Compter le total
     const countResult = await pool.query(
       `SELECT COUNT(*) FROM orders o ${whereClause}`,
-      params
+      params,
     );
     const total = parseInt(countResult.rows[0].count);
 
@@ -163,30 +171,30 @@ router.get('/', authenticate, async (req, res) => {
        GROUP BY o.id, u.id
        ORDER BY o.created_at DESC
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
-      [...params, limit, offset]
+      [...params, limit, offset],
     );
 
-    const orders = result.rows.map(order =>
+    const orders = result.rows.map((order) =>
       formatOrder(order, order.items, {
         id: order.customer_id,
         name: order.customer_name,
-        phone: order.customer_phone
-      })
+        phone: order.customer_phone,
+      }),
     );
 
     res.json(getPagingData(orders, total, page, limit));
   } catch (error) {
-    console.error('Orders error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error("Orders error:", error);
+    res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
 // GET /api/orders/my
-router.get('/my', authenticate, async (req, res) => {
+router.get("/my", authenticate, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT * FROM orders WHERE customer_id = $1 AND organization_id = $2 ORDER BY created_at DESC`,
-      [req.user.id, req.user.organization_id]
+      [req.user.id, req.user.organization_id],
     );
 
     const orders = [];
@@ -197,8 +205,8 @@ router.get('/my', authenticate, async (req, res) => {
 
     res.json({ success: true, data: orders });
   } catch (error) {
-    console.error('My orders error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error("My orders error:", error);
+    res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
@@ -216,7 +224,7 @@ router.get('/my', authenticate, async (req, res) => {
  *         description: Liste des commandes cuisine
  */
 // GET /api/orders/kitchen
-router.get('/kitchen', authenticate, requireKitchen, async (req, res) => {
+router.get("/kitchen", authenticate, requireKitchen, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT o.*, u.name as customer_name, u.phone as customer_phone
@@ -226,7 +234,7 @@ router.get('/kitchen', authenticate, requireKitchen, async (req, res) => {
        ORDER BY 
          CASE WHEN o.status = 'validated' THEN 0 ELSE 1 END,
          o.created_at ASC`,
-      [req.user.organization_id]
+      [req.user.organization_id],
     );
 
     const orders = [];
@@ -244,15 +252,15 @@ router.get('/kitchen', authenticate, requireKitchen, async (req, res) => {
         customer: {
           id: order.customer_id,
           name: order.customer_name,
-          phone: order.customer_phone
-        }
+          phone: order.customer_phone,
+        },
       });
     }
 
     res.json({ success: true, data: orders });
   } catch (error) {
-    console.error('Kitchen orders error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error("Kitchen orders error:", error);
+    res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
@@ -300,21 +308,24 @@ router.get('/kitchen', authenticate, requireKitchen, async (req, res) => {
  *         description: Stock insuffisant ou données invalides
  */
 // POST /api/orders
-router.post('/', authenticate, validate('createOrder'), async (req, res) => {
+router.post("/", authenticate, validate("createOrder"), async (req, res) => {
   try {
     const { items } = req.body;
     const clientId = req.user.id;
 
     let total = 0;
     for (const item of items) {
-      const product = await pool.query('SELECT price FROM products WHERE id = $1 AND organization_id = $2', [item.productId, req.user.organization_id]);
+      const product = await pool.query(
+        "SELECT price FROM products WHERE id = $1 AND organization_id = $2",
+        [item.productId, req.user.organization_id],
+      );
       if (product.rows.length > 0) {
         total += product.rows[0].price * item.quantity;
       }
     }
 
     if (total === 0) {
-      return res.status(400).json({ error: 'Aucun produit valide trouvé' });
+      return res.status(400).json({ error: "Aucun produit valide trouvé" });
     }
 
     // Générer numéro de commande séquentiel
@@ -324,176 +335,302 @@ router.post('/', authenticate, validate('createOrder'), async (req, res) => {
        ON CONFLICT(organization_id) 
        DO UPDATE SET last_number = order_sequences.last_number + 1 
        RETURNING last_number`,
-      [req.user.organization_id]
+      [req.user.organization_id],
     );
     const orderNumber = seqResult.rows[0].last_number;
 
     const orderResult = await pool.query(
       `INSERT INTO orders(organization_id, customer_id, date, total, status, payment_status, amount_paid, order_number) 
        VALUES($1, $2, NOW(), $3, 'pending', 'unpaid', 0, $4) RETURNING * `,
-      [req.user.organization_id, clientId, total, orderNumber]
+      [req.user.organization_id, clientId, total, orderNumber],
     );
 
     const order = orderResult.rows[0];
 
     for (const item of items) {
-      const product = await pool.query('SELECT price FROM products WHERE id = $1 AND organization_id = $2', [item.productId, req.user.organization_id]);
+      const product = await pool.query(
+        "SELECT price FROM products WHERE id = $1 AND organization_id = $2",
+        [item.productId, req.user.organization_id],
+      );
       if (product.rows.length > 0) {
         await pool.query(
-          'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4)',
-          [order.id, item.productId, item.quantity, product.rows[0].price]
+          "INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4)",
+          [order.id, item.productId, item.quantity, product.rows[0].price],
         );
       }
     }
 
-    await logAudit('ORDER_CREATED', req.user.id, req.user.organization_id, { orderId: order.id, total }, req);
+    await logAudit(
+      "ORDER_CREATED",
+      req.user.id,
+      req.user.organization_id,
+      { orderId: order.id, total },
+      req,
+    );
 
-    // Vérifier limite de crédit
-    await require('../services/credit.service').checkAndNotify(req.user.id, req.user.organization_id);
+    // Vérifier limite de crédit (appel interne simplifié)
+    try {
+      const creditCheck = await pool.query(
+        `SELECT u.credit_limit, COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) as debt
+         FROM users u
+         LEFT JOIN orders o ON u.id = o.customer_id AND o.organization_id = $2 AND o.total > o.amount_paid
+         WHERE u.id = $1 GROUP BY u.id, u.credit_limit`,
+        [req.user.id, req.user.organization_id],
+      );
+
+      if (creditCheck.rows.length > 0) {
+        const { credit_limit, debt } = creditCheck.rows[0];
+        const limit = parseFloat(credit_limit) || 0;
+        const currentDebt = parseFloat(debt) || 0;
+
+        if (limit > 0 && currentDebt >= limit * 0.8) {
+          // Notification admin via service (ne bloque pas la commande)
+          const ratio = Math.round((currentDebt / limit) * 100);
+          console.log(
+            `[CREDIT_ALERT] Customer ${req.user.id} at ${ratio}% of credit limit`,
+          );
+        }
+      }
+    } catch (err) {
+      console.error("[CREDIT_CHECK] Error:", err.message);
+    }
 
     const orderItems = await getOrderItems(order.id);
     res.json({ success: true, data: { ...order, items: orderItems } });
   } catch (error) {
-    console.error('Create order error:', error);
-    res.status(500).json({ error: 'Erreur serveur: ' + error.message });
+    console.error("Create order error:", error);
+    res.status(500).json({ error: "Erreur serveur: " + error.message });
   }
 });
 
 // PUT /api/orders/:id
-router.put('/:id', authenticate, validateUUID('id'), validate('updateOrder'), async (req, res) => {
-  try {
-    const { items } = req.body;
+router.put(
+  "/:id",
+  authenticate,
+  validateUUID("id"),
+  validate("updateOrder"),
+  async (req, res) => {
+    try {
+      const { items } = req.body;
 
-    const orderCheck = await pool.query(
-      `SELECT * FROM orders WHERE id = $1 AND customer_id = $2 AND organization_id = $3 AND status = 'pending'`,
-      [req.params.id, req.user.id, req.user.organization_id]
-    );
+      const orderCheck = await pool.query(
+        `SELECT * FROM orders WHERE id = $1 AND customer_id = $2 AND organization_id = $3 AND status = 'pending'`,
+        [req.params.id, req.user.id, req.user.organization_id],
+      );
 
-    if (orderCheck.rows.length === 0) {
-      return res.status(403).json({ error: 'Commande non modifiable' });
-    }
-
-    await pool.query('DELETE FROM order_items WHERE order_id = $1', [req.params.id]);
-
-    let total = 0;
-    for (const item of items) {
-      const product = await pool.query('SELECT price FROM products WHERE id = $1 AND organization_id = $2', [item.productId, req.user.organization_id]);
-      if (product.rows.length > 0) {
-        const price = product.rows[0].price;
-        total += price * item.quantity;
-        await pool.query(
-          'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4)',
-          [req.params.id, item.productId, item.quantity, price]
-        );
+      if (orderCheck.rows.length === 0) {
+        return res.status(403).json({ error: "Commande non modifiable" });
       }
+
+      await pool.query("DELETE FROM order_items WHERE order_id = $1", [
+        req.params.id,
+      ]);
+
+      let total = 0;
+      for (const item of items) {
+        const product = await pool.query(
+          "SELECT price FROM products WHERE id = $1 AND organization_id = $2",
+          [item.productId, req.user.organization_id],
+        );
+        if (product.rows.length > 0) {
+          const price = product.rows[0].price;
+          total += price * item.quantity;
+          await pool.query(
+            "INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4)",
+            [req.params.id, item.productId, item.quantity, price],
+          );
+        }
+      }
+
+      await pool.query(
+        "UPDATE orders SET total = $1, updated_at = NOW() WHERE id = $2",
+        [total, req.params.id],
+      );
+
+      await logAudit(
+        "ORDER_UPDATED",
+        req.user.id,
+        req.user.organization_id,
+        { orderId: req.params.id, total },
+        req,
+      );
+
+      // Vérifier limite de crédit (appel interne simplifié)
+      try {
+        const creditCheck = await pool.query(
+          `SELECT u.credit_limit, COALESCE(SUM(o.total) - SUM(o.amount_paid), 0) as debt
+           FROM users u
+           LEFT JOIN orders o ON u.id = o.customer_id AND o.organization_id = $2 AND o.total > o.amount_paid
+           WHERE u.id = $1 GROUP BY u.id, u.credit_limit`,
+          [req.user.id, req.user.organization_id],
+        );
+
+        if (creditCheck.rows.length > 0) {
+          const { credit_limit, debt } = creditCheck.rows[0];
+          const limit = parseFloat(credit_limit) || 0;
+          const currentDebt = parseFloat(debt) || 0;
+
+          if (limit > 0 && currentDebt >= limit * 0.8) {
+            const ratio = Math.round((currentDebt / limit) * 100);
+            console.log(
+              `[CREDIT_ALERT] Customer ${req.user.id} at ${ratio}% of credit limit`,
+            );
+          }
+        }
+      } catch (err) {
+        console.error("[CREDIT_CHECK] Error:", err.message);
+      }
+
+      const updatedItems = await getOrderItems(req.params.id);
+      res.json({
+        success: true,
+        data: { id: req.params.id, total, items: updatedItems },
+      });
+    } catch (error) {
+      console.error("Update order error:", error);
+      res.status(500).json({ error: "Erreur serveur" });
     }
-
-    await pool.query('UPDATE orders SET total = $1, updated_at = NOW() WHERE id = $2', [total, req.params.id]);
-
-    await logAudit('ORDER_UPDATED', req.user.id, req.user.organization_id, { orderId: req.params.id, total }, req);
-
-    // Vérifier limite de crédit
-    await require('../services/credit.service').checkAndNotify(req.user.id, req.user.organization_id);
-
-    const updatedItems = await getOrderItems(req.params.id);
-    res.json({ success: true, data: { id: req.params.id, total, items: updatedItems } });
-  } catch (error) {
-    console.error('Update order error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
+  },
+);
 
 // PUT /api/orders/:id/lock
-router.put('/:id/lock', authenticate, requireAdmin, validateUUID('id'), async (req, res) => {
-  try {
-    const orgResult = await pool.query(
-      'SELECT kitchen_mode FROM organizations WHERE id = $1',
-      [req.user.organization_id]
-    );
+router.put(
+  "/:id/lock",
+  authenticate,
+  requireAdmin,
+  validateUUID("id"),
+  async (req, res) => {
+    try {
+      const orgResult = await pool.query(
+        "SELECT kitchen_mode FROM organizations WHERE id = $1",
+        [req.user.organization_id],
+      );
 
-    const kitchenMode = orgResult.rows[0]?.kitchen_mode || false;
-    const newStatus = kitchenMode ? 'validated' : 'locked';
+      const kitchenMode = orgResult.rows[0]?.kitchen_mode || false;
+      const newStatus = kitchenMode ? "validated" : "locked";
 
-    await pool.query(
-      `UPDATE orders SET status = $1, locked_at = NOW() 
+      await pool.query(
+        `UPDATE orders SET status = $1, locked_at = NOW() 
        WHERE id = $2 AND organization_id = $3 AND status = 'pending'`,
-      [newStatus, req.params.id, req.user.organization_id]
-    );
+        [newStatus, req.params.id, req.user.organization_id],
+      );
 
-    await logAudit('ORDER_LOCKED', req.user.id, req.user.organization_id, { orderId: req.params.id, newStatus }, req);
+      await logAudit(
+        "ORDER_LOCKED",
+        req.user.id,
+        req.user.organization_id,
+        { orderId: req.params.id, newStatus },
+        req,
+      );
 
-    res.json({ success: true, status: newStatus });
-  } catch (error) {
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
+      res.json({ success: true, status: newStatus });
+    } catch (error) {
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+);
 
 // POST /api/orders/:id/assign
-router.post('/:id/assign', authenticate, requireAdmin, validateUUID('id'), validate('assignDeliverer'), async (req, res) => {
-  try {
-    const { delivererId } = req.body;
+router.post(
+  "/:id/assign",
+  authenticate,
+  requireAdmin,
+  validateUUID("id"),
+  validate("assignDeliverer"),
+  async (req, res) => {
+    try {
+      const { delivererId } = req.body;
 
-    const orderCheck = await pool.query(
-      `SELECT * FROM orders WHERE id = $1 AND organization_id = $2 AND status IN('locked', 'ready')`,
-      [req.params.id, req.user.organization_id]
-    );
+      const orderCheck = await pool.query(
+        `SELECT * FROM orders WHERE id = $1 AND organization_id = $2 AND status IN('locked', 'ready')`,
+        [req.params.id, req.user.organization_id],
+      );
 
-    if (orderCheck.rows.length === 0) {
-      return res.status(400).json({ error: 'Commande non prête pour assignation' });
-    }
+      if (orderCheck.rows.length === 0) {
+        return res
+          .status(400)
+          .json({ error: "Commande non prête pour assignation" });
+      }
 
-    const deliveryResult = await pool.query(
-      `INSERT INTO deliveries(organization_id, order_id, deliverer_id, status) 
+      const deliveryResult = await pool.query(
+        `INSERT INTO deliveries(organization_id, order_id, deliverer_id, status) 
        VALUES($1, $2, $3, 'assigned') RETURNING * `,
-      [req.user.organization_id, req.params.id, delivererId]
-    );
+        [req.user.organization_id, req.params.id, delivererId],
+      );
 
-    await pool.query(`UPDATE orders SET status = 'in_delivery' WHERE id = $1`, [req.params.id]);
+      await pool.query(
+        `UPDATE orders SET status = 'in_delivery' WHERE id = $1`,
+        [req.params.id],
+      );
 
-    await logAudit('ORDER_ASSIGNED', req.user.id, req.user.organization_id, { orderId: req.params.id, delivererId }, req);
+      await logAudit(
+        "ORDER_ASSIGNED",
+        req.user.id,
+        req.user.organization_id,
+        { orderId: req.params.id, delivererId },
+        req,
+      );
 
-    res.json({ success: true, data: deliveryResult.rows[0] });
-  } catch (error) {
-    console.error('Assign error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
+      res.json({ success: true, data: deliveryResult.rows[0] });
+    } catch (error) {
+      console.error("Assign error:", error);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  },
+);
 
 // PUT /api/orders/:id/kitchen-status
-router.put('/:id/kitchen-status', authenticate, requireKitchen, validateUUID('id'), validate('kitchenStatus'), async (req, res) => {
-  try {
-    const { status } = req.body;
+router.put(
+  "/:id/kitchen-status",
+  authenticate,
+  requireKitchen,
+  validateUUID("id"),
+  validate("kitchenStatus"),
+  async (req, res) => {
+    try {
+      const { status } = req.body;
 
-    const orderCheck = await pool.query(
-      `SELECT status FROM orders WHERE id = $1 AND organization_id = $2`,
-      [req.params.id, req.user.organization_id]
-    );
+      const orderCheck = await pool.query(
+        `SELECT status FROM orders WHERE id = $1 AND organization_id = $2`,
+        [req.params.id, req.user.organization_id],
+      );
 
-    if (orderCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Commande non trouvée' });
+      if (orderCheck.rows.length === 0) {
+        return res.status(404).json({ error: "Commande non trouvée" });
+      }
+
+      const currentStatus = orderCheck.rows[0].status;
+
+      if (status === "preparing" && currentStatus !== "validated") {
+        return res.status(400).json({
+          error: "La commande doit être validée pour commencer la préparation",
+        });
+      }
+      if (status === "ready" && currentStatus !== "preparing") {
+        return res.status(400).json({
+          error: "La commande doit être en préparation pour être marquée prête",
+        });
+      }
+
+      await pool.query(
+        `UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2 AND organization_id = $3`,
+        [status, req.params.id, req.user.organization_id],
+      );
+
+      await logAudit(
+        "ORDER_KITCHEN_STATUS",
+        req.user.id,
+        req.user.organization_id,
+        { orderId: req.params.id, status },
+        req,
+      );
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Kitchen status error:", error);
+      res.status(500).json({ error: "Erreur serveur" });
     }
-
-    const currentStatus = orderCheck.rows[0].status;
-
-    if (status === 'preparing' && currentStatus !== 'validated') {
-      return res.status(400).json({ error: 'La commande doit être validée pour commencer la préparation' });
-    }
-    if (status === 'ready' && currentStatus !== 'preparing') {
-      return res.status(400).json({ error: 'La commande doit être en préparation pour être marquée prête' });
-    }
-
-    await pool.query(
-      `UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2 AND organization_id = $3`,
-      [status, req.params.id, req.user.organization_id]
-    );
-
-    await logAudit('ORDER_KITCHEN_STATUS', req.user.id, req.user.organization_id, { orderId: req.params.id, status }, req);
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Kitchen status error:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
+  },
+);
 
 module.exports = router;

@@ -94,4 +94,32 @@ class FinancialService {
       },
     );
   }
+
+  /// Récupère le statut crédit d'un client
+  Future<Map<String, dynamic>> getCreditStatus(String customerId) async {
+    return await _apiService.request(
+      'GET',
+      '/financial/credit/$customerId',
+    );
+  }
+
+  /// Modifie la limite de crédit d'un client
+  Future<Map<String, dynamic>> updateCreditLimit({
+    required String customerId,
+    required double limit,
+  }) async {
+    return await _apiService.request(
+      'PUT',
+      '/financial/credit/$customerId/limit',
+      body: {'limit': limit},
+    );
+  }
+
+  /// Récupère la liste des alertes crédit
+  Future<Map<String, dynamic>> getCreditAlerts() async {
+    return await _apiService.request(
+      'GET',
+      '/financial/credit/alerts',
+    );
+  }
 }
