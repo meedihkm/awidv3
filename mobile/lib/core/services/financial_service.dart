@@ -28,7 +28,7 @@ class FinancialService {
     final queryString =
         queryParams.isEmpty ? '' : '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
 
-    return await _apiService._request(
+    return _apiService.request(
       'GET',
       '${ApiConstants.baseUrl}/financial/overview$queryString',
     );
@@ -61,7 +61,7 @@ class FinancialService {
 
     final queryString = '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
 
-    return await _apiService._request(
+    return _apiService.request(
       'GET',
       '${ApiConstants.baseUrl}/financial/debts$queryString',
     );
@@ -69,7 +69,7 @@ class FinancialService {
 
   /// Récupère le détail de la dette d'un client
   Future<Map<String, dynamic>> getCustomerDebt(String customerId) async {
-    return await _apiService._request(
+    return _apiService.request(
       'GET',
       '${ApiConstants.baseUrl}/financial/debts/$customerId',
     );
@@ -83,7 +83,7 @@ class FinancialService {
     String? notes,
     List<String>? targetOrders,
   }) async {
-    return await _apiService._request(
+    return _apiService.request(
       'POST',
       '${ApiConstants.baseUrl}/financial/payments',
       body: {
@@ -98,7 +98,7 @@ class FinancialService {
 
   /// Récupère le statut crédit d'un client
   Future<Map<String, dynamic>> getCreditStatus(String customerId) async {
-    return await _apiService._request(
+    return _apiService.request(
       'GET',
       '${ApiConstants.baseUrl}/financial/credit/$customerId',
     );
@@ -109,7 +109,7 @@ class FinancialService {
     required String customerId,
     required double limit,
   }) async {
-    return await _apiService._request(
+    return _apiService.request(
       'PUT',
       '${ApiConstants.baseUrl}/financial/credit/$customerId/limit',
       body: {'limit': limit},
@@ -118,7 +118,7 @@ class FinancialService {
 
   /// Récupère la liste des alertes crédit
   Future<Map<String, dynamic>> getCreditAlerts() async {
-    return await _apiService._request(
+    return _apiService.request(
       'GET',
       '${ApiConstants.baseUrl}/financial/credit/alerts',
     );
@@ -126,7 +126,11 @@ class FinancialService {
 
   /// Récupère les collections du livreur connecté
   Future<Map<String, dynamic>> getMyCollections() async {
-    final result = await _apiService._request('GET', '${ApiConstants.baseUrl}/payments/my-collections');
-    return result['data'] ?? {};
+    final result = await _apiService.request('GET', '${ApiConstants.baseUrl}/payments/my-collections');
+    final data = result['data'];
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+    return {};
   }
 }

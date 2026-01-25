@@ -51,7 +51,8 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
   Future<void> _showCollectDebtDialog(Map<String, dynamic> client) async {
     final amountController = TextEditingController();
     final notesController = TextEditingController();
-    final debt = (client['debt'] ?? 0).toDouble();
+    final debtValue = client['debt'];
+    final debt = (debtValue is num) ? debtValue.toDouble() : 0.0;
 
     amountController.text = debt.toStringAsFixed(0);
 
@@ -136,7 +137,6 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
         final paymentResult = await _financialService.recordPayment(
           customerId: client['id'] as String,
           amount: amount,
-          mode: 'cash',
           notes: notesController.text.isNotEmpty ? notesController.text : 'Collecte de dette',
         );
 
