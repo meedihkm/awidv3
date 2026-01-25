@@ -330,10 +330,10 @@ ORDER BY total_debt DESC NULLS LAST;
 -- FIN DU SCRIPT
 -- ============================================
 
-DO $ 
+DO $$ 
 BEGIN
     RAISE NOTICE '✅ Script de correction des incohérences terminé!';
     RAISE NOTICE '📊 Vérifiez les résultats ci-dessus';
     RAISE NOTICE '💡 Les dettes ont été recalculées automatiquement';
-    RAISE NOTICE '🔄 Redémarrez l\'application pour voir les changements';
-END $;
+    RAISE NOTICE '🔄 Redémarrez l''application pour voir les changements';
+END $$;

@@ -20,11 +20,10 @@ const ordersRoutes = require("./routes/orders.routes");
 const deliveriesRoutes = require("./routes/deliveries.routes");
 const organizationRoutes = require("./routes/organization.routes");
 const superAdminRoutes = require("./routes/superAdmin.routes");
-const debtsRoutes = require("./routes/debts.routes"); // Refactorisé
 const packagingRoutes = require("./routes/packaging.routes");
-const recurringOrdersRoutes = require("./routes/recurring-orders.routes"); // Refactorisé
+const recurringOrdersRoutes = require("./routes/recurring-orders.routes");
 const favoritesRoutes = require("./routes/favorites.routes");
-const paymentsRoutes = require("./routes/payments.routes"); // Refactorisé
+const financialRoutes = require("./routes/financial.routes"); // Route unifiée finances
 const notificationsRoutes = require("./routes/notifications.routes");
 
 const { initSentry, getHandlers } = require("./config/sentry");
@@ -149,11 +148,7 @@ app.use("/api/deliverers", deliveriesRoutes); // Alias pour compatibilité
 
 // Routes d'organisation et finances
 app.use("/api/organization", organizationRoutes);
-app.use("/api/financial", organizationRoutes); // Routes financières dans organization
-
-// Routes de gestion des dettes et paiements (Refactorisées)
-app.use("/api/debts", debtsRoutes); // Nouvelle route refactorisée
-app.use("/api/payments", paymentsRoutes); // Nouvelle route refactorisée
+app.use("/api/financial", financialRoutes); // Route unifiée finances (overview, debts, payments)
 
 // Routes de gestion des consignes
 app.use("/api/packaging", packagingRoutes);
