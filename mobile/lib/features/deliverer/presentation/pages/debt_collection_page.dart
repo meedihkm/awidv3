@@ -28,21 +28,23 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final results = await Future.wait([
+      final results = await Future.wait<Map<String, dynamic>>([
         _apiService.getDebts(),
-        _paymentService.getMyCollections(),
+        _financialService.getMyCollections(),
       ]);
 
       setState(() {
-        _clientsWithDebts = results[0]['data'] ?? [];
-        _myCollections = results[1]['data'] ?? [];
+        _clientsWithDebts = (results[0]['data'] as List?) ?? [];
+        _myCollections = (results[1]['data'] as List?) ?? [];
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: ${e.toString()}'), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: ${e.toString()}'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -131,21 +133,25 @@ class _DebtCollectionPageState extends State<DebtCollectionPage> {
       }
 
       try {
-        final paymentResult = await _paymentService.recordPayment(
-          clientId: client['id'],
+        final paymentResult = await _financialService.recordPayment(
+          customerId: client['id'] as String,
           amount: amount,
-          mode: 'auto',
+          mode: 'cash',
           notes: notesController.text.isNotEmpty ? notesController.text : 'Collecte de dette',
         );
 
         if (paymentResult['success'] == true) {
-          _showPaymentResult(paymentResult['data']);
-          _loadData(); // Rafraîchir les données
+          _showPaymentResult(paymentResult['data'] as Map<String, dynamic>);
+          if (mounted) {
+            await _loadData();
+          }
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: ${e.toString()}'), backgroundColor: Colors.red),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erreur: ${e.toString()}'), backgroundColor: Colors.red),
+          );
+        }
       }
     }
 

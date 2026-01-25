@@ -3,6 +3,7 @@
 // Consomme l'API /api/financial/*
 // =====================================================
 
+import '../constants/api_constants.dart';
 import 'api_service.dart';
 
 class FinancialService {
@@ -27,9 +28,9 @@ class FinancialService {
     final queryString =
         queryParams.isEmpty ? '' : '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
 
-    return await _apiService.request(
+    return await _apiService._request(
       'GET',
-      '/financial/overview$queryString',
+      '${ApiConstants.baseUrl}/financial/overview$queryString',
     );
   }
 
@@ -60,17 +61,17 @@ class FinancialService {
 
     final queryString = '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
 
-    return await _apiService.request(
+    return await _apiService._request(
       'GET',
-      '/financial/debts$queryString',
+      '${ApiConstants.baseUrl}/financial/debts$queryString',
     );
   }
 
   /// Récupère le détail de la dette d'un client
   Future<Map<String, dynamic>> getCustomerDebt(String customerId) async {
-    return await _apiService.request(
+    return await _apiService._request(
       'GET',
-      '/financial/debts/$customerId',
+      '${ApiConstants.baseUrl}/financial/debts/$customerId',
     );
   }
 
@@ -82,9 +83,9 @@ class FinancialService {
     String? notes,
     List<String>? targetOrders,
   }) async {
-    return await _apiService.request(
+    return await _apiService._request(
       'POST',
-      '/financial/payments',
+      '${ApiConstants.baseUrl}/financial/payments',
       body: {
         'customerId': customerId,
         'amount': amount,
@@ -97,9 +98,9 @@ class FinancialService {
 
   /// Récupère le statut crédit d'un client
   Future<Map<String, dynamic>> getCreditStatus(String customerId) async {
-    return await _apiService.request(
+    return await _apiService._request(
       'GET',
-      '/financial/credit/$customerId',
+      '${ApiConstants.baseUrl}/financial/credit/$customerId',
     );
   }
 
@@ -108,18 +109,24 @@ class FinancialService {
     required String customerId,
     required double limit,
   }) async {
-    return await _apiService.request(
+    return await _apiService._request(
       'PUT',
-      '/financial/credit/$customerId/limit',
+      '${ApiConstants.baseUrl}/financial/credit/$customerId/limit',
       body: {'limit': limit},
     );
   }
 
   /// Récupère la liste des alertes crédit
   Future<Map<String, dynamic>> getCreditAlerts() async {
-    return await _apiService.request(
+    return await _apiService._request(
       'GET',
-      '/financial/credit/alerts',
+      '${ApiConstants.baseUrl}/financial/credit/alerts',
     );
+  }
+
+  /// Récupère les collections du livreur connecté
+  Future<Map<String, dynamic>> getMyCollections() async {
+    final result = await _apiService._request('GET', '${ApiConstants.baseUrl}/payments/my-collections');
+    return result['data'] ?? {};
   }
 }

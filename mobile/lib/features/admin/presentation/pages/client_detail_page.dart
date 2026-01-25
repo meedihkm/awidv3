@@ -29,7 +29,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
   late final ApiService _apiService;
   late final CacheService _cacheService;
   late final SettingsService _settings;
-  late final PaymentService _paymentService;
+  late final FinancialService _financialService;
   late TabController _tabController;
 
   List<dynamic> _orders = [];
@@ -50,7 +50,7 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
     _apiService = widget.apiService ?? ApiService();
     _cacheService = widget.cacheService ?? CacheService();
     _settings = widget.settingsService ?? SettingsService();
-    _paymentService = PaymentService();
+    _financialService = FinancialService();
     _tabController = TabController(length: 4, vsync: this);
     _notesController.text = widget.client['notes'] ?? '';
     _addressController.text = widget.client['address'] ?? '';
@@ -89,45 +89,37 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
     try {
       print('🔍 Loading data for client: ${widget.client['id']}');
 
-      final results = await Future.wait([
-        _apiService.getOrders(customerId: widget.client['id'], limit: 100),
-        _apiService.getDeliveries(customerId: widget.client['id'], limit: 100),
-        _apiService.getCustomerDebt(widget.client['id']),
-        _paymentService.getClientDebtDetails(widget.client['id']),
+      final results = await Future.wait<Map<String, dynamic>>([
+        _apiService.getOrders(customerId: widget.client['id'] as String, limit: 100),
+        _apiService.getDeliveries(customerId: widget.client['id'] as String, limit: 100),
+        _apiService.getCustomerDebt(widget.client['id'] as String),
       ]);
 
       print('📦 Orders response: ${results[0]}');
       print('🚚 Deliveries response: ${results[1]}');
       print('💰 Debt response: ${results[2]}');
-      print('📊 Debt details response: ${results[3]}');
 
-      final clientOrders = (results[0] as Map<String, dynamic>)['data'] as List? ?? [];
-      final clientDeliveries = (results[1] as Map<String, dynamic>)['data'] as List? ?? [];
-      final debtInfo = results[2] as CustomerDebt?;
-      final debtDetails = results[3] as Map<String, dynamic>;
-      final paymentHistory = (debtDetails['data']?['payment_history'] as List?) ?? [];
+      final clientOrders = (results[0]['data'] as List?) ?? [];
+      final clientDeliveries = (results[1]['data'] as List?) ?? [];
+      final debtInfo = results[2];
 
       print('✅ Parsed: ${clientOrders.length} orders, ${clientDeliveries.length} deliveries');
 
-      // Filtering handled by API
-      // final clientOrders = ...
-      // final clientDeliveries = ...
-
       // Mettre en cache
       final history = [
-        ...clientOrders.map((o) => {...o, 'type': 'order'}),
-        ...clientDeliveries.map((d) => {...d, 'type': 'delivery'}),
+        ...clientOrders.map((o) => {...o as Map<String, dynamic>, 'type': 'order'}),
+        ...clientDeliveries.map((d) => {...d as Map<String, dynamic>, 'type': 'delivery'}),
       ];
-      await _cacheService.cacheClientHistory(widget.client['id'], history);
+      await _cacheService.cacheClientHistory(widget.client['id'] as String, history);
 
       setState(() {
         _orders = clientOrders;
         _deliveries = clientDeliveries;
-        _customerDebt = debtInfo;
-        _debtHistory = paymentHistory;
+        _customerDebt = CustomerDebt.fromJson(debtInfo);
+        _debtHistory = [];
         _isLoading = false;
       });
-      _loadPackaging();
+      await _loadPackaging();
     } catch (e) {
       print('❌ Error loading client data: $e');
       setState(() => _isLoading = false);
@@ -262,18 +254,78 @@ class _ClientDetailPageState extends State<ClientDetailPage> with SingleTickerPr
       return;
     }
 
-    showModalBottomSheet(
+    final amountController = TextEditingController();
+    final notesController = TextEditingController();
+    amountController.text = _customerDebt!.totalDebt.toStringAsFixed(0);
+
+    showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => RecordDebtPaymentModal(
-        debt: _customerDebt!,
-        onSuccess: () {
-          _loadClientData();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Paiement enregistré'), backgroundColor: Colors.green),
-          );
-        },
+      builder: (context) => AlertDialog(
+        title: Text('Enregistrer un paiement'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Dette actuelle: ${_customerDebt!.totalDebt.toStringAsFixed(0)} DA',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+            SizedBox(height: 16),
+            TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Montant (DA)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 12),
+            TextField(
+              controller: notesController,
+              decoration: InputDecoration(
+                labelText: 'Note (optionnel)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final amount = double.tryParse(amountController.text);
+              if (amount == null || amount <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Montant invalide'), backgroundColor: Colors.red),
+                );
+                return;
+              }
+
+              try {
+                await _financialService.recordPayment(
+                  customerId: widget.client['id'] as String,
+                  amount: amount,
+                  notes: notesController.text.isNotEmpty ? notesController.text : null,
+                );
+                Navigator.pop(context);
+                await _loadClientData();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Paiement enregistré'), backgroundColor: Colors.green),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF2E7D32)),
+            child: Text('Enregistrer', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
