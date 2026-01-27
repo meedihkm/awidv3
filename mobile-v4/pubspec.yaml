@@ -66,9 +66,9 @@ dev_dependencies:
     sdk: flutter
 
   # Build
-  build_runner: ^2.4.13
-  freezed: ^3.2.3
-  json_serializable: ^6.11.2
+  build_runner: ^2.4.12
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
   riverpod_generator: ^2.6.2
 
   # Linting
