@@ -32,3 +32,10 @@ export const allocatePaymentSchema = z.object({
 export type RecordPaymentInput = z.infer<typeof recordPaymentSchema>;
 export type PaymentQuery = z.infer<typeof paymentQuerySchema>;
 export type AllocatePaymentInput = z.infer<typeof allocatePaymentSchema>;
+
+// Export grouped schemas for convenience
+export const paymentSchemas = {
+  record: recordPaymentSchema,
+  query: paymentQuerySchema,
+  allocate: allocatePaymentSchema,
+};

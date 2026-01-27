@@ -70,3 +70,12 @@ export type UpdateDeliveryStatusInput = z.infer<typeof updateDeliveryStatusSchem
 export type CompleteDeliveryInput = z.infer<typeof completeDeliverySchema>;
 export type UpdateDelivererLocationInput = z.infer<typeof updateDelivererLocationSchema>;
 export type DeliveryQuery = z.infer<typeof deliveryQuerySchema>;
+
+// Export grouped schemas for convenience
+export const deliverySchemas = {
+  create: assignDeliverySchema,
+  updateStatus: updateDeliveryStatusSchema,
+  complete: completeDeliverySchema,
+  recordTracking: updateDelivererLocationSchema,
+  query: deliveryQuerySchema,
+};

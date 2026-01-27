@@ -89,3 +89,12 @@ export type UpdateOrderInput = z.infer<typeof updateOrderSchema>;
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
 export type AssignDelivererInput = z.infer<typeof assignDelivererSchema>;
 export type OrderQuery = z.infer<typeof orderQuerySchema>;
+
+// Export grouped schemas for convenience
+export const orderSchemas = {
+  create: createOrderSchema,
+  update: updateOrderSchema,
+  updateStatus: updateOrderStatusSchema,
+  assignDeliverer: assignDelivererSchema,
+  query: orderQuerySchema,
+};

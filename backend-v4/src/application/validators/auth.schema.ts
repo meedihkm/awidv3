@@ -73,3 +73,13 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+// Export grouped schemas for convenience
+export const authSchemas = {
+  login: loginSchema,
+  register: registerSchema,
+  changePassword: changePasswordSchema,
+  refreshToken: refreshTokenSchema,
+  forgotPassword: forgotPasswordSchema,
+  resetPassword: resetPasswordSchema,
+};
