@@ -22,7 +22,11 @@ COPY package*.json ./
 COPY tsconfig.json ./
 
 # Installer toutes les dépendances
-RUN npm install
+RUN npm install && \
+    echo "=== Vérification TypeScript ===" && \
+    npx tsc --version && \
+    echo "=== Contenu node_modules/.bin ===" && \
+    ls -la node_modules/.bin/ | grep tsc
 
 # Copier le code source
 COPY src ./src
