@@ -22,7 +22,7 @@ COPY package*.json ./
 COPY tsconfig.json ./
 
 # Installer toutes les dépendances
-RUN npm ci
+RUN npm install
 
 # Copier le code source
 COPY src ./src
