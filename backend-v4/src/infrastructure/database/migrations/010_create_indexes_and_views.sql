@@ -1,6 +1,10 @@
 -- Migration 010: Create additional indexes and materialized views
 -- Description: Optimisations de performance et vues matérialisées
 
+-- Activer l'extension pg_trgm si elle n'est pas déjà activée
+-- (nécessaire pour les index gin_trgm_ops)
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+
 -- ============================================================================
 -- INDEXES SUPPLÉMENTAIRES POUR PERFORMANCE
 -- ============================================================================
