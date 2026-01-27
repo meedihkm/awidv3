@@ -138,6 +138,12 @@ class Server {
       await db.connect();
       logger.info('✅ Database connected successfully');
 
+      // Run migrations
+      logger.info('🔄 Running database migrations...');
+      const { runMigrations } = await import('./infrastructure/database/migrate');
+      await runMigrations();
+      logger.info('✅ Migrations completed successfully');
+
       // Connect to Redis
       logger.info('🔌 Connecting to Redis...');
       await redisConnection.connect();
