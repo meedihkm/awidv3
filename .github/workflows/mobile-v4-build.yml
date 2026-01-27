@@ -26,6 +26,8 @@ jobs:
       - name: Build APK
         run: |
           cd mobile-v4
+          flutter clean
+          rm -rf .dart_tool
           flutter pub get
           flutter pub run build_runner build --delete-conflicting-outputs
           flutter build apk --release

@@ -68,7 +68,7 @@ dev_dependencies:
   # Build
   build_runner: ^2.4.13
   freezed: ^3.2.3
-  json_serializable: ^6.8.0
+  json_serializable: ^6.11.2
   riverpod_generator: ^4.0.0+1
 
   # Linting
