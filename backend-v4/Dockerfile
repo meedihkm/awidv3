@@ -24,8 +24,8 @@ RUN npm install
 # Copier le code source
 COPY src ./src
 
-# Compiler TypeScript
-RUN npm run build
+# Compiler TypeScript directement
+RUN npx tsc
 
 # Supprimer les devDependencies après compilation
 RUN npm prune --production
