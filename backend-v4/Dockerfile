@@ -6,10 +6,7 @@ RUN apk add --no-cache \
     postgresql-client \
     curl \
     bash \
-    tzdata \
-    python3 \
-    make \
-    g++
+    tzdata
 
 # Créer un utilisateur non-root
 RUN addgroup -g 1001 -S nodejs && \
@@ -17,21 +14,16 @@ RUN addgroup -g 1001 -S nodejs && \
 
 WORKDIR /app
 
-# Copier les fichiers de dépendances
+# Copier package.json et installer les dépendances
 COPY package.json ./
+
+# Installer les dépendances en production + tsx pour exécuter TypeScript
+RUN npm install --production --legacy-peer-deps && \
+    npm install tsx --legacy-peer-deps
+
+# Copier le code source et la configuration
 COPY tsconfig.json ./
-
-# Installer toutes les dépendances (sans package-lock pour éviter les conflits)
-RUN npm install --legacy-peer-deps && \
-    echo "=== TypeScript installé ===" && \
-    ls -la node_modules/.bin/tsc && \
-    ./node_modules/.bin/tsc --version
-
-# Copier le code source
 COPY src ./src
-
-# Compiler TypeScript
-RUN npm run build 2>&1 || (echo "=== ERREUR DE COMPILATION ===" && cat /tmp/tsc-error.log 2>/dev/null && exit 1)
 
 # Créer les dossiers nécessaires
 RUN mkdir -p uploads logs && \
@@ -47,5 +39,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
-# Démarrer l'application
-CMD ["node", "dist/main.js"]
+# Démarrer l'application avec tsx (exécute TypeScript directement)
+CMD ["npx", "tsx", "src/main.ts"]
