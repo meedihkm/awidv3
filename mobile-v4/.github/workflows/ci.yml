@@ -44,8 +44,14 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
-          cache: true
-          cache-key: 'flutter-mobile-v4-${{ hashFiles(''mobile-v4/pubspec.lock'') }}'
+          cache: false
+      
+      - name: 🧹 Clean Flutter cache
+        run: |
+          flutter clean
+          flutter pub cache repair
+        working-directory: mobile-v4
+        continue-on-error: true
       
       - name: � Geet dependencies
         working-directory: mobile-v4
