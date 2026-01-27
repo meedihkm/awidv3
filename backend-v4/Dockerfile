@@ -24,7 +24,7 @@ FROM node:20-alpine
 
 # Installer les dépendances système
 RUN apk add --no-cache \
-    postgresql15-client \
+    postgresql-client \
     curl \
     bash \
     tzdata
