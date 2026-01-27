@@ -22,13 +22,16 @@ COPY package.json ./
 COPY tsconfig.json ./
 
 # Installer toutes les dépendances (sans package-lock pour éviter les conflits)
-RUN npm install --legacy-peer-deps
+RUN npm install --legacy-peer-deps && \
+    echo "=== TypeScript installé ===" && \
+    ls -la node_modules/.bin/tsc && \
+    ./node_modules/.bin/tsc --version
 
 # Copier le code source
 COPY src ./src
 
 # Compiler TypeScript
-RUN npm run build
+RUN npm run build 2>&1 || (echo "=== ERREUR DE COMPILATION ===" && cat /tmp/tsc-error.log 2>/dev/null && exit 1)
 
 # Créer les dossiers nécessaires
 RUN mkdir -p uploads logs && \
