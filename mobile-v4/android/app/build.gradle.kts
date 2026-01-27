@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.awid_mobile"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "27.2.12479018"
 
     compileOptions {
@@ -24,7 +24,7 @@ android {
     defaultConfig {
         applicationId = "com.awid.mobile"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "4.0.0"
         multiDexEnabled = true
@@ -33,12 +33,8 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
