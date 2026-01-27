@@ -28,10 +28,17 @@ jobs:
       
       - name: 🔍 Verify directory
         run: |
-          echo "Current directory: $(pwd)"
+          echo "=== Current directory ==="
+          pwd
+          echo ""
+          echo "=== Root contents ==="
           ls -la
-          echo "Checking mobile-v4:"
+          echo ""
+          echo "=== mobile-v4 contents ==="
           ls -la mobile-v4
+          echo ""
+          echo "=== mobile-v4/lib exists? ==="
+          test -d mobile-v4/lib && echo "YES" || echo "NO"
       
       - name: ☕ Setup Java
         uses: actions/setup-java@v3
@@ -46,52 +53,51 @@ jobs:
           channel: 'stable'
           cache: false
       
-      - name: 🧹 Clean Flutter cache
+      - name: 📦 Get dependencies
         run: |
-          flutter clean
-          flutter pub cache repair
-        working-directory: mobile-v4
-        continue-on-error: true
+          cd mobile-v4
+          flutter pub get
       
-      - name: � Geet dependencies
-        working-directory: mobile-v4
-        run: flutter pub get
-      
-      - name: � Generate code
-        working-directory: mobile-v4
-        run: flutter pub run build_runner build --delete-conflicting-outputs
+      - name: 🔨 Generate code
+        run: |
+          cd mobile-v4
+          flutter pub run build_runner build --delete-conflicting-outputs
         continue-on-error: true
       
       - name: 🔍 Analyze code
-        working-directory: mobile-v4
-        run: flutter analyze
+        run: |
+          cd mobile-v4
+          flutter analyze
         continue-on-error: true
       
       - name: 🧪 Run tests
-        working-directory: mobile-v4
-        run: flutter test
+        run: |
+          cd mobile-v4
+          flutter test
         continue-on-error: true
       
       - name: 🏗️ Build Debug APK
-        working-directory: mobile-v4
-        run: flutter build apk --debug
+        run: |
+          cd mobile-v4
+          flutter build apk --debug
       
       - name: 🏗️ Build Release APK (if secrets available)
-        working-directory: mobile-v4
-        run: flutter build apk --release
+        run: |
+          cd mobile-v4
+          flutter build apk --release
         continue-on-error: true
       
-      - name: � Upload Debug APK
+      - name: 📤 Upload Debug APK
         uses: actions/upload-artifact@v3
         with:
-          name: android-debug-apk
+          name: awid-mobile-v4-debug
           path: mobile-v4/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
       
       - name: 📤 Upload Release APK
         uses: actions/upload-artifact@v3
         with:
-          name: android-release-apk
+          name: awid-mobile-v4-release
           path: mobile-v4/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: ignore
         continue-on-error: true
@@ -99,13 +105,23 @@ jobs:
       - name: 📊 Build Summary
         if: always()
         run: |
-          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 📱 AWID Mobile v4 - Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Debug APK built successfully" >> $GITHUB_STEP_SUMMARY
-          if [ -f mobile-v4/build/app/outputs/flutter-apk/app-release.apk ]; then
-            echo "✅ Release APK built successfully" >> $GITHUB_STEP_SUMMARY
+          if [ -f mobile-v4/build/app/outputs/flutter-apk/app-debug.apk ]; then
+            echo "✅ **Debug APK** built successfully" >> $GITHUB_STEP_SUMMARY
+            echo "   - Download from artifacts: \`awid-mobile-v4-debug\`" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ Release APK not built (secrets not configured)" >> $GITHUB_STEP_SUMMARY
+            echo "❌ Debug APK build failed" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📱 Download the APK from the Artifacts section above" >> $GITHUB_STEP_SUMMARY
+          if [ -f mobile-v4/build/app/outputs/flutter-apk/app-release.apk ]; then
+            echo "✅ **Release APK** built successfully" >> $GITHUB_STEP_SUMMARY
+            echo "   - Download from artifacts: \`awid-mobile-v4-release\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Release APK not built (signing secrets not configured)" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 How to download" >> $GITHUB_STEP_SUMMARY
+          echo "1. Go to the **Artifacts** section at the top of this page" >> $GITHUB_STEP_SUMMARY
+          echo "2. Download \`awid-mobile-v4-debug.zip\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Extract and install the APK on your Android device" >> $GITHUB_STEP_SUMMARY
