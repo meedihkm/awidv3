@@ -27,9 +27,8 @@ export class RedisConnection {
     // Construire l'URL Redis à partir des variables d'environnement
     const redisUrl = `redis://${envConfig.REDIS_HOST}:${envConfig.REDIS_PORT}`;
 
-    this.client = createClient({
+    const clientOptions: any = {
       url: redisUrl,
-      password: envConfig.REDIS_PASSWORD,
       socket: {
         reconnectStrategy: (retries) => {
           if (retries > 10) {
@@ -40,7 +39,14 @@ export class RedisConnection {
           return Math.min(retries * 100, 3000);
         },
       },
-    });
+    };
+
+    // Add password only if it's defined
+    if (envConfig.REDIS_PASSWORD) {
+      clientOptions.password = envConfig.REDIS_PASSWORD;
+    }
+
+    this.client = createClient(clientOptions);
 
     this.client.on('error', (err) => {
       console.error('Redis Client Error:', err);

@@ -18,5 +18,4 @@ register({
     },
 });
 
-// Now import and start the application
-import('./main');
+console.log('✅ Path aliases registered');

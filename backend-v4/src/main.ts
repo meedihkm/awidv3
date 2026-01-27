@@ -2,6 +2,10 @@
  * Main Entry Point
  * Point d'entrée de l'application AWID Backend v4
  */
+
+// Register path aliases FIRST
+import './bootstrap';
+
 import cors from 'cors';
 import express, { Application, NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
@@ -10,7 +14,7 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { envConfig } from './config/env.validation';
 import { swaggerConfig } from './config/swagger.config';
-import { redisConnection } from './infrastructure/cache/RedisConnection';
+import { RedisConnection } from './infrastructure/cache/RedisConnection';
 import { db } from './infrastructure/database/PostgresConnection';
 import { logger } from './infrastructure/logging/WinstonLogger';
 import { startAllWorkers, stopAllWorkers } from './infrastructure/workers';
@@ -22,19 +26,36 @@ import { generalRateLimiter } from './presentation/http/middlewares/rateLimit.mi
 import { createV1Routes } from './presentation/http/routes/v1';
 import { initializeWebSocket } from './presentation/websocket';
 
+// Get Redis singleton instance
+const redisConnection = RedisConnection.getInstance();
+
 class Server {
   private app: Application;
   private httpServer: HTTPServer;
   private port: number;
 
   constructor() {
+    console.log('🔧 Initializing Server class...');
     this.app = express();
     this.httpServer = createServer(this.app);
     this.port = envConfig.PORT;
+    console.log('✅ Server class initialized');
+
+    console.log('🔧 Initializing middlewares...');
     this.initializeMiddlewares();
+    console.log('✅ Middlewares initialized');
+
+    console.log('🔧 Initializing Swagger...');
     this.initializeSwagger();
+    console.log('✅ Swagger initialized');
+
+    console.log('🔧 Initializing routes...');
     this.initializeRoutes();
+    console.log('✅ Routes initialized');
+
+    console.log('🔧 Initializing error handling...');
     this.initializeErrorHandling();
+    console.log('✅ Error handling initialized');
   }
 
   private initializeMiddlewares(): void {
@@ -133,35 +154,54 @@ class Server {
 
   public async start(): Promise<void> {
     try {
+      console.log('🚀 Starting server...');
+
       // Connect to database
+      console.log('🔌 Connecting to database...');
       logger.info('🔌 Connecting to database...');
       await db.connect();
+      console.log('✅ Database connected successfully');
       logger.info('✅ Database connected successfully');
 
       // Run migrations
+      console.log('🔄 Running database migrations...');
       logger.info('🔄 Running database migrations...');
-      const { runMigrations } = await import('./infrastructure/database/migrate');
-      await runMigrations();
-      logger.info('✅ Migrations completed successfully');
+      try {
+        const { runMigrations } = await import('./infrastructure/database/migrate');
+        await runMigrations();
+        console.log('✅ Migrations completed successfully');
+        logger.info('✅ Migrations completed successfully');
+      } catch (migrationError) {
+        console.error('❌ Migration error:', migrationError);
+        logger.error('❌ Migration error:', migrationError);
+        throw migrationError;
+      }
 
       // Connect to Redis
+      console.log('🔌 Connecting to Redis...');
       logger.info('🔌 Connecting to Redis...');
       await redisConnection.connect();
+      console.log('✅ Redis connected successfully');
       logger.info('✅ Redis connected successfully');
 
       // Start workers
+      console.log('🔧 Starting background workers...');
       logger.info('🔧 Starting background workers...');
-      await startAllWorkers();
+      startAllWorkers();
+      console.log('✅ Workers started successfully');
       logger.info('✅ Workers started successfully');
 
       // Initialize WebSocket
+      console.log('🔌 Initializing WebSocket...');
       logger.info('🔌 Initializing WebSocket...');
       initializeWebSocket(this.httpServer);
+      console.log('✅ WebSocket initialized successfully');
       logger.info('✅ WebSocket initialized successfully');
 
       // Start HTTP server
+      console.log(`🌐 Starting HTTP server on port ${this.port}...`);
       this.httpServer.listen(this.port, () => {
-        logger.info(`
+        const message = `
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
 ║   🚀 AWID Backend v4.0 - Server Started                   ║
@@ -175,10 +215,20 @@ class Server {
 ║   📡 API:       http://localhost:${envConfig.PORT}/api/${envConfig.API_VERSION}            ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
-        `);
+        `;
+        console.log(message);
+        logger.info(message);
       });
     } catch (error) {
+      console.error('❌ Failed to start server:', error);
       logger.error('❌ Failed to start server:', error);
+
+      // Log stack trace
+      if (error instanceof Error) {
+        console.error('Stack trace:', error.stack);
+        logger.error('Stack trace:', error.stack);
+      }
+
       process.exit(1);
     }
   }
@@ -215,22 +265,37 @@ class Server {
 }
 
 // Create and start server
+console.log('🎬 Creating server instance...');
 const server = new Server();
+console.log('✅ Server instance created');
 
 // Handle shutdown signals
-process.on('SIGTERM', () => server.stop());
-process.on('SIGINT', () => server.stop());
+process.on('SIGTERM', () => {
+  console.log('⚠️  Received SIGTERM signal');
+  server.stop();
+});
+
+process.on('SIGINT', () => {
+  console.log('⚠️  Received SIGINT signal');
+  server.stop();
+});
 
 // Handle unhandled errors
 process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', { promise, reason });
   logger.error('❌ Unhandled Rejection at:', { promise, reason });
   server.stop();
 });
 
 process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
   logger.error('❌ Uncaught Exception:', error);
   server.stop();
 });
 
 // Start server
-server.start();
+console.log('🚀 Calling server.start()...');
+server.start().catch((error) => {
+  console.error('❌ Fatal error during startup:', error);
+  process.exit(1);
+});
