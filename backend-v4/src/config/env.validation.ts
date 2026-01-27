@@ -37,7 +37,7 @@ const envSchema = z.object({
   GOOGLE_MAPS_API_KEY: z.string().optional(),
   ONESIGNAL_APP_ID: z.string().optional(),
   ONESIGNAL_API_KEY: z.string().optional(),
-  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_DSN: z.string().url().optional().or(z.literal('')),
 
   // Email
   SMTP_HOST: z.string().optional(),
