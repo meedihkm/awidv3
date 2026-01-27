@@ -1,6 +1,6 @@
 # Dependencies
 node_modules/
-package-lock.json
+# package-lock.json doit être commité pour garantir des builds reproductibles
 yarn.lock
 pnpm-lock.yaml
 

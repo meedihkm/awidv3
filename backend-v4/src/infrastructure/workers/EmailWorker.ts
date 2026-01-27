@@ -6,23 +6,38 @@ import { Job } from 'bullmq';
 import { EmailJobData } from '../queue/EmailQueue';
 import { QueueConnection } from '../queue/QueueConnection';
 
+console.log('[EmailWorker] Module loading...');
+
 export class EmailWorker {
   private static instance: EmailWorker;
   private worker: any;
 
   private constructor() {
-    const queueConnection = QueueConnection.getInstance();
-    this.worker = queueConnection.createWorker<EmailJobData>(
-      'email',
-      this.processEmail.bind(this),
-      5 // concurrency
-    );
+    console.log('[EmailWorker] Constructor called');
+    try {
+      console.log('[EmailWorker] Getting QueueConnection instance...');
+      const queueConnection = QueueConnection.getInstance();
+      console.log('[EmailWorker] QueueConnection obtained, creating worker...');
 
-    this.setupEventHandlers();
+      this.worker = queueConnection.createWorker<EmailJobData>(
+        'email',
+        this.processEmail.bind(this),
+        5 // concurrency
+      );
+
+      console.log('[EmailWorker] Worker created, setting up event handlers...');
+      this.setupEventHandlers();
+      console.log('[EmailWorker] EmailWorker initialized successfully');
+    } catch (error) {
+      console.error('[EmailWorker] Error in constructor:', error);
+      throw error;
+    }
   }
 
   static getInstance(): EmailWorker {
+    console.log('[EmailWorker] getInstance called');
     if (!EmailWorker.instance) {
+      console.log('[EmailWorker] Creating new instance...');
       EmailWorker.instance = new EmailWorker();
     }
     return EmailWorker.instance;
