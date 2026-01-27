@@ -11,8 +11,8 @@ COPY package.json ./
 COPY package-lock.json ./
 COPY tsconfig.json ./
 
-# Installer toutes les dépendances (dev + prod) avec npm ci pour garantir la reproductibilité
-RUN npm ci
+# Installer toutes les dépendances (dev + prod)
+RUN npm install
 
 # Copier le code source
 COPY src ./src
