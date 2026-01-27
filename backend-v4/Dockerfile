@@ -6,10 +6,7 @@ RUN apk add --no-cache \
     postgresql-client \
     curl \
     bash \
-    tzdata \
-    python3 \
-    make \
-    g++
+    tzdata
 
 WORKDIR /app
 
@@ -18,17 +15,11 @@ COPY package.json ./
 COPY package-lock.json ./
 COPY tsconfig.json ./
 
-# Installer TOUTES les dépendances (dev inclus pour la compilation)
+# Installer toutes les dépendances
 RUN npm install
 
 # Copier le code source
 COPY src ./src
-
-# Compiler TypeScript directement
-RUN npx tsc
-
-# Supprimer les devDependencies après compilation
-RUN npm prune --production
 
 # Créer un utilisateur non-root
 RUN addgroup -g 1001 -S nodejs && \
@@ -48,5 +39,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
-# Démarrer l'application
-CMD ["node", "dist/bootstrap.js"]
+# Démarrer l'application avec tsx (pas besoin de compiler)
+CMD ["npx", "tsx", "src/main.ts"]
