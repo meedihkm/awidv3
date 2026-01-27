@@ -41,7 +41,7 @@ COPY package.json ./
 COPY package-lock.json ./
 
 # Installer UNIQUEMENT les dépendances de production
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copier les fichiers compilés depuis le builder
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
