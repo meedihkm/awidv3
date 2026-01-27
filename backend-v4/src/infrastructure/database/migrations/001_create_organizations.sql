@@ -1,6 +1,11 @@
 -- Migration 001: Create organizations table
 -- Description: Table principale pour les organisations (pizzeria, boulangerie, laiterie, etc.)
 
+-- Activer les extensions nécessaires
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";      -- Pour gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS "cube";           -- Dépendance pour earthdistance
+CREATE EXTENSION IF NOT EXISTS "earthdistance";  -- Pour les calculs de distance géographique (ll_to_earth)
+
 CREATE TABLE IF NOT EXISTS organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
