@@ -192,3 +192,7 @@ docs/
 
 # Kiro steering files (documentation locale)
 .kiro/steering/*.md
+
+# Anciennes versions (garder en local uniquement)
+api-v2/
+mobile/
