@@ -18,15 +18,11 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /app
 
 # Copier les fichiers de dépendances
-COPY package*.json ./
+COPY package.json ./
 COPY tsconfig.json ./
 
-# Installer toutes les dépendances
-RUN npm install && \
-    echo "=== Vérification TypeScript ===" && \
-    npx tsc --version && \
-    echo "=== Contenu node_modules/.bin ===" && \
-    ls -la node_modules/.bin/ | grep tsc
+# Installer toutes les dépendances (sans package-lock pour éviter les conflits)
+RUN npm install --legacy-peer-deps
 
 # Copier le code source
 COPY src ./src
