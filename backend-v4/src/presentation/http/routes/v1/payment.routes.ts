@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { paymentSchemas } from '../../../../application/validators/payment.schema';
 import { PaymentController } from '../../controllers/PaymentController';
 import { authMiddleware } from '../../middlewares/auth.middleware';
-import { validateMiddleware } from '../../middlewares/validate.middleware';
+import { validateBody } from '../../middlewares/validate.middleware';
 
 const router = Router();
 const paymentController = new PaymentController();
@@ -11,13 +11,13 @@ router.use(authMiddleware);
 
 router.post(
   '/',
-  validateMiddleware(paymentSchemas.record),
+  validateBody(paymentSchemas.record),
   paymentController.record.bind(paymentController)
 );
 
 router.post(
   '/:id/allocate',
-  validateMiddleware(paymentSchemas.allocate),
+  validateBody(paymentSchemas.allocate),
   paymentController.allocate.bind(paymentController)
 );
 
