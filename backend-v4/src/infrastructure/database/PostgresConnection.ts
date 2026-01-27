@@ -12,11 +12,11 @@ export class PostgresConnection {
 
   private constructor() {
     const config: PoolConfig = {
-      host: envConfig.DATABASE_HOST,
-      port: envConfig.DATABASE_PORT,
-      database: envConfig.DATABASE_NAME,
-      user: envConfig.DATABASE_USER,
-      password: envConfig.DATABASE_PASSWORD,
+      host: envConfig.DB_HOST,
+      port: envConfig.DB_PORT,
+      database: envConfig.DB_NAME,
+      user: envConfig.DB_USER,
+      password: envConfig.DB_PASSWORD,
       max: 20, // Maximum de connexions dans le pool
       idleTimeoutMillis: 30000, // Fermer les connexions inactives après 30s
       connectionTimeoutMillis: 5000, // Timeout de connexion 5s

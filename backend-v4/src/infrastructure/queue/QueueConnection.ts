@@ -2,6 +2,7 @@
  * Infrastructure: Queue Connection
  * Configuration BullMQ pour les jobs asynchrones
  */
+import { envConfig } from '@/config/env.validation';
 import { ConnectionOptions, Queue, QueueEvents, Worker } from 'bullmq';
 
 export class QueueConnection {
@@ -9,13 +10,10 @@ export class QueueConnection {
   private connection: ConnectionOptions;
 
   private constructor() {
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-    const url = new URL(redisUrl);
-
     this.connection = {
-      host: url.hostname,
-      port: parseInt(url.port) || 6379,
-      password: url.password || undefined,
+      host: envConfig.REDIS_HOST,
+      port: envConfig.REDIS_PORT,
+      password: envConfig.REDIS_PASSWORD,
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
     };

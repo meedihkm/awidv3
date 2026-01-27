@@ -98,7 +98,12 @@ class Server {
       });
     });
 
-    // Health check endpoint
+    // Simple health check for Docker
+    this.app.get('/health', (_req: Request, res: Response) => {
+      res.status(200).json({ status: 'ok' });
+    });
+
+    // Detailed health check endpoint
     this.app.get('/api/health', async (_req: Request, res: Response) => {
       const dbHealth = await db.healthCheck();
       const redisHealth = await redisConnection.healthCheck();

@@ -13,11 +13,11 @@ interface RefreshTokenOutput {
 }
 
 export class RefreshTokenUseCase {
-  constructor(private userRepository: IUserRepository) {}
+  constructor(private userRepository: IUserRepository) { }
 
   async execute(input: RefreshTokenInput): Promise<RefreshTokenOutput> {
     try {
-      const decoded = jwt.verify(input.refreshToken, envConfig.JWT_SECRET) as {
+      const decoded = jwt.verify(input.refreshToken, envConfig.JWT_REFRESH_SECRET) as {
         userId: string;
         type: string;
       };
@@ -43,7 +43,7 @@ export class RefreshTokenUseCase {
           type: 'access',
         },
         envConfig.JWT_SECRET,
-        { expiresIn: envConfig.JWT_ACCESS_EXPIRY }
+        { expiresIn: envConfig.JWT_EXPIRES_IN }
       );
 
       const refreshToken = jwt.sign(
@@ -51,8 +51,8 @@ export class RefreshTokenUseCase {
           userId: user.getId(),
           type: 'refresh',
         },
-        envConfig.JWT_SECRET,
-        { expiresIn: envConfig.JWT_REFRESH_EXPIRY }
+        envConfig.JWT_REFRESH_SECRET,
+        { expiresIn: envConfig.JWT_REFRESH_EXPIRES_IN }
       );
 
       return {

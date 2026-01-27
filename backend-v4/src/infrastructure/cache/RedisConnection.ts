@@ -2,6 +2,7 @@
  * Infrastructure: Redis Connection
  * Gère la connexion à Redis pour le cache et pub/sub
  */
+import { envConfig } from '@/config/env.validation';
 import { createClient, RedisClientType } from 'redis';
 
 export class RedisConnection {
@@ -9,7 +10,7 @@ export class RedisConnection {
   private client: RedisClientType | null = null;
   private isConnected = false;
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): RedisConnection {
     if (!RedisConnection.instance) {
@@ -23,10 +24,12 @@ export class RedisConnection {
       return;
     }
 
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    // Construire l'URL Redis à partir des variables d'environnement
+    const redisUrl = `redis://${envConfig.REDIS_HOST}:${envConfig.REDIS_PORT}`;
 
     this.client = createClient({
       url: redisUrl,
+      password: envConfig.REDIS_PASSWORD,
       socket: {
         reconnectStrategy: (retries) => {
           if (retries > 10) {
@@ -86,14 +89,20 @@ export class RedisConnection {
     return this.isConnected && this.client !== null;
   }
 
-  async ping(): Promise<boolean> {
+  async healthCheck(): Promise<{ status: string; message?: string }> {
     try {
-      if (!this.client) return false;
+      if (!this.client || !this.isConnected) {
+        return { status: 'unhealthy', message: 'Not connected' };
+      }
       const result = await this.client.ping();
-      return result === 'PONG';
+      return result === 'PONG'
+        ? { status: 'healthy' }
+        : { status: 'unhealthy', message: 'Ping failed' };
     } catch (error) {
-      console.error('Redis ping failed:', error);
-      return false;
+      return {
+        status: 'unhealthy',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   }
 

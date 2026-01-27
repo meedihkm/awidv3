@@ -35,7 +35,7 @@ export interface LoginOutput {
 }
 
 export class LoginUseCase {
-  constructor(private userRepository: IUserRepository) {}
+  constructor(private userRepository: IUserRepository) { }
 
   async execute(input: LoginInput): Promise<LoginOutput> {
     // Trouver l'utilisateur par email
@@ -94,7 +94,7 @@ export class LoginUseCase {
         type: 'access',
       },
       envConfig.JWT_SECRET,
-      { expiresIn: envConfig.JWT_ACCESS_EXPIRY }
+      { expiresIn: envConfig.JWT_EXPIRES_IN }
     );
   }
 
@@ -104,8 +104,8 @@ export class LoginUseCase {
         userId,
         type: 'refresh',
       },
-      envConfig.JWT_SECRET,
-      { expiresIn: envConfig.JWT_REFRESH_EXPIRY }
+      envConfig.JWT_REFRESH_SECRET,
+      { expiresIn: envConfig.JWT_REFRESH_EXPIRES_IN }
     );
   }
 }

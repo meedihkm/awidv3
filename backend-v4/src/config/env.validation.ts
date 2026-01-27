@@ -14,23 +14,24 @@ const envSchema = z.object({
   API_VERSION: z.string().default('v1'),
 
   // Database PostgreSQL
-  DATABASE_HOST: z.string().default('localhost'),
-  DATABASE_PORT: z.coerce.number().default(5432),
-  DATABASE_NAME: z.string().default('awid_v4'),
-  DATABASE_USER: z.string().default('postgres'),
-  DATABASE_PASSWORD: z.string().default('postgres'),
-  DATABASE_URL: z.string().url('DATABASE_URL doit être une URL valide').optional(),
+  DB_HOST: z.string().default('localhost'),
+  DB_PORT: z.coerce.number().default(5432),
+  DB_NAME: z.string().default('awid_v4'),
+  DB_USER: z.string().default('postgres'),
+  DB_PASSWORD: z.string().default('postgres'),
   DB_POOL_MIN: z.coerce.number().default(2),
   DB_POOL_MAX: z.coerce.number().default(10),
 
   // Redis
-  REDIS_URL: z.string().url('REDIS_URL doit être une URL valide').optional(),
+  REDIS_HOST: z.string().default('localhost'),
+  REDIS_PORT: z.coerce.number().default(6379),
   REDIS_PASSWORD: z.string().optional(),
 
   // JWT
   JWT_SECRET: z.string().min(32, 'JWT_SECRET doit contenir au moins 32 caractères'),
-  JWT_ACCESS_EXPIRY: z.string().default('15m'),
-  JWT_REFRESH_EXPIRY: z.string().default('7d'),
+  JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET doit contenir au moins 32 caractères'),
+  JWT_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
   // External Services
   GOOGLE_MAPS_API_KEY: z.string().optional(),
@@ -52,6 +53,7 @@ const envSchema = z.object({
 
   // Storage
   STORAGE_TYPE: z.enum(['local', 's3']).default('local'),
+  UPLOAD_DIR: z.string().default('./uploads'),
   S3_BUCKET: z.string().optional(),
   S3_REGION: z.string().optional(),
   S3_ACCESS_KEY: z.string().optional(),
@@ -64,9 +66,11 @@ const envSchema = z.object({
   FEATURE_OFFLINE_SYNC: z.coerce.boolean().default(true),
 
   // Security
-  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000), // 15 min
-  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
+  CORS_ORIGIN: z.string().default('*'),
+  RATE_LIMIT_WINDOW: z.coerce.number().default(15), // minutes
+  RATE_LIMIT_MAX: z.coerce.number().default(100),
   BCRYPT_ROUNDS: z.coerce.number().default(12),
+  MAX_FILE_SIZE: z.coerce.number().default(10485760), // 10MB
 
   // Monitoring
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
