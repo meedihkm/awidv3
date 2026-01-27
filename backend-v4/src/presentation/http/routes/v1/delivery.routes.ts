@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { deliverySchemas } from '../../../../application/validators/delivery.schema';
 import { DeliveryController } from '../../controllers/DeliveryController';
-import { authMiddleware } from '../../middlewares/auth.middleware';
+import { authenticate } from '../../middlewares/auth.middleware';
 import { validateBody } from '../../middlewares/validate.middleware';
 
 const router = Router();
 const deliveryController = new DeliveryController();
 
-router.use(authMiddleware);
+router.use(authenticate);
 
 router.post(
   '/',

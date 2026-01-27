@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { productSchemas } from '../../../../application/validators/product.schema';
 import { ProductController } from '../../controllers/ProductController';
-import { authMiddleware } from '../../middlewares/auth.middleware';
+import { authenticate } from '../../middlewares/auth.middleware';
 import { validateBody } from '../../middlewares/validate.middleware';
 
 const router = Router();
 const productController = new ProductController();
 
-router.use(authMiddleware);
+router.use(authenticate);
 
 router.post(
   '/',

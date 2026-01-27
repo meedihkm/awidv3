@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { paymentSchemas } from '../../../../application/validators/payment.schema';
 import { PaymentController } from '../../controllers/PaymentController';
-import { authMiddleware } from '../../middlewares/auth.middleware';
+import { authenticate } from '../../middlewares/auth.middleware';
 import { validateBody } from '../../middlewares/validate.middleware';
 
 const router = Router();
 const paymentController = new PaymentController();
 
-router.use(authMiddleware);
+router.use(authenticate);
 
 router.post(
   '/',
