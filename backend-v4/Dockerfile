@@ -21,6 +21,10 @@ RUN npm install
 # Copier le code source
 COPY src ./src
 
+# Copier le script de démarrage
+COPY start.sh ./
+RUN chmod +x start.sh
+
 # Créer un utilisateur non-root
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
@@ -39,5 +43,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
-# Démarrer l'application avec tsx (pas besoin de compiler)
-CMD ["npx", "--yes", "tsx", "src/main.ts"]
+# Démarrer l'application avec le script
+CMD ["./start.sh"]
