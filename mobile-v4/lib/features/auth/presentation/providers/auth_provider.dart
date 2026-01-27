@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:state_notifier/state_notifier.dart';
 
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/storage/secure_storage.dart';

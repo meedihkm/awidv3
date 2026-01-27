@@ -3,6 +3,7 @@ import 'package:awid_mobile/features/kitchen/domain/repositories/kitchen_reposit
 import 'package:awid_mobile/features/kitchen/domain/usecases/get_kitchen_orders_usecase.dart';
 import 'package:awid_mobile/features/kitchen/domain/usecases/update_order_status_usecase.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:state_notifier/state_notifier.dart';
 
 /// État des commandes cuisine
 class KitchenOrdersState {

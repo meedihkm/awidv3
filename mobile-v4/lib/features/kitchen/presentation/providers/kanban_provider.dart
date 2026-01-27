@@ -1,5 +1,6 @@
 import 'package:awid_mobile/features/kitchen/domain/entities/kitchen_order.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:state_notifier/state_notifier.dart';
 
 /// État du Kanban
 class KanbanState {
