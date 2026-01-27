@@ -1,25 +1,4 @@
-# Multi-stage build pour optimiser la taille de l'image
-FROM node:20-alpine AS builder
-
-# Installer les dépendances système nécessaires pour la compilation
-RUN apk add --no-cache python3 make g++
-
-WORKDIR /app
-
-# Copier les fichiers de dépendances
-COPY package*.json ./
-COPY tsconfig.json ./
-
-# Installer toutes les dépendances (dev + prod)
-RUN npm ci
-
-# Copier le code source
-COPY src ./src
-
-# Compiler TypeScript
-RUN npm run build
-
-# Stage de production
+# Image de base Node.js
 FROM node:20-alpine
 
 # Installer les dépendances système
@@ -27,7 +6,10 @@ RUN apk add --no-cache \
     postgresql-client \
     curl \
     bash \
-    tzdata
+    tzdata \
+    python3 \
+    make \
+    g++
 
 # Créer un utilisateur non-root
 RUN addgroup -g 1001 -S nodejs && \
@@ -37,17 +19,16 @@ WORKDIR /app
 
 # Copier les fichiers de dépendances
 COPY package*.json ./
+COPY tsconfig.json ./
 
-# Installer uniquement les dépendances de production
-RUN npm ci --omit=dev && \
-    npm cache clean --force
+# Installer toutes les dépendances
+RUN npm ci
 
-# Copier les fichiers compilés depuis le builder
-COPY --from=builder /app/dist ./dist
+# Copier le code source
+COPY src ./src
 
-# Copier les migrations et seeds
-COPY --from=builder /app/src/infrastructure/database/migrations ./dist/infrastructure/database/migrations
-COPY --from=builder /app/src/infrastructure/database/seeds ./dist/infrastructure/database/seeds
+# Compiler TypeScript
+RUN npm run build
 
 # Créer les dossiers nécessaires
 RUN mkdir -p uploads logs && \
@@ -59,7 +40,7 @@ USER nodejs
 # Exposer le port
 EXPOSE 3000
 
-# Healthcheck pour Coolify
+# Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
