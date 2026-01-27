@@ -91,14 +91,14 @@ jobs:
           ls -lh mobile-v4/build/app/outputs/flutter-apk/
       
       - name: 📤 Upload Debug APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: awid-mobile-v4-debug
           path: mobile-v4/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
       
       - name: 📤 Upload Release APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: awid-mobile-v4-release
           path: mobile-v4/build/app/outputs/flutter-apk/app-release.apk
