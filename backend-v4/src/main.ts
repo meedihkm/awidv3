@@ -210,7 +210,7 @@ class Server {
 
       // Start HTTP server
       console.log(`🌐 Starting HTTP server on port ${this.port}...`);
-      this.httpServer.listen(this.port, () => {
+      this.httpServer.listen(this.port, '0.0.0.0', () => {
         const message = `
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
@@ -220,9 +220,9 @@ class Server {
 ║   Port:        ${String(envConfig.PORT).padEnd(44)}║
 ║   API Version: ${envConfig.API_VERSION.padEnd(44)}║
 ║                                                            ║
-║   📍 Health:    http://localhost:${envConfig.PORT}/api/health        ║
-║   📚 Docs:      http://localhost:${envConfig.PORT}/api/docs          ║
-║   📡 API:       http://localhost:${envConfig.PORT}/api/${envConfig.API_VERSION}            ║
+║   📍 Health:    http://0.0.0.0:${envConfig.PORT}/api/health          ║
+║   📚 Docs:      http://0.0.0.0:${envConfig.PORT}/api/docs            ║
+║   📡 API:       http://0.0.0.0:${envConfig.PORT}/api/${envConfig.API_VERSION}              ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
         `;
