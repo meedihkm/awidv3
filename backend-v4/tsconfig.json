@@ -2,7 +2,9 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
@@ -21,17 +23,38 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-    "baseUrl": ".",
+    "baseUrl": "./src",
     "paths": {
-      "@/*": ["src/*"],
-      "@domain/*": ["src/domain/*"],
-      "@application/*": ["src/application/*"],
-      "@infrastructure/*": ["src/infrastructure/*"],
-      "@presentation/*": ["src/presentation/*"],
-      "@shared/*": ["src/shared/*"],
-      "@config/*": ["src/config/*"]
+      "@/*": [
+        "./*"
+      ],
+      "@domain/*": [
+        "./domain/*"
+      ],
+      "@application/*": [
+        "./application/*"
+      ],
+      "@infrastructure/*": [
+        "./infrastructure/*"
+      ],
+      "@presentation/*": [
+        "./presentation/*"
+      ],
+      "@shared/*": [
+        "./shared/*"
+      ],
+      "@config/*": [
+        "./config/*"
+      ]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
 }
