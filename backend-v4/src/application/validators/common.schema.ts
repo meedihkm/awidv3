@@ -73,3 +73,16 @@ export type Pagination = z.infer<typeof paginationSchema>;
 export type DateRange = z.infer<typeof dateRangeSchema>;
 export type Coordinates = z.infer<typeof coordinatesSchema>;
 export type Address = z.infer<typeof addressSchema>;
+
+// Export grouped schemas for convenience
+export const commonSchemas = {
+  uuid: uuidSchema,
+  phone: phoneSchema,
+  email: emailSchema,
+  password: passwordSchema,
+  money: moneySchema,
+  pagination: paginationSchema,
+  dateRange: dateRangeSchema,
+  coordinates: coordinatesSchema,
+  address: addressSchema,
+};
