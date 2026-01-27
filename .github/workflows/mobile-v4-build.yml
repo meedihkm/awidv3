@@ -3,8 +3,6 @@ name: Build APK
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'mobile-v4/**'
   workflow_dispatch:
 
 jobs:
