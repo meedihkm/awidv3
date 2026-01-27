@@ -2,15 +2,15 @@
  * Rate Limiting Middleware
  * Middleware de limitation du taux de requêtes
  */
-import { config } from '@/config/env.validation';
+import { envConfig } from '@/config/env.validation';
 import rateLimit from 'express-rate-limit';
 
 /**
  * Rate limiter général
  */
 export const generalRateLimiter = rateLimit({
-  windowMs: config.RATE_LIMIT_WINDOW_MS,
-  max: config.RATE_LIMIT_MAX_REQUESTS,
+  windowMs: envConfig.RATE_LIMIT_WINDOW * 60 * 1000, // Convert minutes to ms
+  max: envConfig.RATE_LIMIT_MAX,
   message: {
     success: false,
     error: 'Trop de requêtes, veuillez réessayer plus tard',

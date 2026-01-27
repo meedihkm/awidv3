@@ -2,7 +2,7 @@
  * Error Handler Middleware
  * Middleware de gestion centralisée des erreurs
  */
-import { config } from '@/config/env.validation';
+import { envConfig } from '@/config/env.validation';
 import { AppError } from '@/shared/errors/AppError';
 import { NextFunction, Request, Response } from 'express';
 
@@ -34,7 +34,7 @@ export const errorHandler = (
   // En production, ne pas exposer les détails de l'erreur
   const statusCode = 500;
   const message =
-    config.NODE_ENV === 'production'
+    envConfig.NODE_ENV === 'production'
       ? 'Une erreur interne est survenue'
       : error.message;
 
@@ -42,7 +42,7 @@ export const errorHandler = (
     success: false,
     error: message,
     code: 'INTERNAL_ERROR',
-    ...(config.NODE_ENV === 'development' && { stack: error.stack }),
+    ...(envConfig.NODE_ENV === 'development' && { stack: error.stack }),
   });
 };
 

@@ -2,7 +2,7 @@
  * Authentication Middleware
  * Middleware d'authentification JWT
  */
-import { config } from '@/config/env.validation';
+import { envConfig } from '@/config/env.validation';
 import { ForbiddenError } from '@/shared/errors/ForbiddenError';
 import { UnauthorizedError } from '@/shared/errors/UnauthorizedError';
 import { NextFunction, Request, Response } from 'express';
@@ -44,7 +44,7 @@ export const authenticate = async (
     const token = authHeader.substring(7); // Enlever "Bearer "
 
     // Vérifier et décoder le token
-    const decoded = jwt.verify(token, config.JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, envConfig.JWT_SECRET) as JWTPayload;
 
     // Vérifier que c'est un access token
     if (decoded.type !== 'access') {
