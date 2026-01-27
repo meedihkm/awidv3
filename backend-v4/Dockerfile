@@ -7,7 +7,8 @@ RUN apk add --no-cache python3 make g++
 WORKDIR /app
 
 # Copier les fichiers de dépendances
-COPY package.json package-lock.json ./
+COPY package.json ./
+COPY package-lock.json ./
 COPY tsconfig.json ./
 
 # Installer toutes les dépendances (dev + prod) avec npm ci pour garantir la reproductibilité
@@ -36,10 +37,11 @@ RUN addgroup -g 1001 -S nodejs && \
 WORKDIR /app
 
 # Copier package.json et package-lock.json
-COPY package.json package-lock.json ./
+COPY package.json ./
+COPY package-lock.json ./
 
 # Installer UNIQUEMENT les dépendances de production
-RUN npm ci --only=production
+RUN npm ci --omit=dev && npm cache clean --force
 
 # Copier les fichiers compilés depuis le builder
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
@@ -62,5 +64,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
-# Démarrer l'application compilée
-CMD ["node", "dist/main.js"]
+# Démarrer l'application compilée via bootstrap
+CMD ["node", "dist/bootstrap.js"]
