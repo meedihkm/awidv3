@@ -40,4 +40,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
 # Démarrer l'application avec tsx (pas besoin de compiler)
-CMD ["npx", "tsx", "src/main.ts"]
+CMD ["node_modules/.bin/tsx", "src/main.ts"]
