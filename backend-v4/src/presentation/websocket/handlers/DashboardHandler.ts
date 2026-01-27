@@ -117,7 +117,7 @@ export class DashboardHandler {
           currentDeliveries: 0,
           location: { latitude: 36.7438, longitude: 3.0688 },
         },
-      },
+      ],
       alerts: [
         {
           id: '1',
