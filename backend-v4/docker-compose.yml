@@ -17,10 +17,11 @@ services:
     ports:
       - "${DB_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-awid_user} -d ${DB_NAME:-awid_db}"]
+      test: ["CMD-SHELL", "pg_isready -U awid_user -d awid_db"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
       - awid-network
 
