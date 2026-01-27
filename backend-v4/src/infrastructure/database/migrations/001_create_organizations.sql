@@ -5,6 +5,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";      -- Pour gen_random_uuid()
 CREATE EXTENSION IF NOT EXISTS "cube";           -- Dépendance pour earthdistance
 CREATE EXTENSION IF NOT EXISTS "earthdistance";  -- Pour les calculs de distance géographique (ll_to_earth)
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";        -- Pour la recherche full-text avec trigrams (gin_trgm_ops)
 
 CREATE TABLE IF NOT EXISTS organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
