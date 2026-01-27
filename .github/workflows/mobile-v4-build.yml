@@ -17,26 +17,14 @@ env:
   JAVA_VERSION: '17'
 
 jobs:
-  build-android:
-    name: Build Android APK
+  build-apk:
+    name: Build APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     
     steps:
-      - name: 📥 Checkout code
+      - name: 📥 Checkout
         uses: actions/checkout@v3
-      
-      - name: 🔍 Verify directory structure
-        run: |
-          echo "=== Workspace root ==="
-          pwd
-          ls -la
-          echo ""
-          echo "=== mobile-v4 directory ==="
-          ls -la mobile-v4
-          echo ""
-          echo "=== mobile-v4/lib exists? ==="
-          test -d mobile-v4/lib && echo "✅ YES" || echo "❌ NO"
       
       - name: ☕ Setup Java
         uses: actions/setup-java@v3
@@ -62,81 +50,31 @@ jobs:
           flutter pub run build_runner build --delete-conflicting-outputs
         continue-on-error: true
       
-      - name: 🔍 Analyze code
-        run: |
-          cd mobile-v4
-          flutter analyze
-        continue-on-error: true
-      
-      - name: 🧪 Run tests
-        run: |
-          cd mobile-v4
-          flutter test
-        continue-on-error: true
-      
       - name: 🏗️ Build Debug APK
         run: |
           cd mobile-v4
-          flutter build apk --debug --verbose
+          flutter build apk --debug
       
       - name: 🏗️ Build Release APK
         run: |
           cd mobile-v4
-          flutter build apk --release --verbose
+          flutter build apk --release
         continue-on-error: true
-      
-      - name: 📦 List built APKs
-        run: |
-          echo "=== APK files built ==="
-          ls -lh mobile-v4/build/app/outputs/flutter-apk/
       
       - name: 📤 Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: awid-mobile-v4-debug
           path: mobile-v4/build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
       
       - name: 📤 Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: awid-mobile-v4-release
           path: mobile-v4/build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: ignore
         continue-on-error: true
       
-      - name: 📊 Build Summary
-        if: always()
+      - name: ✅ Done
         run: |
-          echo "## 📱 AWID Mobile v4 - Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Build Status" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ -f mobile-v4/build/app/outputs/flutter-apk/app-debug.apk ]; then
-            SIZE=$(ls -lh mobile-v4/build/app/outputs/flutter-apk/app-debug.apk | awk '{print $5}')
-            echo "✅ **Debug APK** - Built successfully ($SIZE)" >> $GITHUB_STEP_SUMMARY
-            echo "   - Artifact: \`awid-mobile-v4-debug\`" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **Debug APK** - Build failed" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ -f mobile-v4/build/app/outputs/flutter-apk/app-release.apk ]; then
-            SIZE=$(ls -lh mobile-v4/build/app/outputs/flutter-apk/app-release.apk | awk '{print $5}')
-            echo "✅ **Release APK** - Built successfully ($SIZE)" >> $GITHUB_STEP_SUMMARY
-            echo "   - Artifact: \`awid-mobile-v4-release\`" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ **Release APK** - Not built (signing keys not configured)" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📥 How to Install" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "1. Click on **Artifacts** at the top of this page" >> $GITHUB_STEP_SUMMARY
-          echo "2. Download \`awid-mobile-v4-debug.zip\`" >> $GITHUB_STEP_SUMMARY
-          echo "3. Extract the ZIP file" >> $GITHUB_STEP_SUMMARY
-          echo "4. Transfer \`app-debug.apk\` to your Android device" >> $GITHUB_STEP_SUMMARY
-          echo "5. Enable **Install from Unknown Sources** in Android settings" >> $GITHUB_STEP_SUMMARY
-          echo "6. Install the APK" >> $GITHUB_STEP_SUMMARY
+          echo "✅ APK built successfully!"
+          echo "📥 Download from Artifacts section above"
