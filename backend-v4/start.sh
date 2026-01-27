@@ -12,19 +12,19 @@ ls -la
 echo "📂 Checking src directory:"
 ls -la src/
 
-echo "📂 Checking if main.ts exists:"
-if [ -f "src/main.ts" ]; then
-    echo "✅ src/main.ts found"
+echo "📂 Checking if index.ts exists:"
+if [ -f "src/index.ts" ]; then
+    echo "✅ src/index.ts found"
 else
-    echo "❌ src/main.ts NOT found"
+    echo "❌ src/index.ts NOT found"
     exit 1
 fi
 
 echo "🔧 Starting application with tsx..."
-echo "Command: npx --yes tsx src/main.ts"
+echo "Command: npx --yes tsx src/index.ts"
 
 # Run with explicit error handling and output
-npx --yes tsx src/main.ts 2>&1 | tee /app/logs/startup.log || {
+npx --yes tsx src/index.ts 2>&1 | tee /app/logs/startup.log || {
     EXIT_CODE=$?
     echo ""
     echo "❌ Application crashed with exit code $EXIT_CODE"

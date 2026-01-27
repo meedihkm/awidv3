@@ -3,8 +3,7 @@
  * Point d'entrée de l'application AWID Backend v4
  */
 
-// Register path aliases FIRST
-import './bootstrap';
+console.log('🎬 main.ts: Starting execution...');
 
 import cors from 'cors';
 import express, { Application, NextFunction, Request, Response } from 'express';
@@ -12,12 +11,21 @@ import helmet from 'helmet';
 import { Server as HTTPServer, createServer } from 'http';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+
+console.log('✅ main.ts: Basic imports loaded');
+
 import { envConfig } from './config/env.validation';
 import { swaggerConfig } from './config/swagger.config';
+
+console.log('✅ main.ts: Config imports loaded');
+
 import { RedisConnection } from './infrastructure/cache/RedisConnection';
 import { db } from './infrastructure/database/PostgresConnection';
 import { logger } from './infrastructure/logging/WinstonLogger';
 import { startAllWorkers, stopAllWorkers } from './infrastructure/workers';
+
+console.log('✅ main.ts: Infrastructure imports loaded');
+
 import {
   errorHandler,
   notFoundHandler,
@@ -25,6 +33,8 @@ import {
 import { generalRateLimiter } from './presentation/http/middlewares/rateLimit.middleware';
 import { createV1Routes } from './presentation/http/routes/v1';
 import { initializeWebSocket } from './presentation/websocket';
+
+console.log('✅ main.ts: All imports loaded successfully');
 
 // Get Redis singleton instance
 const redisConnection = RedisConnection.getInstance();
