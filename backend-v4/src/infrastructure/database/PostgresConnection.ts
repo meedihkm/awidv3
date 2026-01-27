@@ -20,7 +20,9 @@ export class PostgresConnection {
       max: 20, // Maximum de connexions dans le pool
       idleTimeoutMillis: 30000, // Fermer les connexions inactives après 30s
       connectionTimeoutMillis: 5000, // Timeout de connexion 5s
-      ssl: envConfig.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      // SSL désactivé pour les connexions internes Docker (réseau privé sécurisé)
+      // Pour une base externe, utiliser: ssl: { rejectUnauthorized: false }
+      ssl: false,
     };
 
     this.pool = new Pool(config);
