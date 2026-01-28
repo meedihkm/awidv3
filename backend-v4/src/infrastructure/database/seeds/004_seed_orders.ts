@@ -7,9 +7,9 @@ export async function seedOrders(db: PostgresConnection): Promise<void> {
     const usersResult = await db.query('SELECT id, role, organization_id FROM users');
     const productsResult = await db.query('SELECT id, name, base_price FROM products LIMIT 5');
 
-    const customers = usersResult.rows.filter(u => u.role === 'customer');
-    const deliverers = usersResult.rows.filter(u => u.role === 'deliverer');
-    const products = productsResult.rows;
+    const customers = usersResult.filter((u: any) => u.role === 'customer');
+    const deliverers = usersResult.filter((u: any) => u.role === 'deliverer');
+    const products = productsResult;
 
     if (customers.length === 0 || products.length === 0) {
         console.log('⚠️ No customers or products found, skipping orders seeding');
