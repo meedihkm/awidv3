@@ -4,7 +4,7 @@ export async function seedUsers(db: PostgresConnection): Promise<void> {
     console.log('🌱 Seeding users...');
 
     // Hash du mot de passe "test123456"
-    const passwordHash = '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
+    const passwordHash = '$2b$12$qEdOkwAABcEwE62srVfgu.JP/LokSqgp7qwpsssRlPLVKbYYRXMCu';
 
     const users = [
         // Admin - Pizzeria La Bella
