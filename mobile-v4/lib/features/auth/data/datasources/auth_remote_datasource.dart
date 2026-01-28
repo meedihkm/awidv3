@@ -16,7 +16,17 @@ class AuthRemoteDatasource {
     try {
       final response = await _dioClient.post(ApiConfig.login, data: request.toJson());
 
-      return AuthResponseModel.fromJson(response.data);
+      // Extract data from API response format: { success: true, data: {...} }
+      final data = response.data['data'] as Map<String, dynamic>;
+      
+      // Restructure to match AuthResponseModel format
+      final restructuredData = {
+        'user': data['user'],
+        'accessToken': data['tokens']['accessToken'],
+        'refreshToken': data['tokens']['refreshToken'],
+      };
+
+      return AuthResponseModel.fromJson(restructuredData);
     } catch (e) {
       throw Exception('Erreur de connexion: ${e.toString()}');
     }
