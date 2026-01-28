@@ -98,9 +98,9 @@ services:
     volumes:
       - uploads_data:/app/uploads
       - logs_data:/app/logs
-    # Port exposé pour Coolify
+    # Port exposé pour Coolify (changé pour éviter conflit)
     ports:
-      - "3000:3000"
+      - "3001:3000"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3000/health" ]
       interval: 30s
