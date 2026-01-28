@@ -1,6 +1,7 @@
 import 'package:awid_mobile/features/kitchen/domain/entities/stock_item.dart';
 import 'package:awid_mobile/features/kitchen/domain/usecases/manage_stock_usecase.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:state_notifier/state_notifier.dart';
 
 /// État du stock
 class StockState {

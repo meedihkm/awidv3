@@ -1,9 +1,6 @@
 import '../entities/packaging_transaction.dart';
 import '../repositories/delivery_actions_repository.dart';
 
-// Utiliser PackagingItem de l'entité packaging_transaction
-typedef PackagingItemForTransaction = packaging_transaction.PackagingItem;
-
 /// Use Case: Gérer les Consignes
 /// Gère les transactions de consignes (dépôt/retour) avec scan QR et calcul de solde
 class ManagePackagingUseCase {
