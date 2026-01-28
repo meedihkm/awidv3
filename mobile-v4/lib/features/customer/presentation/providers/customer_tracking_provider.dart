@@ -30,10 +30,12 @@ final activeDeliveriesProvider = FutureProvider.family<List<CustomerDelivery>, S
     final useCase = ref.watch(trackDeliveryUseCaseProvider);
     final result = await useCase.getActiveDeliveries(customerId);
     
-    return result.when(
-      success: (deliveries) => deliveries,
-      failure: (error, customerId) => throw Exception(error),
-    );
+    if (result is GetActiveDeliveriesSuccess) {
+      return result.deliveries;
+    } else if (result is GetActiveDeliveriesFailure) {
+      throw Exception(result.error);
+    }
+    return [];
   },
 );
 
@@ -48,10 +50,12 @@ final deliveriesHistoryProvider = FutureProvider.family<List<CustomerDelivery>, 
       limit: params.limit,
     );
     
-    return result.when(
-      success: (deliveries) => deliveries,
-      failure: (error, customerId) => throw Exception(error),
-    );
+    if (result is GetDeliveriesHistorySuccess) {
+      return result.deliveries;
+    } else if (result is GetDeliveriesHistoryFailure) {
+      throw Exception(result.error);
+    }
+    return [];
   },
 );
 
@@ -74,20 +78,16 @@ class DeliveryTrackingNotifier extends StateNotifier<AsyncValue<CustomerDelivery
       
       final result = await _useCase.execute(_deliveryId);
 
-      result.when(
-        success: (delivery) {
-          state = AsyncValue.data(delivery);
-        },
-        notTrackable: (delivery, reason) {
-          state = AsyncValue.error(
-            'Livraison non suivable: $reason',
-            StackTrace.current,
-          );
-        },
-        failure: (error, deliveryId) {
-          state = AsyncValue.error(error, StackTrace.current);
-        },
-      );
+      if (result is TrackDeliverySuccess) {
+        state = AsyncValue.data(result.delivery);
+      } else if (result is TrackDeliveryNotTrackable) {
+        state = AsyncValue.error(
+          'Livraison non suivable: ${result.reason}',
+          StackTrace.current,
+        );
+      } else if (result is TrackDeliveryFailure) {
+        state = AsyncValue.error(result.error, StackTrace.current);
+      }
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
     }

@@ -38,10 +38,12 @@ final customerCreditInfoProvider = FutureProvider.family<CustomerCreditInfo?, St
     final useCase = ref.watch(getAccountInfoUseCaseProvider);
     final result = await useCase.getCreditInfo(customerId);
     
-    return result.when(
-      success: (creditInfo) => creditInfo,
-      failure: (error, customerId) => throw Exception(error),
-    );
+    if (result is GetCreditInfoSuccess) {
+      return result.creditInfo;
+    } else if (result is GetCreditInfoFailure) {
+      throw Exception(result.error);
+    }
+    return null;
   },
 );
 
@@ -51,10 +53,12 @@ final customerPackagingInfoProvider = FutureProvider.family<CustomerPackagingInf
     final useCase = ref.watch(getAccountInfoUseCaseProvider);
     final result = await useCase.getPackagingInfo(customerId);
     
-    return result.when(
-      success: (packagingInfo) => packagingInfo,
-      failure: (error, customerId) => throw Exception(error),
-    );
+    if (result is GetPackagingInfoSuccess) {
+      return result.packagingInfo;
+    } else if (result is GetPackagingInfoFailure) {
+      throw Exception(result.error);
+    }
+    return null;
   },
 );
 
@@ -94,20 +98,16 @@ class CustomerAccountNotifier extends StateNotifier<AsyncValue<CustomerAccount>>
       
       final result = await _useCase.execute(_customerId);
 
-      result.when(
-        success: (account) {
-          state = AsyncValue.data(account);
-        },
-        inactive: (account, reason) {
-          state = AsyncValue.error(
-            'Compte inactif: $reason',
-            StackTrace.current,
-          );
-        },
-        failure: (error, customerId) {
-          state = AsyncValue.error(error, StackTrace.current);
-        },
-      );
+      if (result is GetAccountInfoSuccess) {
+        state = AsyncValue.data(result.account);
+      } else if (result is GetAccountInfoInactive) {
+        state = AsyncValue.error(
+          'Compte inactif: ${result.reason}',
+          StackTrace.current,
+        );
+      } else if (result is GetAccountInfoFailure) {
+        state = AsyncValue.error(result.error, StackTrace.current);
+      }
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
     }
@@ -193,14 +193,11 @@ class CustomerNotificationsNotifier extends StateNotifier<AsyncValue<List<Custom
         offset: offset,
       ));
 
-      result.when(
-        success: (notifications, totalCount, unreadCount, hasMore) {
-          state = AsyncValue.data(notifications);
-        },
-        failure: (error, customerId) {
-          state = AsyncValue.error(error, StackTrace.current);
-        },
-      );
+      if (result is GetNotificationsSuccess) {
+        state = AsyncValue.data(result.notifications);
+      } else if (result is GetNotificationsFailure) {
+        state = AsyncValue.error(result.error, StackTrace.current);
+      }
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
     }

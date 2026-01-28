@@ -9,7 +9,7 @@ class LocationTracker extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final locationState = ref.watch(locationNotifierProvider);
+    final locationState = ref.watch(locationProvider);
 
     return locationState.when(
       data: (position) {
@@ -127,7 +127,7 @@ class LocationTracker extends ConsumerWidget {
           if (!isActive)
             ElevatedButton(
               onPressed: () {
-                ref.read(locationNotifierProvider.notifier).startTracking();
+                ref.read(locationProvider.notifier).startTracking();
                 Navigator.pop(context);
               },
               child: const Text('Activer'),

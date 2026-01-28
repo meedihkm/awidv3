@@ -14,7 +14,7 @@ class DeliveriesListPage extends ConsumerStatefulWidget {
 }
 
 class _DeliveriesListPageState extends ConsumerState<DeliveriesListPage> {
-  DeliveryStatus? _selectedStatus;
+  String? _selectedStatus;
   DateTime? _selectedDate;
 
   @override
@@ -171,9 +171,19 @@ class _DeliveriesListPageState extends ConsumerState<DeliveriesListPage> {
                       setModalState(() => _selectedStatus = null);
                     },
                   ),
-                  ...DeliveryStatus.values.map((status) {
+                  ...['pending', 'assigned', 'picked_up', 'in_transit', 'delivered', 'completed', 'cancelled', 'failed'].map((status) {
+                    final displayNames = {
+                      'pending': 'En attente',
+                      'assigned': 'Assignée',
+                      'picked_up': 'Récupérée',
+                      'in_transit': 'En transit',
+                      'delivered': 'Livrée',
+                      'completed': 'Terminée',
+                      'cancelled': 'Annulée',
+                      'failed': 'Échouée',
+                    };
                     return FilterChip(
-                      label: Text(status.displayName),
+                      label: Text(displayNames[status] ?? status),
                       selected: _selectedStatus == status,
                       onSelected: (selected) {
                         setModalState(() {

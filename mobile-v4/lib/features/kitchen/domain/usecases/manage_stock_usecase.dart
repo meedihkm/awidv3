@@ -115,7 +115,7 @@ class ManageStockUseCase {
     return adjustQuantity(
       itemId: itemId,
       quantity: quantity,
-      type: StockMovementType.out,
+      type: StockMovementType.stockOut,
       orderId: orderId,
       reason: reason,
     );

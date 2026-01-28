@@ -66,12 +66,6 @@ class StatsSummary extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      stats.period,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -125,7 +119,7 @@ class StatsSummary extends StatelessWidget {
                 child: _StatItem(
                   icon: Icons.schedule,
                   label: 'À l\'heure',
-                  value: '${stats.onTimeRate.toStringAsFixed(0)}%',
+                  value: '${stats.onTimeRate?.toStringAsFixed(0) ?? '0'}%',
                 ),
               ),
             ],

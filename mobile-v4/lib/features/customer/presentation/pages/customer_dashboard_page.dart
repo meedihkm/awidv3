@@ -88,12 +88,10 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await Future.wait([
-            ref.refresh(customerAccountProvider(widget.customerId).future),
-            ref.refresh(activeOrdersProvider(widget.customerId).future),
-            ref.refresh(activeDeliveriesProvider(widget.customerId).future),
-            ref.refresh(unreadNotificationsCountProvider(widget.customerId).future),
-          ]);
+          ref.invalidate(customerAccountProvider(widget.customerId));
+          ref.invalidate(activeOrdersProvider(widget.customerId));
+          ref.invalidate(activeDeliveriesProvider(widget.customerId));
+          ref.invalidate(unreadNotificationsCountProvider(widget.customerId));
         },
         child: ListView(
           padding: const EdgeInsets.all(16),

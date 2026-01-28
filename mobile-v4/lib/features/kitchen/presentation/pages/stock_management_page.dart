@@ -535,7 +535,7 @@ class _StockManagementPageState extends ConsumerState<StockManagementPage>
                 ref.read(stockProvider.notifier).adjustQuantity(
                       itemId: item.id,
                       quantity: quantity,
-                      type: StockMovementType.out,
+                      type: StockMovementType.stockOut,
                       reason: 'Utilisation',
                     );
                 Navigator.pop(context);

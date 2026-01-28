@@ -68,7 +68,7 @@ class DeliveryCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      delivery.status.displayName,
+                      delivery.statusDisplayName,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: statusColor,
                         fontWeight: FontWeight.bold,
@@ -162,7 +162,7 @@ class DeliveryCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${delivery.itemsCount} article${delivery.itemsCount > 1 ? 's' : ''}',
+                    '${delivery.itemsCount ?? 0} article${(delivery.itemsCount ?? 0) > 1 ? 's' : ''}',
                     style: theme.textTheme.bodySmall,
                   ),
 
@@ -180,7 +180,7 @@ class DeliveryCard extends StatelessWidget {
               ),
 
               // Instructions spéciales
-              if (delivery.specialInstructions != null && delivery.specialInstructions!.isNotEmpty) ...[
+              if (delivery.deliveryInstructions != null && delivery.deliveryInstructions!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(8),
@@ -198,7 +198,7 @@ class DeliveryCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          delivery.specialInstructions!,
+                          delivery.deliveryInstructions!,
                           style: theme.textTheme.bodySmall,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -232,18 +232,20 @@ class DeliveryCard extends StatelessWidget {
   Color _getStatusColor(BuildContext context) {
     final theme = Theme.of(context);
     switch (delivery.status) {
-      case DeliveryStatus.pending:
-      case DeliveryStatus.assigned:
+      case 'pending':
+      case 'assigned':
         return Colors.orange;
-      case DeliveryStatus.pickedUp:
-      case DeliveryStatus.inTransit:
+      case 'picked_up':
+      case 'in_transit':
         return theme.colorScheme.primary;
-      case DeliveryStatus.delivered:
-      case DeliveryStatus.completed:
+      case 'delivered':
+      case 'completed':
         return Colors.green;
-      case DeliveryStatus.cancelled:
-      case DeliveryStatus.failed:
+      case 'cancelled':
+      case 'failed':
         return theme.colorScheme.error;
+      default:
+        return Colors.grey;
     }
   }
 
