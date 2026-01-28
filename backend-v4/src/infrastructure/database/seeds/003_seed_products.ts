@@ -1,100 +1,102 @@
-import { db } from '../PostgresConnection';
+import { PostgresConnection } from '../PostgresConnection';
 
-/**
- * Seed: Products
- * Crée des produits de test
- */
-
-export async function seedProducts(): Promise<void> {
+export async function seedProducts(db: PostgresConnection): Promise<void> {
     console.log('🌱 Seeding products...');
 
     const products = [
-        // Pizzeria La Bella - need to use actual organization UUID
+        // Produits Pizzeria La Bella
         {
-            organization_id: '94bbefe1-194a-4782-984a-c24a5d197d03', // Pizzeria La Bella UUID
+            organization_id: '94bbefe1-194a-4782-984a-c24a5d197d03',
             name: 'Pizza Margherita',
-            description: 'Pizza classique avec tomate, mozzarella et basilic',
+            description: 'Pizza classique avec tomate et mozzarella',
+            sku: 'PIZZA-MARG-001',
             category: 'Pizza',
-            base_price: 120000, // 1,200 DZD en centimes
-            unit: 'pièce',
+            base_price: 120000, // 1200 DZD en centimes
+            unit: 'unit',
+            track_stock: true,
             current_stock: 50,
             min_stock_level: 10,
             is_available: true,
-            tags: ['pizza', 'végétarien', 'classique'],
+            tags: ['pizza', 'margherita', 'classique'],
+            metadata: {}
         },
         {
             organization_id: '94bbefe1-194a-4782-984a-c24a5d197d03',
             name: 'Pizza 4 Fromages',
-            description: 'Pizza aux 4 fromages: mozzarella, gorgonzola, parmesan, chèvre',
+            description: 'Pizza aux quatre fromages',
+            sku: 'PIZZA-4FROM-001',
             category: 'Pizza',
-            base_price: 150000, // 1,500 DZD
-            unit: 'pièce',
+            base_price: 150000, // 1500 DZD en centimes
+            unit: 'unit',
+            track_stock: true,
             current_stock: 30,
             min_stock_level: 5,
             is_available: true,
             tags: ['pizza', 'fromage', 'premium'],
+            metadata: {}
         },
         {
             organization_id: '94bbefe1-194a-4782-984a-c24a5d197d03',
-            name: 'Pizza Pepperoni',
-            description: 'Pizza avec pepperoni, tomate et mozzarella',
-            category: 'Pizza',
-            base_price: 140000, // 1,400 DZD
-            unit: 'pièce',
-            current_stock: 40,
-            min_stock_level: 8,
+            name: 'Coca Cola',
+            description: 'Boisson gazeuse 33cl',
+            sku: 'DRINK-COCA-33CL',
+            category: 'Boisson',
+            base_price: 15000, // 150 DZD en centimes
+            unit: 'unit',
+            track_stock: true,
+            current_stock: 100,
+            min_stock_level: 20,
             is_available: true,
-            tags: ['pizza', 'viande', 'épicé'],
+            tags: ['boisson', 'coca', 'gazeux'],
+            metadata: { volume: '33cl' }
+        },
+        // Produits Boulangerie El Baraka
+        {
+            organization_id: '57974cc1-4261-4e2f-a10f-71948e90864e',
+            name: 'Pain Blanc',
+            description: 'Pain blanc traditionnel',
+            sku: 'BREAD-WHITE-001',
+            category: 'Boulangerie',
+            base_price: 5000, // 50 DZD en centimes
+            unit: 'unit',
+            track_stock: true,
+            current_stock: 200,
+            min_stock_level: 50,
+            is_available: true,
+            tags: ['pain', 'blanc', 'traditionnel'],
+            metadata: { weight: '400g' }
         },
         {
-            organization_id: '94bbefe1-194a-4782-984a-c24a5d197d03',
-            name: 'Calzone Jambon',
-            description: 'Calzone farci au jambon, fromage et champignons',
-            category: 'Calzone',
-            base_price: 130000, // 1,300 DZD
-            unit: 'pièce',
-            current_stock: 25,
-            min_stock_level: 5,
+            organization_id: '57974cc1-4261-4e2f-a10f-71948e90864e',
+            name: 'Croissant',
+            description: 'Croissant au beurre',
+            sku: 'PASTRY-CROIS-001',
+            category: 'Viennoiserie',
+            base_price: 8000, // 80 DZD en centimes
+            unit: 'unit',
+            track_stock: true,
+            current_stock: 50,
+            min_stock_level: 10,
             is_available: true,
-            tags: ['calzone', 'jambon', 'champignons'],
-        },
-        {
-            organization_id: '94bbefe1-194a-4782-984a-c24a5d197d03',
-            name: 'Salade César',
-            description: 'Salade verte, croûtons, parmesan, sauce césar',
-            category: 'Salade',
-            base_price: 80000, // 800 DZD
-            unit: 'portion',
-            current_stock: 20,
-            min_stock_level: 5,
-            is_available: true,
-            tags: ['salade', 'léger', 'végétarien'],
-        },
+            tags: ['croissant', 'beurre', 'viennoiserie'],
+            metadata: { weight: '60g' }
+        }
     ];
 
     for (const product of products) {
-        await db.query(
-            `
+        await db.query(`
       INSERT INTO products (
-        organization_id, name, description, category, base_price, unit,
-        current_stock, min_stock_level, is_available, tags
+        organization_id, name, description, sku, category, base_price, unit,
+        track_stock, current_stock, min_stock_level, is_available, tags, metadata
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      `,
-            [
-                product.organization_id,
-                product.name,
-                product.description,
-                product.category,
-                product.base_price,
-                product.unit,
-                product.current_stock,
-                product.min_stock_level,
-                product.is_available,
-                product.tags,
-            ]
-        );
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ON CONFLICT DO NOTHING
+    `, [
+            product.organization_id, product.name, product.description, product.sku, product.category,
+            product.base_price, product.unit, product.track_stock, product.current_stock,
+            product.min_stock_level, product.is_available, product.tags, JSON.stringify(product.metadata)
+        ]);
     }
 
-    console.log(`✅ Seeded ${products.length} products`);
+    console.log('✅ Seeded 5 products');
 }

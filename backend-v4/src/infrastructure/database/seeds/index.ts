@@ -1,26 +1,30 @@
-import { db } from '../PostgresConnection';
+import { PostgresConnection } from '../PostgresConnection';
 import { seedOrganizations } from './001_seed_organizations';
 import { seedUsers } from './002_seed_users';
 import { seedProducts } from './003_seed_products';
 
 async function runSeeds(): Promise<void> {
+  const db = new PostgresConnection();
+
   try {
-    console.log('🌱 Starting database seeding...\n');
+    console.log('🌱 Starting database seeding...');
 
     await db.connect();
+    console.log('✅ Database connected successfully');
 
-    await seedOrganizations();
-    await seedUsers();
-    await seedProducts();
+    await seedOrganizations(db);
+    await seedUsers(db);
+    await seedProducts(db);
 
     console.log('\n✅ All seeds completed successfully!');
     console.log('\n📋 Test Accounts Created:');
-    console.log('👤 Admin: admin@pizzeria-labella.dz / password123');
-    console.log('👨‍🍳 Kitchen: kitchen@pizzeria-labella.dz / password123');
-    console.log('🚚 Deliverer: deliverer@pizzeria-labella.dz / password123');
-    console.log('🏪 Customer: customer@cafeteria-alger.dz / password123');
+    console.log('👤 Admin: admin@test.com / test123456');
+    console.log('👨‍🍳 Kitchen: atelier@test.com / test123456');
+    console.log('🚚 Deliverer: livreur@test.com / test123456');
+    console.log('🏪 Customer: client@test.com / test123456');
 
     await db.disconnect();
+    console.log('✅ Database disconnected successfully');
     process.exit(0);
   } catch (error) {
     console.error('\n❌ Seeding failed:', error);
