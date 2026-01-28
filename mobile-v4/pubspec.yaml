@@ -11,8 +11,8 @@ dependencies:
     sdk: flutter
 
   # State Management
-  flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
+  flutter_riverpod: ^3.0.0
+  riverpod_annotation: ^4.0.0
   state_notifier: ^1.0.0
 
   # Navigation
@@ -43,7 +43,7 @@ dependencies:
 
   # Utils
   intl: ^0.20.0
-  freezed_annotation: ^2.4.4
+  freezed_annotation: ^3.0.0
   json_annotation: ^4.9.0
   logger: ^2.5.0
   uuid: ^4.5.1
@@ -67,9 +67,9 @@ dev_dependencies:
 
   # Build
   build_runner: ^2.4.12
-  freezed: ^2.5.7
+  freezed: ^3.0.0
   json_serializable: ^6.8.0
-  riverpod_generator: ^2.6.2
+  riverpod_generator: ^4.0.0
 
   # Linting
   flutter_lints: ^6.0.0
