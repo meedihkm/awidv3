@@ -154,7 +154,7 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
                           child: ListTile(
                             leading: const Icon(Icons.local_shipping, color: Colors.orange),
                             title: Text('Livraison #${delivery.deliveryNumber}'),
-                            subtitle: Text(delivery.status.displayName),
+                            subtitle: Text(_getStatusLabel(delivery.status)),
                             trailing: delivery.estimatedArrival != null
                                 ? Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -162,7 +162,7 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
                                     children: [
                                       const Icon(Icons.access_time, size: 16),
                                       Text(
-                                        delivery.estimatedTimeRemaining ?? '',
+                                        _getEstimatedTime(delivery) ?? '',
                                         style: const TextStyle(fontSize: 12),
                                       ),
                                     ],
@@ -375,5 +375,41 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
 
   void _navigateToNotifications() {
     // TODO: Navigate to notifications page
+  }
+
+  String _getStatusLabel(DeliveryStatus status) {
+    switch (status) {
+      case DeliveryStatus.scheduled:
+        return 'Planifiée';
+      case DeliveryStatus.assigned:
+        return 'Assignée';
+      case DeliveryStatus.inProgress:
+        return 'En cours';
+      case DeliveryStatus.nearDestination:
+        return 'Proche';
+      case DeliveryStatus.arrived:
+        return 'Arrivée';
+      case DeliveryStatus.completed:
+        return 'Terminée';
+      case DeliveryStatus.failed:
+        return 'Échec';
+      case DeliveryStatus.cancelled:
+        return 'Annulée';
+    }
+  }
+
+  String? _getEstimatedTime(CustomerDelivery delivery) {
+    if (delivery.estimatedArrival == null) return null;
+    final now = DateTime.now();
+    if (delivery.estimatedArrival!.isBefore(now)) return 'Arrivée imminente';
+
+    final difference = delivery.estimatedArrival!.difference(now);
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} min';
+    } else {
+      final hours = difference.inHours;
+      final minutes = difference.inMinutes % 60;
+      return '${hours}h ${minutes}min';
+    }
   }
 }

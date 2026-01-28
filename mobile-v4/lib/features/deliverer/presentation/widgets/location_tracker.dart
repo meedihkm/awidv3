@@ -10,64 +10,43 @@ class LocationTracker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locationState = ref.watch(locationProvider);
+    final position = locationState.position;
 
-    return locationState.when(
-      data: (position) {
-        if (position == null) {
-          return IconButton(
-            icon: const Icon(Icons.location_off),
-            onPressed: () {
-              _showLocationDialog(context, ref, false);
-            },
-            tooltip: 'GPS désactivé',
-          );
-        }
-
-        return IconButton(
-          icon: Stack(
-            children: [
-              const Icon(Icons.location_on),
-              Positioned(
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          onPressed: () {
-            _showLocationDialog(context, ref, true);
-          },
-          tooltip: 'GPS actif',
-        );
-      },
-      loading: () => const IconButton(
-        icon: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-          ),
-        ),
-        onPressed: null,
-        tooltip: 'Activation GPS...',
-      ),
-      error: (error, stack) => IconButton(
-        icon: const Icon(Icons.location_disabled),
+    if (position == null) {
+      return IconButton(
+        icon: const Icon(Icons.location_off),
         onPressed: () {
           _showLocationDialog(context, ref, false);
         },
-        tooltip: 'Erreur GPS',
+        tooltip: 'GPS désactivé',
+      );
+    }
+
+    return IconButton(
+      icon: Stack(
+        children: [
+          const Icon(Icons.location_on),
+          Positioned(
+            right: 0,
+            top: 0,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
+      onPressed: () {
+        _showLocationDialog(context, ref, true);
+      },
+      tooltip: 'GPS actif',
     );
   }
 
