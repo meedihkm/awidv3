@@ -85,6 +85,16 @@ class DeliveryHistoryItem with _$DeliveryHistoryItem {
     if (completedAt == null || deliveryDuration == null) return true;
     return deliveryDuration! <= 45; // Assuming 45 minutes is the target
   }
+
+  // Legacy compatibility getters
+  String get deliveryNumber => orderNumber;
+  String get deliveryAddress => customerAddress;
+  int get orderCount => 1; // Une livraison = une commande dans ce contexte
+  double get totalAmount => orderAmount;
+  double? get paymentCollected => orderAmount; // Si livré, considéré comme payé
+  double? get packagingDeposited => null; // À implémenter si nécessaire
+  double? get packagingReturned => null; // À implémenter si nécessaire
+  bool get hasProofOfDelivery => status == DeliveryHistoryStatus.completed;
 }
 
 /// Delivery History Status

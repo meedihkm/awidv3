@@ -52,17 +52,16 @@ class _UsersPageState extends ConsumerState<UsersPage> {
   }
 
   Color _getRoleColor(String role) {
-    switch (role) {
-      case 'admin':
-        return Colors.purple;
-      case 'customer':
-        return Colors.blue;
-      case 'deliverer':
-        return Colors.green;
-      case 'kitchen':
-        return Colors.orange;
-      default:
-        return Colors.grey;
+    if (role == 'admin') {
+      return Colors.purple;
+    } else if (role == 'customer') {
+      return Colors.blue;
+    } else if (role == 'deliverer') {
+      return Colors.green;
+    } else if (role == 'kitchen') {
+      return Colors.orange;
+    } else {
+      return Colors.grey;
     }
   }
 

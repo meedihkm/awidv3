@@ -49,9 +49,9 @@ class _PaymentCollectionPageState extends ConsumerState<PaymentCollectionPage> {
     final actionsState = ref.watch(deliveryActionsProvider);
 
     ref.listen<DeliveryActionsState>(deliveryActionsProvider, (previous, next) {
-      if (next is _PaymentCollected) {
+      if (next is PaymentCollected) {
         _showSuccessDialog(next);
-      } else if (next is _Error) {
+      } else if (next is Error) {
         _showErrorSnackBar(next.message);
       }
     });
@@ -85,7 +85,7 @@ class _PaymentCollectionPageState extends ConsumerState<PaymentCollectionPage> {
 
   Widget _buildForm(BuildContext context, List<UnpaidOrder> unpaidOrders, DeliveryActionsState state) {
     final totalDebt = unpaidOrders.fold<double>(0, (sum, order) => sum + order.remainingAmount);
-    final isLoading = state is _Loading;
+    final isLoading = state is Loading;
 
     return Form(
       key: _formKey,
@@ -324,7 +324,7 @@ class _PaymentCollectionPageState extends ConsumerState<PaymentCollectionPage> {
     }
   }
 
-  void _showSuccessDialog(_PaymentCollected state) {
+  void _showSuccessDialog(PaymentCollected state) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -380,6 +380,8 @@ class _PaymentCollectionPageState extends ConsumerState<PaymentCollectionPage> {
         return Icons.receipt;
       case PaymentMode.transfer:
         return Icons.account_balance;
+      case PaymentMode.card:
+        return Icons.credit_card;
     }
   }
 
@@ -391,6 +393,8 @@ class _PaymentCollectionPageState extends ConsumerState<PaymentCollectionPage> {
         return 'Chèque';
       case PaymentMode.transfer:
         return 'Virement';
+      case PaymentMode.card:
+        return 'Carte';
     }
   }
 }

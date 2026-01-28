@@ -40,44 +40,41 @@ class _PhotoCaptureState extends ConsumerState<PhotoCapture> {
 
     // Écouter les changements d'état de la caméra
     ref.listen<CameraState>(cameraProvider, (previous, next) {
-      switch (next) {
-        case _PhotoTaken():
-          setState(() {
+      if (next is _PhotoTaken) {
+        setState(() {
+          if (next.imagePath != null) {
             _selectedPhotos.add(next.imagePath);
-            _isLoading = false;
-          });
-          ref.read(cameraProvider.notifier).resetState();
-          break;
-        case _MultiplePhotosTaken():
-          setState(() {
+          }
+          _isLoading = false;
+        });
+        ref.read(cameraProvider.notifier).resetState();
+      } else if (next is _MultiplePhotosTaken) {
+        setState(() {
+          if (next.imagePaths != null) {
             _selectedPhotos.addAll(next.imagePaths);
-            _isLoading = false;
-          });
-          ref.read(cameraProvider.notifier).resetState();
-          break;
-        case _Loading():
-          setState(() {
-            _isLoading = true;
-          });
-          break;
-        case _Error():
-          setState(() {
-            _isLoading = false;
-          });
-          _showErrorSnackBar(next.message);
-          ref.read(cameraProvider.notifier).resetState();
-          break;
-        case _Cancelled():
-          setState(() {
-            _isLoading = false;
-          });
-          ref.read(cameraProvider.notifier).resetState();
-          break;
-        default:
-          setState(() {
-            _isLoading = false;
-          });
-          break;
+          }
+          _isLoading = false;
+        });
+        ref.read(cameraProvider.notifier).resetState();
+      } else if (next is _Loading) {
+        setState(() {
+          _isLoading = true;
+        });
+      } else if (next is _Error) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showErrorSnackBar(next.message);
+        ref.read(cameraProvider.notifier).resetState();
+      } else if (next is _Cancelled) {
+        setState(() {
+          _isLoading = false;
+        });
+        ref.read(cameraProvider.notifier).resetState();
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
       }
     });
 

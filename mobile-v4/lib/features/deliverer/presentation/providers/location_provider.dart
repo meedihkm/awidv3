@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:state_notifier/state_notifier.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../domain/usecases/update_location_usecase.dart';

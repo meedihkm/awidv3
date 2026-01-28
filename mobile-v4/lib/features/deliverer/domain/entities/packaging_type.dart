@@ -28,6 +28,9 @@ class PackagingType with _$PackagingType {
           (Match m) => '${m[1]} ',
         )} DZD';
   }
+
+  /// Legacy compatibility - alias for unitValue
+  double get value => unitValue;
 }
 
 /// Packaging Balance

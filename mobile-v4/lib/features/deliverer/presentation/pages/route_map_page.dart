@@ -14,7 +14,7 @@ class RouteMapPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final locationState = ref.watch(locationNotifierProvider);
+    final locationState = ref.watch(locationProvider);
 
     return Scaffold(
       appBar: AppBar(

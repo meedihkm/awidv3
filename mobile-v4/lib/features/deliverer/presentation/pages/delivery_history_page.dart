@@ -171,7 +171,7 @@ class _DeliveryHistoryPageState extends ConsumerState<DeliveryHistoryPage> {
                       fontSize: 16,
                     ),
                   ),
-                  _buildStatusChip(item.status),
+                  _buildStatusChip(item.status.displayName),
                 ],
               ),
               const SizedBox(height: 12),

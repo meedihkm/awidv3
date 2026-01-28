@@ -65,38 +65,31 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryPage> {
 
     // Écouter les changements d'état
     ref.listen<DeliveryActionsState>(deliveryActionsProvider, (previous, next) {
-      switch (next) {
-        case _DeliveryCompleted():
-          _showSuccessDialog(next.proofId, next.completedAt);
-          break;
-        case _Error():
-          _showErrorDialog(next.message);
-          break;
-        default:
-          break;
+      if (next is DeliveryCompleted) {
+        _showSuccessDialog(next.proofId, next.completedAt);
+      } else if (next is Error) {
+        _showErrorDialog(next.message);
       }
     });
 
     ref.listen<CameraState>(cameraProvider, (previous, next) {
-      switch (next) {
-        case _PhotoTaken():
-          setState(() {
+      if (next is _PhotoTaken) {
+        setState(() {
+          if (next.imagePath != null) {
             _photosPaths.add(next.imagePath);
-          });
-          ref.read(cameraProvider.notifier).resetState();
-          break;
-        case _MultiplePhotosTaken():
-          setState(() {
+          }
+        });
+        ref.read(cameraProvider.notifier).resetState();
+      } else if (next is _MultiplePhotosTaken) {
+        setState(() {
+          if (next.imagePaths != null) {
             _photosPaths.addAll(next.imagePaths);
-          });
-          ref.read(cameraProvider.notifier).resetState();
-          break;
-        case _Error():
-          _showErrorSnackBar(next.message);
-          ref.read(cameraProvider.notifier).resetState();
-          break;
-        default:
-          break;
+          }
+        });
+        ref.read(cameraProvider.notifier).resetState();
+      } else if (next is _Error) {
+        _showErrorSnackBar(next.message);
+        ref.read(cameraProvider.notifier).resetState();
       }
     });
 
@@ -106,7 +99,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryPage> {
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
       ),
-      body: actionsState is _Loading
+      body: actionsState is Loading
           ? const LoadingWidget(message: 'Finalisation de la livraison...')
           : _buildBody(),
       bottomNavigationBar: _buildBottomBar(),

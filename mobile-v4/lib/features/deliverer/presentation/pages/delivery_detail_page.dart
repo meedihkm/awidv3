@@ -128,7 +128,7 @@ class DeliveryDetailPage extends ConsumerWidget {
                       icon: const Icon(Icons.play_arrow),
                       label: const Text('Démarrer la livraison'),
                       onPressed: () async {
-                        await ref.read(deliveryActionsNotifierProvider.notifier).startDelivery(deliveryId);
+                        await ref.read(deliveryActionsProvider.notifier).startDelivery(deliveryId);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -148,7 +148,7 @@ class DeliveryDetailPage extends ConsumerWidget {
                       label: const Text('Marquer comme livrée'),
                       onPressed: () async {
                         // TODO: Navigation vers page de preuve de livraison
-                        await ref.read(deliveryActionsNotifierProvider.notifier).completeDelivery(deliveryId);
+                        await ref.read(deliveryActionsProvider.notifier).completeDelivery(deliveryId);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -276,37 +276,30 @@ class _HeaderCard extends StatelessWidget {
 
   Color _getStatusColor(BuildContext context) {
     final theme = Theme.of(context);
-    switch (delivery.status) {
-      case DeliveryStatus.pending:
-      case DeliveryStatus.assigned:
-        return Colors.orange;
-      case DeliveryStatus.pickedUp:
-      case DeliveryStatus.inTransit:
-        return theme.colorScheme.primary;
-      case DeliveryStatus.delivered:
-      case DeliveryStatus.completed:
-        return Colors.green;
-      case DeliveryStatus.cancelled:
-      case DeliveryStatus.failed:
-        return theme.colorScheme.error;
+    final status = delivery.status;
+    if (status == DeliveryStatus.pending || status == DeliveryStatus.assigned) {
+      return Colors.orange;
+    } else if (status == DeliveryStatus.pickedUp || status == DeliveryStatus.inTransit) {
+      return theme.colorScheme.primary;
+    } else if (status == DeliveryStatus.delivered || status == DeliveryStatus.completed) {
+      return Colors.green;
+    } else {
+      return theme.colorScheme.error;
     }
   }
 
   IconData _getStatusIcon() {
-    switch (delivery.status) {
-      case DeliveryStatus.pending:
-      case DeliveryStatus.assigned:
-        return Icons.schedule;
-      case DeliveryStatus.pickedUp:
-        return Icons.shopping_bag;
-      case DeliveryStatus.inTransit:
-        return Icons.local_shipping;
-      case DeliveryStatus.delivered:
-      case DeliveryStatus.completed:
-        return Icons.check_circle;
-      case DeliveryStatus.cancelled:
-      case DeliveryStatus.failed:
-        return Icons.cancel;
+    final status = delivery.status;
+    if (status == DeliveryStatus.pending || status == DeliveryStatus.assigned) {
+      return Icons.schedule;
+    } else if (status == DeliveryStatus.pickedUp) {
+      return Icons.shopping_bag;
+    } else if (status == DeliveryStatus.inTransit) {
+      return Icons.local_shipping;
+    } else if (status == DeliveryStatus.delivered || status == DeliveryStatus.completed) {
+      return Icons.check_circle;
+    } else {
+      return Icons.cancel;
     }
   }
 }

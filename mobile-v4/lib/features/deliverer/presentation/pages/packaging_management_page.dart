@@ -49,9 +49,9 @@ class _PackagingManagementPageState extends ConsumerState<PackagingManagementPag
     final actionsState = ref.watch(deliveryActionsProvider);
 
     ref.listen<DeliveryActionsState>(deliveryActionsProvider, (previous, next) {
-      if (next is _PackagingTransactionRecorded) {
+      if (next is PackagingTransactionRecorded) {
         _showSuccessDialog(next);
-      } else if (next is _Error) {
+      } else if (next is Error) {
         _showErrorSnackBar(next.message);
       }
     });
@@ -101,7 +101,7 @@ class _PackagingManagementPageState extends ConsumerState<PackagingManagementPag
     AsyncValue<PackagingBalance> balanceAsync,
     DeliveryActionsState state,
   ) {
-    final isLoading = state is _Loading;
+    final isLoading = state is Loading;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -175,7 +175,7 @@ class _PackagingManagementPageState extends ConsumerState<PackagingManagementPag
     AsyncValue<PackagingBalance> balanceAsync,
     DeliveryActionsState state,
   ) {
-    final isLoading = state is _Loading;
+    final isLoading = state is Loading;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -372,7 +372,7 @@ class _PackagingManagementPageState extends ConsumerState<PackagingManagementPag
     ref.read(deliveryActionsProvider.notifier).recordPackagingReturn(params);
   }
 
-  void _showSuccessDialog(_PackagingTransactionRecorded state) {
+  void _showSuccessDialog(PackagingTransactionRecorded state) {
     final typeLabel = state.type == PackagingTransactionType.deposit ? 'Dépôt' : 'Retour';
     
     showDialog(

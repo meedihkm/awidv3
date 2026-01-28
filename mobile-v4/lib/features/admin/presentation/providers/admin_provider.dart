@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:state_notifier/state_notifier.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/network/websocket_client.dart';
 import '../../data/datasources/admin_remote_datasource.dart';

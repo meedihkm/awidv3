@@ -1,6 +1,8 @@
-import '../entities/packaging_transaction.dart' as packaging_transaction;
 import '../entities/packaging_transaction.dart';
 import '../repositories/delivery_actions_repository.dart';
+
+// Utiliser PackagingItem de l'entité packaging_transaction
+typedef PackagingItemForTransaction = packaging_transaction.PackagingItem;
 
 /// Use Case: Gérer les Consignes
 /// Gère les transactions de consignes (dépôt/retour) avec scan QR et calcul de solde
@@ -453,19 +455,3 @@ class PackagingQrFailure extends PackagingQrResult {
 }
 
 
-/// Article de consigne pour les transactions
-class PackagingItem {
-  final String packagingTypeId;
-  final String packagingName;
-  final int quantity;
-  final double unitValue;
-
-  const PackagingItem({
-    required this.packagingTypeId,
-    required this.packagingName,
-    required this.quantity,
-    required this.unitValue,
-  });
-
-  double get totalValue => quantity * unitValue;
-}

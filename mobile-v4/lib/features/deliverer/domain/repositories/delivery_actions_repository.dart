@@ -1,6 +1,10 @@
 import '../entities/proof_of_delivery.dart';
 import '../entities/payment_collection.dart';
 import '../entities/packaging_transaction.dart';
+import '../entities/unpaid_order.dart';
+import '../entities/packaging_type.dart';
+import '../entities/delivery_history_item.dart';
+import '../entities/deliverer_earnings.dart';
 
 /// Repository pour les Actions de Livraison
 /// Interface pour gérer les preuves de livraison, paiements et consignes
@@ -141,88 +145,6 @@ abstract class DeliveryActionsRepository {
 
 // ==================== CLASSES AUXILIAIRES ====================
 
-/// Commande Impayée
-class UnpaidOrder {
-  final String id;
-  final String orderNumber;
-  final DateTime orderDate;
-  final double totalAmount;
-  final double paidAmount;
-  final double remainingAmount;
-  final int daysSinceOrder;
-
-  const UnpaidOrder({
-    required this.id,
-    required this.orderNumber,
-    required this.orderDate,
-    required this.totalAmount,
-    required this.paidAmount,
-    required this.remainingAmount,
-    required this.daysSinceOrder,
-  });
-
-  double get unpaidAmount => totalAmount - paidAmount;
-  bool get isFullyUnpaid => paidAmount == 0;
-  bool get isPartiallyPaid => paidAmount > 0 && paidAmount < totalAmount;
-}
-
-/// Solde Consignes Client
-class PackagingBalance {
-  final String customerId;
-  final String customerName;
-  final List<PackagingBalanceItem> items;
-  final double totalValue;
-  final DateTime lastUpdated;
-
-  const PackagingBalance({
-    required this.customerId,
-    required this.customerName,
-    required this.items,
-    required this.totalValue,
-    required this.lastUpdated,
-  });
-
-  bool get hasPositiveBalance => totalValue > 0;
-  bool get hasNegativeBalance => totalValue < 0;
-  bool get isBalanced => totalValue == 0;
-}
-
-/// Article du Solde Consignes
-class PackagingBalanceItem {
-  final String packagingId;
-  final String packagingName;
-  final int quantity;
-  final double unitValue;
-  final double totalValue;
-
-  const PackagingBalanceItem({
-    required this.packagingId,
-    required this.packagingName,
-    required this.quantity,
-    required this.unitValue,
-    required this.totalValue,
-  });
-}
-
-/// Type de Consigne
-class PackagingType {
-  final String id;
-  final String name;
-  final String description;
-  final double value;
-  final String? qrCodePattern;
-  final bool isActive;
-
-  const PackagingType({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.value,
-    this.qrCodePattern,
-    required this.isActive,
-  });
-}
-
 /// Données QR Code Consigne
 class PackagingQrData {
   final String packagingId;
@@ -238,73 +160,6 @@ class PackagingQrData {
     this.batchNumber,
     this.expiryDate,
   });
-}
-
-/// Élément Historique Livraison
-class DeliveryHistoryItem {
-  final String id;
-  final String deliveryNumber;
-  final String customerName;
-  final DateTime deliveryDate;
-  final String status;
-  final String deliveryAddress;
-  final int orderCount;
-  final double totalAmount;
-  final double? paymentCollected;
-  final double? packagingDeposited;
-  final double? packagingReturned;
-  final bool hasProofOfDelivery;
-  final String? notes;
-
-  const DeliveryHistoryItem({
-    required this.id,
-    required this.deliveryNumber,
-    required this.customerName,
-    required this.deliveryDate,
-    required this.status,
-    required this.deliveryAddress,
-    required this.orderCount,
-    required this.totalAmount,
-    this.paymentCollected,
-    this.packagingDeposited,
-    this.packagingReturned,
-    required this.hasProofOfDelivery,
-    this.notes,
-  });
-
-  // Legacy compatibility
-  String get orderNumber => deliveryNumber;
-  double get orderValue => totalAmount;
-}
-
-/// Gains Livreur
-class DelivererEarnings {
-  final String delivererId;
-  final DateTime startDate;
-  final DateTime endDate;
-  final int deliveryCount;
-  final double totalOrderValue;
-  final double commissionEarned;
-  final double bonusEarned;
-  final double totalEarnings;
-  final List<EarningsBreakdown> breakdown;
-
-  const DelivererEarnings({
-    required this.delivererId,
-    required this.startDate,
-    required this.endDate,
-    required this.deliveryCount,
-    required this.totalOrderValue,
-    required this.commissionEarned,
-    required this.bonusEarned,
-    required this.totalEarnings,
-    required this.breakdown,
-  });
-
-  // Legacy compatibility
-  int get totalDeliveries => deliveryCount;
-  double get totalCommissions => commissionEarned;
-  double get totalBonuses => bonusEarned;
 }
 
 /// Détail des Gains
@@ -324,46 +179,6 @@ class EarningsBreakdown {
     required this.bonuses,
     required this.total,
   });
-}
-
-/// Statistiques Détaillées Livreur
-class DelivererDetailedStats {
-  final String delivererId;
-  final DateTime startDate;
-  final DateTime endDate;
-  final int totalDeliveries;
-  final int successfulDeliveries;
-  final int failedDeliveries;
-  final double successRate;
-  final double averageDeliveryTime;
-  final double totalDistance;
-  final double totalPaymentsCollected;
-  final double averageRating;
-  final Map<String, int> deliveriesByStatus;
-  final List<DailyEarning> dailyEarnings;
-
-  const DelivererDetailedStats({
-    required this.delivererId,
-    required this.startDate,
-    required this.endDate,
-    required this.totalDeliveries,
-    required this.successfulDeliveries,
-    required this.failedDeliveries,
-    required this.successRate,
-    required this.averageDeliveryTime,
-    required this.totalDistance,
-    required this.totalPaymentsCollected,
-    required this.averageRating,
-    required this.deliveriesByStatus,
-    required this.dailyEarnings,
-  });
-
-  // Legacy compatibility
-  Map<String, double> get earningsByPeriod {
-    return Map.fromEntries(
-      dailyEarnings.map((e) => MapEntry(e.date.toIso8601String(), e.earnings)),
-    );
-  }
 }
 
 /// Gains quotidiens

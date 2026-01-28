@@ -84,6 +84,12 @@ class DelivererEarnings with _$DelivererEarnings {
     if (totalEarnings == 0) return 0;
     return (bonuses / totalEarnings) * 100;
   }
+
+  // Legacy compatibility getters
+  int get deliveryCount => totalDeliveries;
+  double get totalOrderValue => deliveryFees + tips + bonuses;
+  double get commissionEarned => deliveryFees;
+  double get bonusEarned => bonuses;
 }
 
 /// Daily Earnings
@@ -209,4 +215,10 @@ class DelivererDetailedStats with _$DelivererDetailedStats {
         return 'red';
     }
   }
+
+  // Legacy compatibility getters
+  double get successRate => completionRate;
+  double get totalDistance => 0.0; // À implémenter si nécessaire
+  double get totalPaymentsCollected => 0.0; // À implémenter si nécessaire
+  List<DailyEarnings> get dailyEarnings => []; // À implémenter si nécessaire
 }

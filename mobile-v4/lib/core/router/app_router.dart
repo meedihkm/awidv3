@@ -132,6 +132,8 @@ class AppRouter {
         path: AppConstants.routeDelivererProof,
         builder: (context, state) {
           final deliveryId = state.pathParameters['deliveryId']!;
+          final customerId = state.uri.queryParameters['customerId'] ?? '';
+          final customerName = state.uri.queryParameters['customerName'] ?? '';
           return Consumer(
             builder: (context, ref, child) {
               final authState = ref.watch(authProvider);
@@ -139,6 +141,8 @@ class AppRouter {
               return ProofOfDeliveryPage(
                 deliveryId: deliveryId,
                 delivererId: delivererId,
+                customerId: customerId,
+                customerName: customerName,
               );
             },
           );
@@ -149,9 +153,11 @@ class AppRouter {
         builder: (context, state) {
           final customerId = state.pathParameters['customerId']!;
           final customerName = state.uri.queryParameters['customerName'] ?? '';
+          final deliveryId = state.uri.queryParameters['deliveryId'] ?? '';
           return PaymentCollectionPage(
             customerId: customerId,
             customerName: customerName,
+            deliveryId: deliveryId,
           );
         },
       ),
@@ -160,9 +166,11 @@ class AppRouter {
         builder: (context, state) {
           final customerId = state.pathParameters['customerId']!;
           final customerName = state.uri.queryParameters['customerName'] ?? '';
+          final deliveryId = state.uri.queryParameters['deliveryId'] ?? '';
           return PackagingManagementPage(
             customerId: customerId,
             customerName: customerName,
+            deliveryId: deliveryId,
           );
         },
       ),
