@@ -27,6 +27,11 @@ export interface LoginOutput {
     lastName: string;
     role: string;
     organizationId: string;
+    phone?: string;
+    avatar?: string;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt?: Date;
   };
   tokens: {
     accessToken: string;
@@ -77,6 +82,11 @@ export class LoginUseCase {
         lastName: user.getLastName(),
         role: user.getRole(),
         organizationId: user.getOrganizationId(),
+        phone: user.getPhone(),
+        avatar: user.getAvatarUrl(),
+        isActive: user.isActive(),
+        createdAt: user.getCreatedAt(),
+        updatedAt: user.getUpdatedAt(),
       },
       tokens: {
         accessToken,
