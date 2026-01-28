@@ -51,7 +51,7 @@ class _PackagingManagementPageState extends ConsumerState<PackagingManagementPag
     ref.listen<DeliveryActionsState>(deliveryActionsProvider, (previous, next) {
       if (next is PackagingTransactionRecorded) {
         _showSuccessDialog(next);
-      } else if (next is Error) {
+      } else if (next is DeliveryActionsError) {
         _showErrorSnackBar(next.message);
       }
     });

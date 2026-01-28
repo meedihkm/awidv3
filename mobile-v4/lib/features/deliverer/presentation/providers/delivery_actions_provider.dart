@@ -494,9 +494,9 @@ class Loading extends DeliveryActionsState {
   const Loading();
 }
 
-class Error extends DeliveryActionsState {
+class DeliveryActionsError extends DeliveryActionsState {
   final String message;
-  const Error(this.message);
+  const DeliveryActionsError(this.message);
 }
 
 class DeliveryCompleted extends DeliveryActionsState {

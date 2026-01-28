@@ -67,7 +67,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryPage> {
     ref.listen<DeliveryActionsState>(deliveryActionsProvider, (previous, next) {
       if (next is DeliveryCompleted) {
         _showSuccessDialog(next.proofId, next.completedAt);
-      } else if (next is Error) {
+      } else if (next is DeliveryActionsError) {
         _showErrorDialog(next.message);
       }
     });

@@ -51,7 +51,7 @@ class _PaymentCollectionPageState extends ConsumerState<PaymentCollectionPage> {
     ref.listen<DeliveryActionsState>(deliveryActionsProvider, (previous, next) {
       if (next is PaymentCollected) {
         _showSuccessDialog(next);
-      } else if (next is Error) {
+      } else if (next is DeliveryActionsError) {
         _showErrorSnackBar(next.message);
       }
     });
