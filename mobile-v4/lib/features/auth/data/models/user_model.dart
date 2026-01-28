@@ -18,8 +18,8 @@ class UserModel with _$UserModel {
     required String organizationId,
     String? phone,
     String? avatar,
-    required bool isActive,
-    required DateTime createdAt,
+    @Default(true) bool isActive,
+    DateTime? createdAt,
     DateTime? updatedAt,
   }) = _UserModel;
 
