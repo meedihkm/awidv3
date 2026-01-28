@@ -4,11 +4,11 @@ class ApiConfig {
   ApiConfig._();
 
   // Base URLs
-  static const String _devBaseUrl = 'http://mgkgcgkkssok0sw880ksgs0o.62.171.130.92.sslip.io/api/v1';
+  static const String _devBaseUrl = 'http://mgkgcgkkssk0k0sw880ksgso0.62.171.130.92.sslip.io:3001/api/v1';
   static const String _stagingBaseUrl = 'https://staging-api.awid.dz/api/v1';
   static const String _prodBaseUrl = 'https://api.awid.dz/api/v1';
 
-  static const String _devWsUrl = 'http://mgkgcgkkssok0sw880ksgs0o.62.171.130.92.sslip.io';
+  static const String _devWsUrl = 'http://mgkgcgkkssk0k0sw880ksgso0.62.171.130.92.sslip.io:3001';
   static const String _stagingWsUrl = 'https://staging-api.awid.dz';
   static const String _prodWsUrl = 'https://api.awid.dz';
 

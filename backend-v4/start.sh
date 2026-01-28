@@ -20,6 +20,17 @@ else
     exit 1
 fi
 
+echo "🗄️ Setting up database..."
+echo "🔄 Running migrations..."
+npm run migrate:up || {
+    echo "⚠️ Migrations failed or already up to date, continuing..."
+}
+
+echo "🌱 Running database seeds..."
+npm run seed || {
+    echo "⚠️ Seeds failed or already exist, continuing..."
+}
+
 echo "🔧 Starting application with tsx..."
 echo "Command: npx --yes tsx src/index.ts"
 
