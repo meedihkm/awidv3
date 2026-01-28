@@ -5,7 +5,7 @@ export async function seedOrders(db: PostgresConnection): Promise<void> {
 
     // Get existing users and products
     const usersResult = await db.query('SELECT id, role, organization_id FROM users');
-    const productsResult = await db.query('SELECT id, name, price FROM products LIMIT 5');
+    const productsResult = await db.query('SELECT id, name, base_price FROM products LIMIT 5');
 
     const customers = usersResult.rows.filter(u => u.role === 'customer');
     const deliverers = usersResult.rows.filter(u => u.role === 'deliverer');
@@ -131,7 +131,7 @@ export async function seedOrders(db: PostgresConnection): Promise<void> {
             for (let i = 0; i < itemCount; i++) {
                 const product = products[i % products.length];
                 const quantity = Math.floor(Math.random() * 3) + 1; // 1-3 quantity
-                const unitPrice = Math.floor(parseFloat(product.price) * 100); // Convert to centimes
+                const unitPrice = parseInt(product.base_price); // Already in centimes
                 const itemTotal = quantity * unitPrice;
                 totalItemsPrice += itemTotal;
 
