@@ -1,7 +1,43 @@
 targets:
   $default:
     builders:
+      # Freezed code generation
+      freezed|freezed:
+        enabled: true
+        generate_for:
+          - lib/**/*.dart
+        options:
+          # Generate .freezed.dart files
+          union_key: "type"
+          union_value_case: "pascal"
+      
+      # JSON Serialization
+      json_serializable|json_serializable:
+        enabled: true
+        generate_for:
+          - lib/**/*.dart
+        options:
+          # Generate .g.dart files
+          any_map: false
+          checked: false
+          create_factory: true
+          create_to_json: true
+          disallow_unrecognized_keys: false
+          explicit_to_json: true
+          field_rename: "snake"
+          generic_argument_factories: false
+          ignore_unannotated: false
+          include_if_null: true
+      
+      # Riverpod code generation
+      riverpod_generator|riverpod_generator:
+        enabled: true
+        generate_for:
+          - lib/**/*.dart
+      
+      # Mockito for tests
       mockito|mockBuilder:
+        enabled: true
         generate_for:
           - test/**/*_test.dart
         options:
