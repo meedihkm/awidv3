@@ -14,7 +14,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend-v4/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
-    # Pas de ports exposés - communication interne uniquement
+    # Port exposé pour DBeaver
+    ports:
+      - "5432:5432"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U awid_user -d awid_db" ]
       interval: 10s
