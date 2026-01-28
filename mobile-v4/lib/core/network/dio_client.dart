@@ -50,19 +50,48 @@ class DioClient {
     CancelToken? cancelToken,
   }) async {
     try {
-      return await _dio.post<T>(
+      final response = await _dio.post<T>(
         path, 
         data: data, 
         queryParameters: queryParameters, 
         options: options, 
         cancelToken: cancelToken
       );
+
+      // Validation de la réponse
+      if (response.statusCode == null) {
+        throw DioException(
+          requestOptions: RequestOptions(path: path),
+          error: 'Status code manquant dans la réponse',
+          type: DioExceptionType.badResponse,
+        );
+      }
+
+      if (response.statusCode! < 200 || response.statusCode! >= 300) {
+        throw DioException(
+          requestOptions: RequestOptions(path: path),
+          response: response,
+          error: 'Status code invalide: ${response.statusCode}',
+          type: DioExceptionType.badResponse,
+        );
+      }
+
+      return response;
     } on DioException {
+      // Re-throw les exceptions Dio (gérées par ErrorInterceptor)
       rethrow;
-    } catch (e) {
+    } on Error catch (e) {
+      // Erreurs système (null pointer, etc.)
       throw DioException(
         requestOptions: RequestOptions(path: path),
-        error: 'Erreur réseau: ${e.toString()}',
+        error: 'Erreur système: ${e.toString()}',
+        type: DioExceptionType.unknown,
+      );
+    } catch (e) {
+      // Autres erreurs inattendues
+      throw DioException(
+        requestOptions: RequestOptions(path: path),
+        error: 'Erreur réseau inattendue: ${e.toString()}',
         type: DioExceptionType.unknown,
       );
     }

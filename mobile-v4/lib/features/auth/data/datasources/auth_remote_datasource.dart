@@ -19,66 +19,132 @@ class AuthRemoteDatasource {
         data: request.toJson()
       );
 
-      // Safe null check for response data
+      // Validation complète de la réponse
       final responseData = response.data;
       if (responseData == null) {
         throw Exception('Réponse vide du serveur');
       }
 
-      // Validate response structure
       if (responseData is! Map<String, dynamic>) {
-        throw Exception('Format de réponse invalide: type ${responseData.runtimeType}');
+        throw Exception('Format de réponse invalide: attendu Map<String, dynamic>, reçu ${responseData.runtimeType}');
       }
 
-      // Check success flag
+      // Vérification du flag de succès
       final success = responseData['success'];
-      if (success != true) {
-        final error = responseData['error'] ?? 'Erreur inconnue';
-        throw Exception('Échec de connexion: $error');
+      if (success == null) {
+        throw Exception('Champ "success" manquant dans la réponse');
       }
 
-      // Extract data safely
+      if (success is! bool) {
+        throw Exception('Champ "success" invalide: attendu bool, reçu ${success.runtimeType}');
+      }
+
+      if (!success) {
+        final error = responseData['error'];
+        final code = responseData['code'];
+        final statusCode = responseData['statusCode'];
+        
+        String errorMessage = 'Échec de connexion';
+        if (error != null && error is String && error.isNotEmpty) {
+          errorMessage = error;
+        }
+        
+        if (code == 'UNAUTHORIZED' || statusCode == 401) {
+          throw Exception('Email ou mot de passe incorrect');
+        }
+        
+        throw Exception(errorMessage);
+      }
+
+      // Extraction des données
       final data = responseData['data'];
-      if (data == null || data is! Map<String, dynamic>) {
-        throw Exception('Données manquantes dans la réponse');
+      if (data == null) {
+        throw Exception('Champ "data" manquant dans la réponse');
       }
 
-      // Extract user data safely
+      if (data is! Map<String, dynamic>) {
+        throw Exception('Champ "data" invalide: attendu Map<String, dynamic>, reçu ${data.runtimeType}');
+      }
+
+      // Validation des données utilisateur
       final userData = data['user'];
-      if (userData == null || userData is! Map<String, dynamic>) {
+      if (userData == null) {
         throw Exception('Données utilisateur manquantes');
       }
 
-      // Extract tokens safely
+      if (userData is! Map<String, dynamic>) {
+        throw Exception('Données utilisateur invalides: attendu Map<String, dynamic>, reçu ${userData.runtimeType}');
+      }
+
+      // Validation des champs utilisateur requis
+      final requiredUserFields = ['id', 'email', 'firstName', 'lastName', 'role', 'organizationId'];
+      for (final field in requiredUserFields) {
+        if (!userData.containsKey(field) || userData[field] == null) {
+          throw Exception('Champ utilisateur requis manquant: $field');
+        }
+      }
+
+      // Validation des tokens
       final tokensData = data['tokens'];
-      if (tokensData == null || tokensData is! Map<String, dynamic>) {
+      if (tokensData == null) {
         throw Exception('Tokens manquants');
+      }
+
+      if (tokensData is! Map<String, dynamic>) {
+        throw Exception('Tokens invalides: attendu Map<String, dynamic>, reçu ${tokensData.runtimeType}');
       }
 
       final accessToken = tokensData['accessToken'];
       final refreshToken = tokensData['refreshToken'];
-      
+
       if (accessToken == null || accessToken is! String || accessToken.isEmpty) {
-        throw Exception('Access token invalide');
-      }
-      
-      if (refreshToken == null || refreshToken is! String || refreshToken.isEmpty) {
-        throw Exception('Refresh token invalide');
+        throw Exception('Access token invalide ou manquant');
       }
 
-      // Create safe structure for AuthResponseModel
-      final authData = <String, dynamic>{
+      if (refreshToken == null || refreshToken is! String || refreshToken.isEmpty) {
+        throw Exception('Refresh token invalide ou manquant');
+      }
+
+      // Validation de la structure des tokens JWT (basique)
+      if (!_isValidJwtStructure(accessToken)) {
+        throw Exception('Access token: format JWT invalide');
+      }
+
+      if (!_isValidJwtStructure(refreshToken)) {
+        throw Exception('Refresh token: format JWT invalide');
+      }
+
+      // Construction de la structure pour AuthResponseModel
+      final authResponseData = <String, dynamic>{
         'user': userData,
         'accessToken': accessToken,
         'refreshToken': refreshToken,
       };
 
-      return AuthResponseModel.fromJson(authData);
+      // Validation finale avant création du modèle
+      try {
+        return AuthResponseModel.fromJson(authResponseData);
+      } catch (e) {
+        throw Exception('Erreur de désérialisation du modèle: ${e.toString()}');
+      }
+
     } on Exception {
+      // Re-throw les exceptions métier
       rethrow;
+    } on Error catch (e) {
+      // Capture les erreurs système (null pointer, etc.)
+      throw Exception('Erreur système lors de la connexion: ${e.toString()}');
     } catch (e) {
-      throw Exception('Erreur de connexion: ${e.toString()}');
+      // Capture toute autre erreur inattendue
+      throw Exception('Erreur inattendue lors de la connexion: ${e.toString()}');
     }
+  }
+
+  /// Validation basique de la structure JWT (3 parties séparées par des points)
+  bool _isValidJwtStructure(String token) {
+    if (token.isEmpty) return false;
+    final parts = token.split('.');
+    return parts.length == 3 && parts.every((part) => part.isNotEmpty);
   }
 
   /// Register
