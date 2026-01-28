@@ -43,7 +43,7 @@ class _DeliveriesListPageState extends ConsumerState<DeliveriesListPage> {
                 children: [
                   if (_selectedStatus != null)
                     Chip(
-                      label: Text(_selectedStatus!.displayName),
+                      label: Text(_selectedStatus!),
                       onDeleted: () {
                         setState(() => _selectedStatus = null);
                         _applyFilters();

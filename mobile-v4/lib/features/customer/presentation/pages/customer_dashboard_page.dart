@@ -154,7 +154,7 @@ class _CustomerDashboardPageState extends ConsumerState<CustomerDashboardPage> {
                           child: ListTile(
                             leading: const Icon(Icons.local_shipping, color: Colors.orange),
                             title: Text('Livraison #${delivery.deliveryNumber}'),
-                            subtitle: Text(delivery.statusMessage),
+                            subtitle: Text(delivery.status.displayName),
                             trailing: delivery.estimatedArrival != null
                                 ? Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
