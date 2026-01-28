@@ -18,7 +18,7 @@ class DeliveryDetailPage extends ConsumerWidget {
 
     // TODO: Créer un provider pour récupérer une livraison par ID
     // Pour l'instant, on simule avec les données de la liste
-    final deliveriesState = ref.watch(deliveriesNotifierProvider);
+    final deliveriesState = ref.watch(deliveriesProvider);
 
     return Scaffold(
       appBar: AppBar(

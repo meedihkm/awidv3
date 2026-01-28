@@ -23,14 +23,14 @@ class _DelivererDashboardPageState extends ConsumerState<DelivererDashboardPage>
     // Charger les données initiales
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(deliveriesProvider.notifier).loadDeliveries();
-      ref.read(locationNotifierProvider.notifier).startTracking();
+      ref.read(locationProvider.notifier).startTracking();
     });
   }
 
   @override
   void dispose() {
     // Arrêter le tracking GPS
-    ref.read(locationNotifierProvider.notifier).stopTracking();
+    ref.read(locationProvider.notifier).stopTracking();
     super.dispose();
   }
 
@@ -39,7 +39,7 @@ class _DelivererDashboardPageState extends ConsumerState<DelivererDashboardPage>
     final deliveriesState = ref.watch(deliveriesProvider);
     final statsAsync = ref.watch(deliveryStatsProvider);
     final activeDeliveryAsync = ref.watch(activeDeliveryProvider);
-    final locationState = ref.watch(locationNotifierProvider);
+    final locationState = ref.watch(locationProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -63,7 +63,7 @@ class _DelivererDashboardPageState extends ConsumerState<DelivererDashboardPage>
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await ref.read(deliveriesNotifierProvider.notifier).loadDeliveries();
+          await ref.read(deliveriesProvider.notifier).loadDeliveries();
           ref.invalidate(deliveryStatsProvider);
           ref.invalidate(activeDeliveryProvider);
         },
@@ -207,7 +207,7 @@ class _DelivererDashboardPageState extends ConsumerState<DelivererDashboardPage>
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: () {
-                          ref.read(deliveriesNotifierProvider.notifier).loadDeliveries();
+                          ref.read(deliveriesProvider.notifier).loadDeliveries();
                         },
                         child: const Text('Réessayer'),
                       ),

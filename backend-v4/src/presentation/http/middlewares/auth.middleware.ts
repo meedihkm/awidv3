@@ -28,7 +28,7 @@ declare global {
  * Middleware d'authentification
  * Vérifie le token JWT et ajoute les infos utilisateur à req.user
  */
-export const authenticate = async (
+export const authMiddleware = async (
   req: Request,
   res: Response,
   next: NextFunction

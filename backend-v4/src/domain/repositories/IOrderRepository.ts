@@ -3,13 +3,13 @@
  * Port pour la persistence des commandes
  */
 import { Order, OrderPriority, PaymentStatus } from '../entities/Order';
-import { OrderStatusEnum } from '../value-objects/OrderStatus';
+import { OrderStatus } from '../value-objects/OrderStatus';
 
 export interface FindOrdersOptions {
   organizationId: string;
   customerId?: string;
   delivererId?: string;
-  status?: OrderStatusEnum;
+  status?: OrderStatus;
   paymentStatus?: PaymentStatus;
   priority?: OrderPriority;
   dateFrom?: Date;
@@ -23,13 +23,12 @@ export interface FindOrdersOptions {
 
 export interface IOrderRepository {
   findById(id: string): Promise<Order | null>;
-  findByCustomer(customerId: string): Promise<Order[]>;
-  findByDeliverer(delivererId: string): Promise<Order[]>;
-  findByStatus(organizationId: string, status: OrderStatusEnum): Promise<Order[]>;
-  findMany(options: FindOrdersOptions): Promise<Order[]>;
-  count(options: FindOrdersOptions): Promise<number>;
-  save(order: Order): Promise<void>;
-  update(order: Order): Promise<void>;
+  findByOrderNumber(organizationId: string, orderNumber: string): Promise<Order | null>;
+  findByOrganization(organizationId: string, limit?: number, offset?: number): Promise<Order[]>;
+  findByCustomer(customerId: string, limit?: number, offset?: number): Promise<Order[]>;
+  findByStatus(organizationId: string, status: OrderStatus): Promise<Order[]>;
+  create(order: Order): Promise<Order>;
+  update(order: Order): Promise<Order>;
   delete(id: string): Promise<void>;
-  exists(id: string): Promise<boolean>;
+  updateStatus(orderId: string, status: OrderStatus): Promise<void>;
 }

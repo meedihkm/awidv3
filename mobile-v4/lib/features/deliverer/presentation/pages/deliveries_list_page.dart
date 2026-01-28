@@ -19,7 +19,7 @@ class _DeliveriesListPageState extends ConsumerState<DeliveriesListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final deliveriesState = ref.watch(deliveriesNotifierProvider);
+    final deliveriesState = ref.watch(deliveriesProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -67,7 +67,7 @@ class _DeliveriesListPageState extends ConsumerState<DeliveriesListPage> {
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
-                await ref.read(deliveriesNotifierProvider.notifier).loadDeliveries(
+                await ref.read(deliveriesProvider.notifier).loadDeliveries(
                       status: _selectedStatus,
                       date: _selectedDate,
                     );
@@ -121,7 +121,7 @@ class _DeliveriesListPageState extends ConsumerState<DeliveriesListPage> {
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: () {
-                          ref.read(deliveriesNotifierProvider.notifier).loadDeliveries(
+                          ref.read(deliveriesProvider.notifier).loadDeliveries(
                                 status: _selectedStatus,
                                 date: _selectedDate,
                               );
@@ -269,7 +269,7 @@ class _DeliveriesListPageState extends ConsumerState<DeliveriesListPage> {
   }
 
   void _applyFilters() {
-    ref.read(deliveriesNotifierProvider.notifier).loadDeliveries(
+    ref.read(deliveriesProvider.notifier).loadDeliveries(
           status: _selectedStatus,
           date: _selectedDate,
         );

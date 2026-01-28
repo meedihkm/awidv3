@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin/presentation/pages/admin_dashboard_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/auth/presentation/providers/auth_provider.dart';
+import '../../features/customer/presentation/pages/customer_dashboard_page.dart';
+import '../../features/deliverer/presentation/pages/deliverer_dashboard_page.dart';
+import '../../features/kitchen/presentation/pages/kitchen_dashboard_page.dart';
 import '../constants/app_constants.dart';
 
 /// App Router
@@ -19,54 +24,26 @@ class AppRouter {
       // Admin
       GoRoute(path: AppConstants.routeAdminDashboard, builder: (context, state) => const AdminDashboardPage()),
 
-      // Deliverer
+      // Deliverer - Using real page
       GoRoute(path: AppConstants.routeDelivererDashboard, builder: (context, state) => const DelivererDashboardPage()),
 
-      // Customer
-      GoRoute(path: AppConstants.routeCustomerDashboard, builder: (context, state) => const CustomerDashboardPage()),
+      // Customer - Using real page with user ID from auth
+      GoRoute(
+        path: AppConstants.routeCustomerDashboard, 
+        builder: (context, state) => Consumer(
+          builder: (context, ref, child) {
+            final authState = ref.watch(authProvider);
+            final userId = authState.user?.id ?? 'unknown-user';
+            return CustomerDashboardPage(customerId: userId);
+          },
+        ),
+      ),
 
-      // Kitchen
+      // Kitchen - Using real page
       GoRoute(path: AppConstants.routeKitchenDashboard, builder: (context, state) => const KitchenDashboardPage()),
     ],
     errorBuilder: (context, state) => const ErrorPage(),
   );
-}
-
-// Placeholder pages (will be implemented in next sprints)
-class DelivererDashboardPage extends StatelessWidget {
-  const DelivererDashboardPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Deliverer Dashboard')),
-      body: const Center(child: Text('Deliverer Dashboard - Sprint 5')),
-    );
-  }
-}
-
-class CustomerDashboardPage extends StatelessWidget {
-  const CustomerDashboardPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Customer Dashboard')),
-      body: const Center(child: Text('Customer Dashboard - Sprint 7')),
-    );
-  }
-}
-
-class KitchenDashboardPage extends StatelessWidget {
-  const KitchenDashboardPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Kitchen Dashboard')),
-      body: const Center(child: Text('Kitchen Dashboard - Sprint 9')),
-    );
-  }
 }
 
 class ErrorPage extends StatelessWidget {

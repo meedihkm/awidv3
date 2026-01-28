@@ -2,6 +2,7 @@ import { PostgresConnection } from '../PostgresConnection';
 import { seedOrganizations } from './001_seed_organizations';
 import { seedUsers } from './002_seed_users';
 import { seedProducts } from './003_seed_products';
+import { seedOrders } from './004_seed_orders';
 
 async function runSeeds(): Promise<void> {
   const db = new PostgresConnection();
@@ -15,6 +16,7 @@ async function runSeeds(): Promise<void> {
     await seedOrganizations(db);
     await seedUsers(db);
     await seedProducts(db);
+    await seedOrders(db);
 
     console.log('\n✅ All seeds completed successfully!');
     console.log('\n📋 Test Accounts Created:');

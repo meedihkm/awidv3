@@ -1,30 +1,34 @@
 import { Router } from 'express';
-import { productSchemas } from '../../../../application/validators/product.schema';
 import { ProductController } from '../../controllers/ProductController';
-import { authenticate } from '../../middlewares/auth.middleware';
-import { validateBody } from '../../middlewares/validate.middleware';
+import { authMiddleware } from '../../middlewares/auth.middleware';
 
 const router = Router();
 const productController = new ProductController();
 
-router.use(authenticate);
+router.use(authMiddleware);
 
-router.post(
-  '/',
-  validateBody(productSchemas.create),
-  productController.create.bind(productController)
-);
+// Get all products
+router.get('/', productController.getProducts.bind(productController));
 
-router.get('/', productController.list.bind(productController));
+// Get categories
+router.get('/categories', productController.getCategories.bind(productController));
 
-router.get('/:id', productController.getById.bind(productController));
+// Get product by ID
+router.get('/:id', productController.getProductById.bind(productController));
 
-router.patch(
-  '/:id',
-  validateBody(productSchemas.update),
-  productController.update.bind(productController)
-);
+// Create product
+router.post('/', productController.createProduct.bind(productController));
 
-router.delete('/:id', productController.delete.bind(productController));
+// Update product
+router.put('/:id', productController.updateProduct.bind(productController));
+
+// Delete product
+router.delete('/:id', productController.deleteProduct.bind(productController));
+
+// Update stock
+router.patch('/:id/stock', productController.updateStock.bind(productController));
+
+// Toggle availability
+router.patch('/:id/availability', productController.toggleAvailability.bind(productController));
 
 export default router;

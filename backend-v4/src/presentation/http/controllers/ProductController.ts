@@ -1,204 +1,563 @@
-import { NextFunction, Request, Response } from 'express';
-import { Product } from '../../../domain/entities/Product';
-import { Money } from '../../../domain/value-objects/Money';
-import { PostgresProductRepository } from '../../../infrastructure/database/repositories';
-import { ForbiddenError } from '../../../shared/errors/ForbiddenError';
-import { NotFoundError } from '../../../shared/errors/NotFoundError';
+import { Request, Response } from 'express';
+import { db } from '../../../infrastructure/database/PostgresConnection';
 
 export class ProductController {
-  private productRepository: PostgresProductRepository;
+  constructor() { }
 
-  constructor() {
-    this.productRepository = new PostgresProductRepository();
-  }
-
-  async create(req: Request, res: Response, next: NextFunction): Promise<void> {
+  /**
+   * Get all products
+   * GET /products
+   */
+  async getProducts(req: Request, res: Response): Promise<void> {
     try {
-      if (!['admin', 'kitchen'].includes(req.user!.role)) {
-        throw new ForbiddenError('Only admin and kitchen can create products');
-      }
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const category = req.query.category as string;
+      const isAvailable = req.query.is_available as string;
+      const search = req.query.search as string;
+      const organizationId = req.user!.organizationId;
+      const offset = (page - 1) * limit;
 
-      const product = Product.create({
-        organizationId: req.user!.organizationId,
-        name: req.body.name,
-        description: req.body.description,
-        sku: req.body.sku,
-        category: req.body.category,
-        basePrice: Money.fromCents(req.body.basePrice, 'DZD'),
-        imageUrl: req.body.imageUrl,
-        thumbnailUrl: req.body.thumbnailUrl,
-        trackStock: req.body.trackStock ?? true,
-        currentStock: req.body.currentStock ?? 0,
-        minStockLevel: req.body.minStockLevel ?? 0,
-        unit: req.body.unit ?? 'unit',
-        isAvailable: req.body.isAvailable ?? true,
-        tags: req.body.tags,
-        metadata: req.body.metadata,
-      });
+      let whereClause = 'WHERE p.organization_id = $1';
+      const params: any[] = [organizationId, limit, offset];
+      let paramIndex = 4;
 
-      const createdProduct = await this.productRepository.create(product);
-
-      res.status(201).json({
-        success: true,
-        data: {
-          product: {
-            id: createdProduct.getId(),
-            name: createdProduct.getName(),
-            category: createdProduct.getCategory(),
-            basePrice: createdProduct.getBasePrice().getAmount(),
-            isAvailable: createdProduct.isAvailable(),
-            createdAt: createdProduct.getCreatedAt(),
-          },
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const product = await this.productRepository.findById(req.params.id);
-      if (!product) {
-        throw new NotFoundError('Product not found');
-      }
-
-      if (product.getOrganizationId() !== req.user!.organizationId) {
-        throw new ForbiddenError('Access denied');
-      }
-
-      res.json({
-        success: true,
-        data: {
-          product: {
-            id: product.getId(),
-            name: product.getName(),
-            description: product.getDescription(),
-            sku: product.getSku(),
-            category: product.getCategory(),
-            basePrice: product.getBasePrice().getAmount(),
-            imageUrl: product.getImageUrl(),
-            thumbnailUrl: product.getThumbnailUrl(),
-            trackStock: product.isTrackStock(),
-            currentStock: product.getCurrentStock(),
-            minStockLevel: product.getMinStockLevel(),
-            unit: product.getUnit(),
-            isAvailable: product.isAvailable(),
-            tags: product.getTags(),
-            createdAt: product.getCreatedAt(),
-          },
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async list(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { category, available } = req.query;
-
-      let products;
       if (category) {
-        products = await this.productRepository.findByCategory(
-          req.user!.organizationId,
-          category as string
-        );
-      } else if (available === 'true') {
-        products = await this.productRepository.findAvailable(req.user!.organizationId);
-      } else {
-        products = await this.productRepository.findByOrganization(req.user!.organizationId);
+        whereClause += ` AND p.category = $${paramIndex}`;
+        params.push(category);
+        paramIndex++;
       }
+
+      if (isAvailable === 'true') {
+        whereClause += ` AND p.is_available = true`;
+      } else if (isAvailable === 'false') {
+        whereClause += ` AND p.is_available = false`;
+      }
+
+      if (search) {
+        whereClause += ` AND (p.name ILIKE $${paramIndex} OR p.description ILIKE $${paramIndex})`;
+        params.push(`%${search}%`);
+        paramIndex++;
+      }
+
+      const query = `
+        SELECT 
+          p.id,
+          p.name,
+          p.description,
+          p.sku,
+          p.category,
+          p.price,
+          p.image_url,
+          p.thumbnail_url,
+          p.current_stock,
+          p.min_stock_level,
+          p.unit,
+          p.is_available,
+          p.tags,
+          p.created_at,
+          p.updated_at
+        FROM products p
+        ${whereClause}
+        ORDER BY p.name ASC
+        LIMIT $2 OFFSET $3
+      `;
+
+      const result = await db.query(query, params);
+
+      const products = result.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        sku: row.sku,
+        category: row.category,
+        price: parseFloat(row.price) / 100, // Convert from centimes
+        imageUrl: row.image_url,
+        thumbnailUrl: row.thumbnail_url,
+        currentStock: parseInt(row.current_stock) || 0,
+        minStockLevel: parseInt(row.min_stock_level) || 0,
+        unit: row.unit,
+        isAvailable: row.is_available,
+        tags: row.tags || [],
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
 
       res.json({
         success: true,
-        data: {
-          products: products.map((product) => ({
-            id: product.getId(),
-            name: product.getName(),
-            category: product.getCategory(),
-            basePrice: product.getBasePrice().getAmount(),
-            imageUrl: product.getImageUrl(),
-            thumbnailUrl: product.getThumbnailUrl(),
-            currentStock: product.getCurrentStock(),
-            isAvailable: product.isAvailable(),
-          })),
+        data: products,
+        pagination: {
+          page,
+          limit,
           total: products.length,
         },
       });
     } catch (error) {
-      next(error);
+      console.error('Error getting products:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la récupération des produits',
+        code: 'INTERNAL_ERROR',
+      });
     }
   }
 
-  async update(req: Request, res: Response, next: NextFunction): Promise<void> {
+  /**
+   * Get product by ID
+   * GET /products/:id
+   */
+  async getProductById(req: Request, res: Response): Promise<void> {
+    try {
+      const productId = req.params.id;
+      const organizationId = req.user!.organizationId;
+
+      const result = await db.query(`
+        SELECT 
+          p.id,
+          p.name,
+          p.description,
+          p.sku,
+          p.category,
+          p.price,
+          p.image_url,
+          p.thumbnail_url,
+          p.current_stock,
+          p.min_stock_level,
+          p.unit,
+          p.is_available,
+          p.tags,
+          p.metadata,
+          p.created_at,
+          p.updated_at
+        FROM products p
+        WHERE p.id = $1 AND p.organization_id = $2
+      `, [productId, organizationId]);
+
+      if (result.length === 0) {
+        res.status(404).json({
+          success: false,
+          error: 'Produit non trouvé',
+          code: 'NOT_FOUND',
+        });
+        return;
+      }
+
+      const row = result[0];
+      const product = {
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        sku: row.sku,
+        category: row.category,
+        price: parseFloat(row.price) / 100,
+        imageUrl: row.image_url,
+        thumbnailUrl: row.thumbnail_url,
+        currentStock: parseInt(row.current_stock) || 0,
+        minStockLevel: parseInt(row.min_stock_level) || 0,
+        unit: row.unit,
+        isAvailable: row.is_available,
+        tags: row.tags || [],
+        metadata: row.metadata || {},
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      };
+
+      res.json({
+        success: true,
+        data: product,
+      });
+    } catch (error) {
+      console.error('Error getting product by ID:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la récupération du produit',
+        code: 'INTERNAL_ERROR',
+      });
+    }
+  }
+
+  /**
+   * Create product
+   * POST /products
+   */
+  async createProduct(req: Request, res: Response): Promise<void> {
     try {
       if (!['admin', 'kitchen'].includes(req.user!.role)) {
-        throw new ForbiddenError('Only admin and kitchen can update products');
+        res.status(403).json({
+          success: false,
+          error: 'Seuls les admins et la cuisine peuvent créer des produits',
+          code: 'FORBIDDEN',
+        });
+        return;
       }
 
-      const product = await this.productRepository.findById(req.params.id);
-      if (!product) {
-        throw new NotFoundError('Product not found');
-      }
+      const {
+        name,
+        description,
+        sku,
+        category,
+        price,
+        imageUrl,
+        thumbnailUrl,
+        currentStock,
+        minStockLevel,
+        unit,
+        isAvailable,
+        tags,
+        metadata
+      } = req.body;
 
-      if (product.getOrganizationId() !== req.user!.organizationId) {
-        throw new ForbiddenError('Access denied');
-      }
+      const result = await db.query(`
+        INSERT INTO products (
+          organization_id, name, description, sku, category, price,
+          image_url, thumbnail_url, current_stock, min_stock_level,
+          unit, is_available, tags, metadata
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING *
+      `, [
+        req.user!.organizationId,
+        name,
+        description || null,
+        sku || null,
+        category,
+        Math.round((price || 0) * 100), // Convert to centimes
+        imageUrl || null,
+        thumbnailUrl || null,
+        currentStock || 0,
+        minStockLevel || 0,
+        unit || 'unit',
+        isAvailable !== false,
+        JSON.stringify(tags || []),
+        JSON.stringify(metadata || {})
+      ]);
 
-      if (req.body.name) product.updateName(req.body.name);
-      if (req.body.description !== undefined) product.updateDescription(req.body.description);
-      if (req.body.basePrice) product.updatePrice(Money.fromCents(req.body.basePrice, 'DZD'));
-      if (req.body.isAvailable !== undefined) {
-        if (req.body.isAvailable) {
-          product.makeAvailable();
-        } else {
-          product.makeUnavailable();
-        }
-      }
+      const row = result[0];
+      const product = {
+        id: row.id,
+        name: row.name,
+        category: row.category,
+        price: parseFloat(row.price) / 100,
+        isAvailable: row.is_available,
+        createdAt: row.created_at,
+      };
 
-      const updatedProduct = await this.productRepository.update(product);
-
-      res.json({
+      res.status(201).json({
         success: true,
-        data: {
-          product: {
-            id: updatedProduct.getId(),
-            name: updatedProduct.getName(),
-            basePrice: updatedProduct.getBasePrice().getAmount(),
-            isAvailable: updatedProduct.isAvailable(),
-            updatedAt: updatedProduct.getUpdatedAt(),
-          },
-        },
+        data: product,
       });
     } catch (error) {
-      next(error);
+      console.error('Error creating product:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la création du produit',
+        code: 'INTERNAL_ERROR',
+      });
     }
   }
 
-  async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
+  /**
+   * Update product
+   * PUT /products/:id
+   */
+  async updateProduct(req: Request, res: Response): Promise<void> {
     try {
-      if (!['admin'].includes(req.user!.role)) {
-        throw new ForbiddenError('Only admin can delete products');
+      if (!['admin', 'kitchen'].includes(req.user!.role)) {
+        res.status(403).json({
+          success: false,
+          error: 'Seuls les admins et la cuisine peuvent modifier des produits',
+          code: 'FORBIDDEN',
+        });
+        return;
       }
 
-      const product = await this.productRepository.findById(req.params.id);
-      if (!product) {
-        throw new NotFoundError('Product not found');
+      const productId = req.params.id;
+      const organizationId = req.user!.organizationId;
+      const {
+        name,
+        description,
+        sku,
+        category,
+        price,
+        imageUrl,
+        thumbnailUrl,
+        currentStock,
+        minStockLevel,
+        unit,
+        isAvailable,
+        tags,
+        metadata
+      } = req.body;
+
+      // Check if product exists and belongs to organization
+      const existingProduct = await db.query(
+        'SELECT id FROM products WHERE id = $1 AND organization_id = $2',
+        [productId, organizationId]
+      );
+
+      if (existingProduct.length === 0) {
+        res.status(404).json({
+          success: false,
+          error: 'Produit non trouvé',
+          code: 'NOT_FOUND',
+        });
+        return;
       }
 
-      if (product.getOrganizationId() !== req.user!.organizationId) {
-        throw new ForbiddenError('Access denied');
-      }
+      const result = await db.query(`
+        UPDATE products SET
+          name = COALESCE($2, name),
+          description = COALESCE($3, description),
+          sku = COALESCE($4, sku),
+          category = COALESCE($5, category),
+          price = COALESCE($6, price),
+          image_url = COALESCE($7, image_url),
+          thumbnail_url = COALESCE($8, thumbnail_url),
+          current_stock = COALESCE($9, current_stock),
+          min_stock_level = COALESCE($10, min_stock_level),
+          unit = COALESCE($11, unit),
+          is_available = COALESCE($12, is_available),
+          tags = COALESCE($13, tags),
+          metadata = COALESCE($14, metadata),
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING *
+      `, [
+        productId,
+        name,
+        description,
+        sku,
+        category,
+        price ? Math.round(price * 100) : null,
+        imageUrl,
+        thumbnailUrl,
+        currentStock,
+        minStockLevel,
+        unit,
+        isAvailable,
+        tags ? JSON.stringify(tags) : null,
+        metadata ? JSON.stringify(metadata) : null
+      ]);
 
-      await this.productRepository.delete(req.params.id);
+      const row = result[0];
+      const product = {
+        id: row.id,
+        name: row.name,
+        price: parseFloat(row.price) / 100,
+        isAvailable: row.is_available,
+        updatedAt: row.updated_at,
+      };
 
       res.json({
         success: true,
-        message: 'Product deleted successfully',
+        data: product,
       });
     } catch (error) {
-      next(error);
+      console.error('Error updating product:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la mise à jour du produit',
+        code: 'INTERNAL_ERROR',
+      });
+    }
+  }
+
+  /**
+   * Delete product
+   * DELETE /products/:id
+   */
+  async deleteProduct(req: Request, res: Response): Promise<void> {
+    try {
+      if (!['admin'].includes(req.user!.role)) {
+        res.status(403).json({
+          success: false,
+          error: 'Seuls les admins peuvent supprimer des produits',
+          code: 'FORBIDDEN',
+        });
+        return;
+      }
+
+      const productId = req.params.id;
+      const organizationId = req.user!.organizationId;
+
+      const result = await db.query(
+        'DELETE FROM products WHERE id = $1 AND organization_id = $2 RETURNING id',
+        [productId, organizationId]
+      );
+
+      if (result.length === 0) {
+        res.status(404).json({
+          success: false,
+          error: 'Produit non trouvé',
+          code: 'NOT_FOUND',
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        message: 'Produit supprimé avec succès',
+      });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la suppression du produit',
+        code: 'INTERNAL_ERROR',
+      });
+    }
+  }
+
+  /**
+   * Get categories
+   * GET /products/categories
+   */
+  async getCategories(req: Request, res: Response): Promise<void> {
+    try {
+      const organizationId = req.user!.organizationId;
+
+      const result = await db.query(`
+        SELECT DISTINCT category
+        FROM products
+        WHERE organization_id = $1 AND category IS NOT NULL
+        ORDER BY category
+      `, [organizationId]);
+
+      const categories = result.map((row: any) => row.category);
+
+      res.json({
+        success: true,
+        data: categories,
+      });
+    } catch (error) {
+      console.error('Error getting categories:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la récupération des catégories',
+        code: 'INTERNAL_ERROR',
+      });
+    }
+  }
+
+  /**
+   * Update stock
+   * PATCH /products/:id/stock
+   */
+  async updateStock(req: Request, res: Response): Promise<void> {
+    try {
+      if (!['admin', 'kitchen'].includes(req.user!.role)) {
+        res.status(403).json({
+          success: false,
+          error: 'Seuls les admins et la cuisine peuvent modifier le stock',
+          code: 'FORBIDDEN',
+        });
+        return;
+      }
+
+      const productId = req.params.id;
+      const { quantity } = req.body;
+      const organizationId = req.user!.organizationId;
+
+      if (typeof quantity !== 'number') {
+        res.status(400).json({
+          success: false,
+          error: 'La quantité doit être un nombre',
+          code: 'VALIDATION_ERROR',
+        });
+        return;
+      }
+
+      const result = await db.query(`
+        UPDATE products 
+        SET current_stock = $2, updated_at = NOW()
+        WHERE id = $1 AND organization_id = $3
+        RETURNING *
+      `, [productId, quantity, organizationId]);
+
+      if (result.length === 0) {
+        res.status(404).json({
+          success: false,
+          error: 'Produit non trouvé',
+          code: 'NOT_FOUND',
+        });
+        return;
+      }
+
+      const row = result[0];
+      const product = {
+        id: row.id,
+        name: row.name,
+        currentStock: parseInt(row.current_stock),
+        updatedAt: row.updated_at,
+      };
+
+      res.json({
+        success: true,
+        data: product,
+      });
+    } catch (error) {
+      console.error('Error updating stock:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la mise à jour du stock',
+        code: 'INTERNAL_ERROR',
+      });
+    }
+  }
+
+  /**
+   * Toggle availability
+   * PATCH /products/:id/availability
+   */
+  async toggleAvailability(req: Request, res: Response): Promise<void> {
+    try {
+      if (!['admin', 'kitchen'].includes(req.user!.role)) {
+        res.status(403).json({
+          success: false,
+          error: 'Seuls les admins et la cuisine peuvent modifier la disponibilité',
+          code: 'FORBIDDEN',
+        });
+        return;
+      }
+
+      const productId = req.params.id;
+      const organizationId = req.user!.organizationId;
+
+      const result = await db.query(`
+        UPDATE products 
+        SET is_available = NOT is_available, updated_at = NOW()
+        WHERE id = $1 AND organization_id = $2
+        RETURNING *
+      `, [productId, organizationId]);
+
+      if (result.length === 0) {
+        res.status(404).json({
+          success: false,
+          error: 'Produit non trouvé',
+          code: 'NOT_FOUND',
+        });
+        return;
+      }
+
+      const row = result[0];
+      const product = {
+        id: row.id,
+        name: row.name,
+        isAvailable: row.is_available,
+        updatedAt: row.updated_at,
+      };
+
+      res.json({
+        success: true,
+        data: product,
+      });
+    } catch (error) {
+      console.error('Error toggling availability:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la modification de la disponibilité',
+        code: 'INTERNAL_ERROR',
+      });
     }
   }
 }

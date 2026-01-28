@@ -1,30 +1,37 @@
 import { Router } from 'express';
-import { userSchemas } from '../../../../application/validators/user.schema';
 import { UserController } from '../../controllers/UserController';
-import { authenticate } from '../../middlewares/auth.middleware';
-import { validateBody } from '../../middlewares/validate.middleware';
+import { authMiddleware } from '../../middlewares/auth.middleware';
 
 const router = Router();
 const userController = new UserController();
 
-router.use(authenticate);
+router.use(authMiddleware);
 
-router.post(
-  '/',
-  validateBody(userSchemas.create),
-  userController.create.bind(userController)
-);
+// Get all users
+router.get('/', userController.getUsers.bind(userController));
 
-router.get('/', userController.list.bind(userController));
+// Get users by role
+router.get('/by-role/:role', userController.getUsersByRole.bind(userController));
 
-router.get('/:id', userController.getById.bind(userController));
+// Get user by ID
+router.get('/:id', userController.getUserById.bind(userController));
 
-router.patch(
-  '/:id',
-  validateBody(userSchemas.update),
-  userController.update.bind(userController)
-);
+// Create user
+router.post('/', userController.createUser.bind(userController));
 
-router.delete('/:id', userController.delete.bind(userController));
+// Update user
+router.put('/:id', userController.updateUser.bind(userController));
+
+// Delete user
+router.delete('/:id', userController.deleteUser.bind(userController));
+
+// Toggle active status
+router.patch('/:id/toggle-active', userController.toggleActiveStatus.bind(userController));
+
+// Update credit limit
+router.patch('/:id/credit-limit', userController.updateCreditLimit.bind(userController));
+
+// Reset password
+router.post('/:id/reset-password', userController.resetPassword.bind(userController));
 
 export default router;
