@@ -49,7 +49,23 @@ class DioClient {
     Options? options,
     CancelToken? cancelToken,
   }) async {
-    return _dio.post<T>(path, data: data, queryParameters: queryParameters, options: options, cancelToken: cancelToken);
+    try {
+      return await _dio.post<T>(
+        path, 
+        data: data, 
+        queryParameters: queryParameters, 
+        options: options, 
+        cancelToken: cancelToken
+      );
+    } on DioException {
+      rethrow;
+    } catch (e) {
+      throw DioException(
+        requestOptions: RequestOptions(path: path),
+        error: 'Erreur réseau: ${e.toString()}',
+        type: DioExceptionType.unknown,
+      );
+    }
   }
 
   // PUT request
