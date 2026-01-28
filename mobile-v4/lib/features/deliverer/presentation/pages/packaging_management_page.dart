@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/entities/packaging_transaction.dart';
+import '../../domain/entities/packaging_type.dart';
 import '../../domain/usecases/manage_packaging_usecase.dart';
 import '../providers/delivery_actions_provider.dart';
 

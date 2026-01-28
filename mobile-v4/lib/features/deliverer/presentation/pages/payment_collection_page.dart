@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/entities/payment_collection.dart';
+import '../../domain/entities/unpaid_order.dart';
 import '../../domain/usecases/collect_payment_usecase.dart';
 import '../providers/delivery_actions_provider.dart';
 import '../widgets/payment_allocation.dart';

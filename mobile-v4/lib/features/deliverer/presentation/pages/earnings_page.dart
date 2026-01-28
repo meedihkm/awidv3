@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 
+import '../../domain/entities/deliverer_earnings.dart';
 import '../providers/delivery_actions_provider.dart';
 
 /// Page des gains du livreur

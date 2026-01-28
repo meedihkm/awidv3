@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../domain/entities/unpaid_order.dart';
 import '../../domain/usecases/collect_payment_usecase.dart';
 
 /// Widget pour l'allocation manuelle des paiements

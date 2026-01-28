@@ -1,4 +1,5 @@
 import '../entities/payment_collection.dart';
+import '../entities/unpaid_order.dart';
 import '../repositories/delivery_actions_repository.dart';
 
 /// Use Case: Encaisser un Paiement
@@ -388,16 +389,4 @@ class CollectPaymentFailure extends CollectPaymentResult {
     return error.contains('Aucune commande') || 
            error.contains('trouvée');
   }
-}
-
-
-/// Allocation manuelle pour le widget
-class ManualAllocation {
-  final String orderId;
-  final double amount;
-
-  const ManualAllocation({
-    required this.orderId,
-    required this.amount,
-  });
 }

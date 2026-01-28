@@ -196,3 +196,13 @@ docs/
 # Anciennes versions (garder en local uniquement)
 api-v2/
 mobile/
+
+# Flutter SDK local
+flutter_windows_*/
+flutter_macos_*/
+flutter_linux_*/
+
+# Fichiers temporaires de build
+freezed_files.txt
+log build
+remove_generated_files.bat

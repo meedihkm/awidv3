@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/customer_order.dart';
+import '../../domain/entities/order_status_filter.dart';
 import '../providers/customer_orders_provider.dart';
 import '../widgets/order_card.dart';
 
