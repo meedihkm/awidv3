@@ -121,8 +121,8 @@ export async function seedOrders(db: PostgresConnection): Promise<void> {
             order.created_at,
         ]);
 
-        if (orderResult.rows.length > 0) {
-            const orderId = orderResult.rows[0].id;
+        if (orderResult.length > 0) {
+            const orderId = orderResult[0].id;
 
             // Add order items (2-3 items per order)
             const itemCount = Math.floor(Math.random() * 2) + 2; // 2-3 items
