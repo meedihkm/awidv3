@@ -459,7 +459,7 @@ sealed class DeliveryActionsState {
 
   const factory DeliveryActionsState.idle() = Idle;
   const factory DeliveryActionsState.loading() = Loading;
-  const factory DeliveryActionsState.error(String message) = Error;
+  const factory DeliveryActionsState.error(String message) = DeliveryActionsError;
   
   const factory DeliveryActionsState.deliveryCompleted({
     required String proofId,
