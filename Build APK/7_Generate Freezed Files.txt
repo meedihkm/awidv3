@@ -1,0 +1,42 @@
+﻿2026-01-29T05:41:24.7202176Z ##[group]Run dart run build_runner build --delete-conflicting-outputs
+2026-01-29T05:41:24.7202684Z [36;1mdart run build_runner build --delete-conflicting-outputs[0m
+2026-01-29T05:41:24.7234722Z shell: /usr/bin/bash -e {0}
+2026-01-29T05:41:24.7234953Z env:
+2026-01-29T05:41:24.7235189Z   JAVA_HOME: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:41:24.7235592Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:41:24.7236200Z   FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.38.5-x64
+2026-01-29T05:41:24.7236526Z   PUB_CACHE: /home/runner/.pub-cache
+2026-01-29T05:41:24.7236765Z ##[endgroup]
+2026-01-29T05:41:29.6495112Z   Generating the build script.
+2026-01-29T05:41:30.0431838Z   Compiling the build script.
+2026-01-29T05:41:35.6945589Z   Reading the asset graph.
+2026-01-29T05:41:36.1845128Z   Creating the asset graph.
+2026-01-29T05:41:36.7001766Z   Doing initial build cleanup.
+2026-01-29T05:41:36.7057039Z   Updating the asset graph.
+2026-01-29T05:41:36.7059873Z   Building, full build because builders changed.
+2026-01-29T05:41:36.7142843Z   0s riverpod_generator on 222 inputs; lib/core/animations/list_animations.dart
+2026-01-29T05:41:36.7219598Z W SDK language version 3.10.0 is newer than `analyzer` language version 3.9.0. Run `flutter packages upgrade`.
+2026-01-29T05:41:42.6309147Z   6s riverpod_generator on 222 inputs: 1 no-op; spent 6s sdk; lib/core/animations/loading_animations.dart
+2026-01-29T05:41:43.6322199Z   7s riverpod_generator on 222 inputs: 67 no-op; spent 6s sdk; lib/features/admin/domain/entities/user_detail.dart
+2026-01-29T05:41:44.6421082Z   8s riverpod_generator on 222 inputs: 160 no-op; spent 6s sdk, 2s analyzing; lib/features/deliverer/domain/entities/route.dart
+2026-01-29T05:41:45.1340530Z   8s riverpod_generator on 222 inputs: 222 no-op; spent 6s sdk, 2s analyzing
+2026-01-29T05:41:45.1341417Z   0s freezed on 222 inputs; lib/core/animations/list_animations.dart
+2026-01-29T05:41:45.6453447Z   1s freezed on 222 inputs: 9 output, 56 no-op; lib/features/admin/domain/entities/order_summary.dart
+2026-01-29T05:41:46.6619246Z   2s freezed on 222 inputs: 36 output, 121 no-op; spent 1s building; lib/features/deliverer/domain/entities/packaging_type.dart
+2026-01-29T05:41:47.2231063Z   2s freezed on 222 inputs: 51 output, 171 no-op; spent 1s building
+2026-01-29T05:41:47.2231931Z   0s json_serializable on 444 inputs; lib/core/animations/list_animations.dart
+2026-01-29T05:41:57.2121203Z   10s json_serializable on 444 inputs: 1 no-op; spent 8s analyzing, 2s resolving; lib/core/animations/list_animations.freezed.dart
+2026-01-29T05:41:58.2131405Z   11s json_serializable on 444 inputs: 14 skipped, 15 no-op; spent 9s analyzing, 2s resolving; lib/core/network/websocket_events.freezed.dart
+2026-01-29T05:42:03.7250424Z   17s json_serializable on 444 inputs: 17 skipped, 18 no-op; spent 13s analyzing, 3s resolving; lib/core/router/app_router.freezed.dart
+2026-01-29T05:42:04.7424098Z   18s json_serializable on 444 inputs: 44 skipped, 45 no-op; spent 14s analyzing, 3s resolving; lib/core/widgets/network_status_banner.freezed.dart
+2026-01-29T05:42:05.7804630Z   19s json_serializable on 444 inputs: 52 skipped, 3 output, 54 no-op; spent 15s analyzing, 3s resolving; lib/features/admin/data/models/order_detail_model.freezed.dart
+2026-01-29T05:42:06.8402248Z   20s json_serializable on 444 inputs: 94 skipped, 12 output, 119 no-op; spent 16s analyzing, 3s resolving; lib/features/customer/data/models/customer_delivery_model.freezed.dart
+2026-01-29T05:42:07.9323185Z   21s json_serializable on 444 inputs: 119 skipped, 22 output, 154 no-op; spent 16s analyzing, 3s resolving, 1s building; lib/features/deliverer/data/models/payment_collection_model.freezed.dart
+2026-01-29T05:42:08.9366882Z   22s json_serializable on 444 inputs: 146 skipped, 31 output, 198 no-op; spent 17s analyzing, 3s resolving, 1s building; lib/features/deliverer/presentation/widgets/signature_pad.freezed.dart
+2026-01-29T05:42:09.9397459Z   23s json_serializable on 444 inputs: 162 skipped, 36 output, 229 no-op; spent 18s analyzing, 3s resolving, 1s building; lib/features/kitchen/presentation/providers/kitchen_orders_provider.freezed.dart
+2026-01-29T05:42:10.0121712Z   23s json_serializable on 444 inputs: 171 skipped, 36 output, 237 no-op; spent 18s analyzing, 3s resolving, 1s building
+2026-01-29T05:42:10.0122702Z   0s source_gen:combining_builder on 445 inputs; lib/core/animations/list_animations.dart
+2026-01-29T05:42:10.7386503Z   1s source_gen:combining_builder on 445 inputs: 171 skipped, 36 output, 238 no-op
+2026-01-29T05:42:10.7387331Z   Running the post build.
+2026-01-29T05:42:10.7434236Z   Writing the asset graph.
+2026-01-29T05:42:11.0089410Z   Built with build_runner in 36s; wrote 123 outputs.

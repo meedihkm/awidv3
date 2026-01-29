@@ -1,0 +1,248 @@
+﻿2026-01-29T05:42:11.1274202Z ##[group]Run flutter analyze --no-fatal-infos --no-fatal-warnings
+2026-01-29T05:42:11.1275081Z [36;1mflutter analyze --no-fatal-infos --no-fatal-warnings[0m
+2026-01-29T05:42:11.1310404Z shell: /usr/bin/bash -e {0}
+2026-01-29T05:42:11.1310646Z env:
+2026-01-29T05:42:11.1310900Z   JAVA_HOME: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:42:11.1311296Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:42:11.1311692Z   FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.38.5-x64
+2026-01-29T05:42:11.1312009Z   PUB_CACHE: /home/runner/.pub-cache
+2026-01-29T05:42:11.1312237Z ##[endgroup]
+2026-01-29T05:42:11.2983753Z Resolving dependencies...
+2026-01-29T05:42:11.5304195Z Downloading packages...
+2026-01-29T05:42:11.6409833Z   _fe_analyzer_shared 85.0.0 (93.0.0 available)
+2026-01-29T05:42:11.6410375Z   analyzer 7.6.0 (10.0.1 available)
+2026-01-29T05:42:11.6410792Z   analyzer_plugin 0.13.4 (0.14.1 available)
+2026-01-29T05:42:11.6411241Z   build 2.5.4 (4.0.4 available)
+2026-01-29T05:42:11.6411685Z   build_config 1.1.2 (1.2.0 available)
+2026-01-29T05:42:11.6412083Z   build_resolvers 2.5.4 (3.0.4 available)
+2026-01-29T05:42:11.6412504Z   build_runner 2.5.4 (2.10.5 available)
+2026-01-29T05:42:11.6412929Z   build_runner_core 9.1.2 (9.3.2 available)
+2026-01-29T05:42:11.6413347Z   characters 1.4.0 (1.4.1 available)
+2026-01-29T05:42:11.6413766Z   connectivity_plus 6.1.5 (7.0.0 available)
+2026-01-29T05:42:11.6414201Z   custom_lint_core 0.7.5 (0.8.2 available)
+2026-01-29T05:42:11.6414691Z   custom_lint_visitor 1.0.0+7.7.0 (1.0.0+9.0.0 available)
+2026-01-29T05:42:11.6415173Z   dart_style 3.1.1 (3.1.5 available)
+2026-01-29T05:42:11.6415584Z   dio 5.9.0 (5.9.1 available)
+2026-01-29T05:42:11.6416185Z   fl_chart 0.70.2 (1.1.1 available)
+2026-01-29T05:42:11.6416511Z   flutter_map 7.0.2 (8.2.2 available)
+2026-01-29T05:42:11.6416787Z   flutter_riverpod 2.6.1 (3.2.0 available)
+2026-01-29T05:42:11.6417104Z   flutter_secure_storage 9.2.4 (10.0.0 available)
+2026-01-29T05:42:11.6417449Z   flutter_secure_storage_linux 1.2.3 (3.0.0 available)
+2026-01-29T05:42:11.6417806Z   flutter_secure_storage_macos 3.1.3 (4.0.0 available)
+2026-01-29T05:42:11.6418195Z   flutter_secure_storage_platform_interface 1.1.2 (2.0.1 available)
+2026-01-29T05:42:11.6418594Z   flutter_secure_storage_web 1.2.1 (2.1.0 available)
+2026-01-29T05:42:11.6418935Z   flutter_secure_storage_windows 3.1.2 (4.1.0 available)
+2026-01-29T05:42:11.6419257Z   flutter_slidable 3.1.2 (4.0.3 available)
+2026-01-29T05:42:11.6419522Z   freezed 3.1.0 (3.2.4 available)
+2026-01-29T05:42:11.6419771Z   geolocator 13.0.4 (14.0.2 available)
+2026-01-29T05:42:11.6420040Z   geolocator_android 4.6.2 (5.0.2 available)
+2026-01-29T05:42:11.6420551Z   go_router 14.8.1 (17.0.1 available)
+2026-01-29T05:42:11.6420825Z   image_picker_ios 0.8.13+3 (0.8.13+5 available)
+2026-01-29T05:42:11.6421100Z   js 0.6.7 (0.7.2 available)
+2026-01-29T05:42:11.6421338Z   json_annotation 4.9.0 (4.10.0 available)
+2026-01-29T05:42:11.6421614Z   json_serializable 6.9.5 (6.12.0 available)
+2026-01-29T05:42:11.6421891Z   matcher 0.12.17 (0.12.18 available)
+2026-01-29T05:42:11.6422279Z   material_color_utilities 0.11.1 (0.13.0 available)
+2026-01-29T05:42:11.6422728Z   meta 1.17.0 (1.18.1 available)
+2026-01-29T05:42:11.6423093Z   mgrs_dart 2.0.0 (3.0.0 available)
+2026-01-29T05:42:11.6423481Z   mockito 5.4.6 (5.6.3 available)
+2026-01-29T05:42:11.6423860Z   objective_c 9.2.4 (9.2.5 available)
+2026-01-29T05:42:11.6424283Z   permission_handler 11.4.0 (12.0.1 available)
+2026-01-29T05:42:11.6424796Z   permission_handler_android 12.1.0 (13.0.1 available)
+2026-01-29T05:42:11.6425269Z   proj4dart 2.1.0 (3.0.0 available)
+2026-01-29T05:42:11.6425829Z   riverpod 2.6.1 (3.2.0 available)
+2026-01-29T05:42:11.6426203Z   riverpod_annotation 2.6.1 (4.0.1 available)
+2026-01-29T05:42:11.6426496Z   riverpod_generator 2.6.5 (4.0.2 available)
+2026-01-29T05:42:11.6426751Z   signature 5.5.0 (6.3.0 available)
+2026-01-29T05:42:11.6426986Z   source_gen 2.0.0 (4.2.0 available)
+2026-01-29T05:42:11.6427224Z   source_helper 1.3.7 (1.3.10 available)
+2026-01-29T05:42:11.6427702Z   test 1.26.3 (1.29.0 available)
+2026-01-29T05:42:11.6427923Z   test_api 0.7.7 (0.7.9 available)
+2026-01-29T05:42:11.6428149Z   test_core 0.6.12 (0.6.15 available)
+2026-01-29T05:42:11.6428377Z   unicode 0.3.1 (1.1.9 available)
+2026-01-29T05:42:11.6428586Z Got dependencies!
+2026-01-29T05:42:11.6428938Z 51 packages have newer versions incompatible with dependency constraints.
+2026-01-29T05:42:11.6429368Z Try `flutter pub outdated` for more information.
+2026-01-29T05:42:31.1871798Z Analyzing mobile-v4...                                          
+2026-01-29T05:42:31.1878044Z 
+2026-01-29T05:42:31.1899729Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/core/animations/loading_animations.dart:86:25 • deprecated_member_use
+2026-01-29T05:42:31.1902187Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/core/animations/loading_animations.dart:150:33 • deprecated_member_use
+2026-01-29T05:42:31.1904502Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/core/animations/loading_animations.dart:335:33 • deprecated_member_use
+2026-01-29T05:42:31.1907119Z    info • 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre • lib/core/config/theme_config.dart:38:9 • deprecated_member_use
+2026-01-29T05:42:31.1910956Z    info • 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre • lib/core/config/theme_config.dart:110:9 • deprecated_member_use
+2026-01-29T05:42:31.1912888Z    info • Dangling library doc comment • lib/core/network/websocket_events.dart:1:1 • dangling_library_doc_comments
+2026-01-29T05:42:31.1914441Z    info • The prefix 'IO' isn't a lower_case_with_underscores identifier • lib/core/network/websocket_service.dart:2:60 • library_prefixes
+2026-01-29T05:42:31.1916969Z warning • A value of type 'StreamSubscription<List<ConnectivityResult>>' can't be assigned to a variable of type 'StreamSubscription<ConnectivityResult>?' • lib/core/services/connectivity_service.dart:27:21 • invalid_assignment
+2026-01-29T05:42:31.1919768Z warning • The argument type 'List<ConnectivityResult>' can't be assigned to the parameter type 'ConnectivityResult'.  • lib/core/services/connectivity_service.dart:28:21 • argument_type_not_assignable
+2026-01-29T05:42:31.1922320Z warning • The argument type 'List<ConnectivityResult>' can't be assigned to the parameter type 'ConnectivityResult'.  • lib/core/services/connectivity_service.dart:36:21 • argument_type_not_assignable
+2026-01-29T05:42:31.1924968Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/core/theme/app_colors.dart:203:18 • deprecated_member_use
+2026-01-29T05:42:31.1927128Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/core/theme/app_text_styles.dart:302:47 • deprecated_member_use
+2026-01-29T05:42:31.1928729Z warning • Unused import: 'dart:typed_data' • lib/core/utils/image_optimizer.dart:2:8 • unused_import
+2026-01-29T05:42:31.1930000Z warning • Unused import: 'package:flutter/foundation.dart' • lib/core/utils/image_optimizer.dart:3:8 • unused_import
+2026-01-29T05:42:31.1931708Z    info • The imported package 'path' isn't a dependency of the importing package • lib/core/utils/image_optimizer.dart:6:8 • depend_on_referenced_packages
+2026-01-29T05:42:31.1933656Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/core/widgets/custom_app_bar.dart:192:24 • deprecated_member_use
+2026-01-29T05:42:31.1935821Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/core/widgets/custom_app_bar.dart:263:54 • deprecated_member_use
+2026-01-29T05:42:31.1937828Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/core/widgets/empty_state.dart:31:72 • deprecated_member_use
+2026-01-29T05:42:31.1940050Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/core/widgets/loading_overlay.dart:25:54 • deprecated_member_use
+2026-01-29T05:42:31.1942085Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/core/widgets/loading_overlay.dart:74:33 • deprecated_member_use
+2026-01-29T05:42:31.1944837Z    info • 'WillPopScope' is deprecated and shouldn't be used. Use PopScope instead. The Android predictive back feature will not work with WillPopScope. This feature was deprecated after v3.12.0-1.0.pre • lib/core/widgets/loading_overlay.dart:122:27 • deprecated_member_use
+2026-01-29T05:42:31.1959846Z    info • The type of the right operand ('ConnectivityResult') isn't a subtype or a supertype of the left operand ('List<ConnectivityResult>') • lib/core/widgets/network_status_banner.dart:31:38 • unrelated_type_equality_checks
+2026-01-29T05:42:31.1963024Z    info • The type of the right operand ('ConnectivityResult') isn't a subtype or a supertype of the left operand ('List<ConnectivityResult>') • lib/core/widgets/network_status_banner.dart:39:34 • unrelated_type_equality_checks
+2026-01-29T05:42:31.1966312Z    info • The type of the right operand ('ConnectivityResult') isn't a subtype or a supertype of the left operand ('List<ConnectivityResult>') • lib/core/widgets/network_status_banner.dart:125:38 • unrelated_type_equality_checks
+2026-01-29T05:42:31.1969346Z    info • The type of the right operand ('ConnectivityResult') isn't a subtype or a supertype of the left operand ('List<ConnectivityResult>') • lib/core/widgets/network_status_banner.dart:132:28 • unrelated_type_equality_checks
+2026-01-29T05:42:31.1972440Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/pages/admin_dashboard_page.dart:60:49 • deprecated_member_use
+2026-01-29T05:42:31.1975149Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/pages/order_detail_page.dart:67:76 • deprecated_member_use
+2026-01-29T05:42:31.1977986Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/pages/order_detail_page.dart:222:90 • deprecated_member_use
+2026-01-29T05:42:31.1980250Z    info • Unnecessary use of multiple underscores • lib/features/admin/presentation/pages/order_detail_page.dart:333:22 • unnecessary_underscores
+2026-01-29T05:42:31.1982526Z warning • Unused import: '../../../../core/config/theme_config.dart' • lib/features/admin/presentation/pages/products_page.dart:4:8 • unused_import
+2026-01-29T05:42:31.1984407Z warning • Unused import: '../../../../core/utils/formatters.dart' • lib/features/admin/presentation/pages/products_page.dart:5:8 • unused_import
+2026-01-29T05:42:31.1987346Z    info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/features/admin/presentation/pages/products_page.dart:200:19 • deprecated_member_use
+2026-01-29T05:42:31.1990055Z    info • Unnecessary use of multiple underscores • lib/features/admin/presentation/pages/products_page.dart:211:28 • unnecessary_underscores
+2026-01-29T05:42:31.1992799Z    info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/features/admin/presentation/pages/products_page.dart:219:17 • deprecated_member_use
+2026-01-29T05:42:31.1995883Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/pages/users_page.dart:168:79 • deprecated_member_use
+2026-01-29T05:42:31.1998344Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/pages/users_page.dart:176:56 • deprecated_member_use
+2026-01-29T05:42:31.2001129Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/pages/users_page.dart:177:54 • deprecated_member_use
+2026-01-29T05:42:31.2004089Z    info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/features/admin/presentation/pages/users_page.dart:254:15 • deprecated_member_use
+2026-01-29T05:42:31.2007652Z    info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/features/admin/presentation/pages/users_page.dart:271:15 • deprecated_member_use
+2026-01-29T05:42:31.2011203Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/admin/presentation/providers/admin_provider.dart:2:8 • unnecessary_import
+2026-01-29T05:42:31.2014947Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/admin/presentation/providers/orders_provider.dart:2:8 • unnecessary_import
+2026-01-29T05:42:31.2018088Z warning • Unused import: '../../../../core/network/dio_client.dart' • lib/features/admin/presentation/providers/orders_provider.dart:4:8 • unused_import
+2026-01-29T05:42:31.2021053Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/admin/presentation/providers/products_provider.dart:2:8 • unnecessary_import
+2026-01-29T05:42:31.2023886Z warning • Unused import: '../../../../core/network/dio_client.dart' • lib/features/admin/presentation/providers/products_provider.dart:4:8 • unused_import
+2026-01-29T05:42:31.2038102Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/admin/presentation/providers/users_provider.dart:2:8 • unnecessary_import
+2026-01-29T05:42:31.2040932Z warning • Unused import: '../../../../core/network/dio_client.dart' • lib/features/admin/presentation/providers/users_provider.dart:4:8 • unused_import
+2026-01-29T05:42:31.2043525Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/widgets/order_list_item.dart:49:42 • deprecated_member_use
+2026-01-29T05:42:31.2046229Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/widgets/product_list_item.dart:70:54 • deprecated_member_use
+2026-01-29T05:42:31.2048603Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/widgets/product_list_item.dart:90:71 • deprecated_member_use
+2026-01-29T05:42:31.2050999Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/widgets/product_list_item.dart:90:101 • deprecated_member_use
+2026-01-29T05:42:31.2053327Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/admin/presentation/widgets/product_list_item.dart:97:52 • deprecated_member_use
+2026-01-29T05:42:31.2055342Z warning • Unnecessary type check; the result is always 'false' • lib/features/auth/data/datasources/auth_remote_datasource.dart:28:11 • unnecessary_type_check
+2026-01-29T05:42:31.2057413Z warning • Dead code • lib/features/auth/data/datasources/auth_remote_datasource.dart:28:50 • dead_code
+2026-01-29T05:42:31.2058915Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/auth/presentation/providers/auth_provider.dart:2:8 • unnecessary_import
+2026-01-29T05:42:31.2061775Z warning • Unused import: '../../domain/entities/customer_delivery.dart' • lib/features/customer/data/datasources/customer_remote_datasource.dart:5:8 • unused_import
+2026-01-29T05:42:31.2063978Z warning • Unused import: '../../domain/entities/customer_account.dart' • lib/features/customer/data/datasources/customer_remote_datasource.dart:6:8 • unused_import
+2026-01-29T05:42:31.2066371Z    info • Unnecessary braces in a string interpolation • lib/features/customer/domain/entities/customer_notification.dart:342:22 • unnecessary_brace_in_string_interps
+2026-01-29T05:42:31.2068443Z warning • Unused import: 'package:intl/intl.dart' • lib/features/customer/presentation/pages/customer_dashboard_page.dart:3:8 • unused_import
+2026-01-29T05:42:31.2070416Z    info • Unnecessary use of multiple underscores • lib/features/customer/presentation/pages/customer_dashboard_page.dart:83:24 • unnecessary_underscores
+2026-01-29T05:42:31.2072478Z    info • Unnecessary use of multiple underscores • lib/features/customer/presentation/pages/customer_dashboard_page.dart:125:26 • unnecessary_underscores
+2026-01-29T05:42:31.2074533Z    info • Unnecessary use of multiple underscores • lib/features/customer/presentation/pages/customer_dashboard_page.dart:180:26 • unnecessary_underscores
+2026-01-29T05:42:31.2076699Z warning • The value of 'refresh' should be used • lib/features/customer/presentation/pages/customer_dashboard_page.dart:246:31 • unused_result
+2026-01-29T05:42:31.2078178Z warning • Dead code • lib/features/customer/presentation/pages/customer_delivery_tracking_page.dart:87:67 • dead_code
+2026-01-29T05:42:31.2079346Z warning • The left operand can't be null, so the right operand is never executed • lib/features/customer/presentation/pages/customer_delivery_tracking_page.dart:87:70 • dead_null_aware_expression
+2026-01-29T05:42:31.2080562Z warning • Dead code • lib/features/customer/presentation/pages/customer_delivery_tracking_page.dart:103:71 • dead_code
+2026-01-29T05:42:31.2081860Z warning • The left operand can't be null, so the right operand is never executed • lib/features/customer/presentation/pages/customer_delivery_tracking_page.dart:103:74 • dead_null_aware_expression
+2026-01-29T05:42:31.2084380Z    info • Missing type annotation • lib/features/customer/presentation/pages/customer_delivery_tracking_page.dart:213:27 • strict_top_level_inference
+2026-01-29T05:42:31.2086603Z    info • Missing type annotation • lib/features/customer/presentation/pages/customer_delivery_tracking_page.dart:226:25 • strict_top_level_inference
+2026-01-29T05:42:31.2088963Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/customer/presentation/pages/customer_history_page.dart:143:73 • deprecated_member_use
+2026-01-29T05:42:31.2091132Z warning • The value of 'refresh' should be used • lib/features/customer/presentation/pages/customer_history_page.dart:176:29 • unused_result
+2026-01-29T05:42:31.2092960Z    info • Missing type annotation • lib/features/customer/presentation/pages/customer_history_page.dart:263:27 • strict_top_level_inference
+2026-01-29T05:42:31.2094804Z    info • Missing type annotation • lib/features/customer/presentation/pages/customer_history_page.dart:276:25 • strict_top_level_inference
+2026-01-29T05:42:31.2097172Z warning • The '!' will have no effect because the receiver can't be null • lib/features/customer/presentation/pages/customer_order_detail_page.dart:59:56 • unnecessary_non_null_assertion
+2026-01-29T05:42:31.2099314Z    info • Missing type annotation • lib/features/customer/presentation/pages/customer_order_detail_page.dart:159:27 • strict_top_level_inference
+2026-01-29T05:42:31.2102132Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/customer/presentation/pages/customer_order_detail_page.dart:163:28 • deprecated_member_use
+2026-01-29T05:42:31.2105477Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/customer/presentation/providers/customer_account_provider.dart:2:8 • unnecessary_import
+2026-01-29T05:42:31.2109595Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/customer/presentation/providers/customer_orders_provider.dart:2:8 • unnecessary_import
+2026-01-29T05:42:31.2112563Z warning • Unused import: '../../../../core/network/dio_client.dart' • lib/features/customer/presentation/providers/customer_orders_provider.dart:4:8 • unused_import
+2026-01-29T05:42:31.2141699Z warning • Unused import: '../../../../core/storage/local_storage.dart' • lib/features/customer/presentation/providers/customer_orders_provider.dart:6:8 • unused_import
+2026-01-29T05:42:31.2145016Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/customer/presentation/providers/customer_tracking_provider.dart:2:8 • unnecessary_import
+2026-01-29T05:42:31.2148243Z    info • Unnecessary use of multiple underscores • lib/features/customer/presentation/providers/customer_tracking_provider.dart:117:18 • unnecessary_underscores
+2026-01-29T05:42:31.2150434Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/customer/presentation/widgets/account_summary.dart:145:22 • deprecated_member_use
+2026-01-29T05:42:31.2152992Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/customer/presentation/widgets/delivery_map.dart:113:38 • deprecated_member_use
+2026-01-29T05:42:31.2155507Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/customer/presentation/widgets/delivery_map.dart:135:49 • deprecated_member_use
+2026-01-29T05:42:31.2158258Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/customer/presentation/widgets/delivery_map.dart:158:49 • deprecated_member_use
+2026-01-29T05:42:31.2161134Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/customer/presentation/widgets/delivery_map.dart:190:51 • deprecated_member_use
+2026-01-29T05:42:31.2163564Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/customer/presentation/widgets/delivery_map.dart:213:51 • deprecated_member_use
+2026-01-29T05:42:31.2165941Z warning • Unused import: 'package:intl/intl.dart' • lib/features/customer/presentation/widgets/order_card.dart:2:8 • unused_import
+2026-01-29T05:42:31.2168127Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/customer/presentation/widgets/order_card.dart:104:45 • deprecated_member_use
+2026-01-29T05:42:31.2170612Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/customer/presentation/widgets/order_card.dart:105:42 • deprecated_member_use
+2026-01-29T05:42:31.2173135Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/customer/presentation/widgets/order_card.dart:145:40 • deprecated_member_use
+2026-01-29T05:42:31.2175954Z warning • Unused import: '../../domain/repositories/delivery_actions_repository.dart' • lib/features/deliverer/data/models/payment_collection_model.dart:5:8 • unused_import
+2026-01-29T05:42:31.2178222Z warning • Unused import: '../../domain/repositories/delivery_actions_repository.dart' • lib/features/deliverer/data/models/proof_of_delivery_model.dart:4:8 • unused_import
+2026-01-29T05:42:31.2180533Z warning • The value of the local variable 'locationState' isn't used • lib/features/deliverer/presentation/pages/deliverer_dashboard_page.dart:42:11 • unused_local_variable
+2026-01-29T05:42:31.2182691Z    info • Unnecessary use of multiple underscores • lib/features/deliverer/presentation/pages/deliverer_dashboard_page.dart:120:28 • unnecessary_underscores
+2026-01-29T05:42:31.2184823Z warning • Unused import: '../../domain/entities/delivery.dart' • lib/features/deliverer/presentation/pages/deliveries_list_page.dart:4:8 • unused_import
+2026-01-29T05:42:31.2187203Z warning • The operand can't be 'null', so the condition is always 'true' • lib/features/deliverer/presentation/pages/delivery_detail_page.dart:84:47 • unnecessary_null_comparison
+2026-01-29T05:42:31.2189555Z warning • The '!' will have no effect because the receiver can't be null • lib/features/deliverer/presentation/pages/delivery_detail_page.dart:87:69 • unnecessary_non_null_assertion
+2026-01-29T05:42:31.2192079Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/pages/delivery_detail_page.dart:201:26 • deprecated_member_use
+2026-01-29T05:42:31.2194820Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/pages/delivery_detail_page.dart:246:50 • deprecated_member_use
+2026-01-29T05:42:31.2197362Z warning • The value of 'refresh' should be used • lib/features/deliverer/presentation/pages/delivery_history_page.dart:133:25 • unused_result
+2026-01-29T05:42:31.2199677Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/pages/delivery_history_page.dart:268:22 • deprecated_member_use
+2026-01-29T05:42:31.2202964Z    info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/features/deliverer/presentation/pages/delivery_history_page.dart:372:17 • deprecated_member_use
+2026-01-29T05:42:31.2205579Z warning • The value of 'refresh' should be used • lib/features/deliverer/presentation/pages/earnings_page.dart:84:15 • unused_result
+2026-01-29T05:42:31.2207823Z warning • The value of 'refresh' should be used • lib/features/deliverer/presentation/pages/earnings_page.dart:85:15 • unused_result
+2026-01-29T05:42:31.2210016Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/pages/earnings_page.dart:407:45 • deprecated_member_use
+2026-01-29T05:42:31.2213270Z    info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/features/deliverer/presentation/pages/payment_collection_page.dart:162:13 • deprecated_member_use
+2026-01-29T05:42:31.2217085Z    info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/features/deliverer/presentation/pages/payment_collection_page.dart:215:19 • deprecated_member_use
+2026-01-29T05:42:31.2220555Z    info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/features/deliverer/presentation/pages/payment_collection_page.dart:216:19 • deprecated_member_use
+2026-01-29T05:42:31.2224026Z    info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/features/deliverer/presentation/pages/payment_collection_page.dart:224:19 • deprecated_member_use
+2026-01-29T05:42:31.2227925Z    info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/features/deliverer/presentation/pages/payment_collection_page.dart:225:19 • deprecated_member_use
+2026-01-29T05:42:31.2230602Z    info • The private field _photosPaths could be 'final' • lib/features/deliverer/presentation/pages/proof_of_delivery_page.dart:43:16 • prefer_final_fields
+2026-01-29T05:42:31.2232801Z warning • The value of the local variable 'cameraState' isn't used • lib/features/deliverer/presentation/pages/proof_of_delivery_page.dart:64:11 • unused_local_variable
+2026-01-29T05:42:31.2235111Z warning • The operand can't be 'null', so the condition is always 'true' • lib/features/deliverer/presentation/pages/proof_of_delivery_page.dart:78:30 • unnecessary_null_comparison
+2026-01-29T05:42:31.2237671Z warning • The operand can't be 'null', so the condition is always 'true' • lib/features/deliverer/presentation/pages/proof_of_delivery_page.dart:85:31 • unnecessary_null_comparison
+2026-01-29T05:42:31.2240177Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/pages/proof_of_delivery_page.dart:621:33 • deprecated_member_use
+2026-01-29T05:42:31.2243295Z    info • 'desiredAccuracy' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings • lib/features/deliverer/presentation/pages/proof_of_delivery_page.dart:661:9 • deprecated_member_use
+2026-01-29T05:42:31.2246437Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/pages/route_map_page.dart:168:33 • deprecated_member_use
+2026-01-29T05:42:31.2249038Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/pages/route_map_page.dart:284:22 • deprecated_member_use
+2026-01-29T05:42:31.2252333Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/deliverer/presentation/providers/camera_provider.dart:4:8 • unnecessary_import
+2026-01-29T05:42:31.2255382Z    info • Unnecessary braces in a string interpolation • lib/features/deliverer/presentation/providers/camera_provider.dart:247:29 • unnecessary_brace_in_string_interps
+2026-01-29T05:42:31.2258209Z    info • Unnecessary braces in a string interpolation • lib/features/deliverer/presentation/providers/camera_provider.dart:404:27 • unnecessary_brace_in_string_interps
+2026-01-29T05:42:31.2261397Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/deliverer/presentation/providers/deliverer_provider.dart:2:8 • unnecessary_import
+2026-01-29T05:42:31.2265142Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/deliverer/presentation/providers/delivery_actions_provider.dart:2:8 • unnecessary_import
+2026-01-29T05:42:31.2268458Z warning • Unused import: '../../../../core/network/dio_client.dart' • lib/features/deliverer/presentation/providers/delivery_actions_provider.dart:5:8 • unused_import
+2026-01-29T05:42:31.2270638Z warning • Unused import: '../../../../core/storage/local_storage.dart' • lib/features/deliverer/presentation/providers/delivery_actions_provider.dart:6:8 • unused_import
+2026-01-29T05:42:31.2273878Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/deliverer/presentation/providers/location_provider.dart:4:8 • unnecessary_import
+2026-01-29T05:42:31.2276144Z    info • 'desiredAccuracy' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings • lib/features/deliverer/presentation/providers/location_provider.dart:90:9 • deprecated_member_use
+2026-01-29T05:42:31.2277931Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/widgets/delivery_card.dart:39:46 • deprecated_member_use
+2026-01-29T05:42:31.2280245Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/widgets/delivery_card.dart:67:42 • deprecated_member_use
+2026-01-29T05:42:31.2282542Z warning • The operand can't be 'null', so the condition is always 'true' • lib/features/deliverer/presentation/widgets/delivery_card.dart:124:41 • unnecessary_null_comparison
+2026-01-29T05:42:31.2284751Z warning • The '!' will have no effect because the receiver can't be null • lib/features/deliverer/presentation/widgets/delivery_card.dart:134:65 • unnecessary_non_null_assertion
+2026-01-29T05:42:31.2286734Z    info • 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre • lib/features/deliverer/presentation/widgets/delivery_card.dart:188:46 • deprecated_member_use
+2026-01-29T05:42:31.2288222Z warning • Unused import: '../../domain/usecases/collect_payment_usecase.dart' • lib/features/deliverer/presentation/widgets/payment_allocation.dart:5:8 • unused_import
+2026-01-29T05:42:31.2289387Z warning • The value of the local variable 'cameraState' isn't used • lib/features/deliverer/presentation/widgets/photo_capture.dart:39:11 • unused_local_variable
+2026-01-29T05:42:31.2290574Z warning • The operand can't be 'null', so the condition is always 'true' • lib/features/deliverer/presentation/widgets/photo_capture.dart:45:30 • unnecessary_null_comparison
+2026-01-29T05:42:31.2291777Z warning • The operand can't be 'null', so the condition is always 'true' • lib/features/deliverer/presentation/widgets/photo_capture.dart:53:31 • unnecessary_null_comparison
+2026-01-29T05:42:31.2293075Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/widgets/photo_capture.dart:334:37 • deprecated_member_use
+2026-01-29T05:42:31.2294645Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/widgets/photo_capture.dart:631:37 • deprecated_member_use
+2026-01-29T05:42:31.2295894Z warning • Unused import: 'dart:ui' • lib/features/deliverer/presentation/widgets/signature_pad.dart:3:8 • unused_import
+2026-01-29T05:42:31.2297310Z    info • The import of 'package:flutter/rendering.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' • lib/features/deliverer/presentation/widgets/signature_pad.dart:6:8 • unnecessary_import
+2026-01-29T05:42:31.2298916Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/widgets/signature_pad.dart:168:39 • deprecated_member_use
+2026-01-29T05:42:31.2300276Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/widgets/stats_summary.dart:25:39 • deprecated_member_use
+2026-01-29T05:42:31.2301123Z 179 issues found. (ran in 18.9s)
+2026-01-29T05:42:31.2301990Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/widgets/stats_summary.dart:33:46 • deprecated_member_use
+2026-01-29T05:42:31.2303501Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/widgets/stats_summary.dart:48:39 • deprecated_member_use
+2026-01-29T05:42:31.2304856Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/widgets/stats_summary.dart:191:29 • deprecated_member_use
+2026-01-29T05:42:31.2306468Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/deliverer/presentation/widgets/stats_summary.dart:214:35 • deprecated_member_use
+2026-01-29T05:42:31.2307852Z warning • Unused import: 'package:awid_mobile/core/network/websocket_events.dart' • lib/features/kitchen/data/datasources/kitchen_websocket_datasource.dart:3:8 • unused_import
+2026-01-29T05:42:31.2308944Z    info • Unclosed instance of 'Sink' • lib/features/kitchen/data/datasources/kitchen_websocket_datasource.dart:44:11 • close_sinks
+2026-01-29T05:42:31.2310135Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/kitchen/presentation/pages/kanban_board_page.dart:467:30 • deprecated_member_use
+2026-01-29T05:42:31.2311527Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/kitchen/presentation/pages/kanban_board_page.dart:498:30 • deprecated_member_use
+2026-01-29T05:42:31.2312688Z warning • The value of 'refresh' should be used • lib/features/kitchen/presentation/pages/kitchen_dashboard_page.dart:42:19 • unused_result
+2026-01-29T05:42:31.2313669Z warning • The value of 'refresh' should be used • lib/features/kitchen/presentation/pages/kitchen_dashboard_page.dart:57:15 • unused_result
+2026-01-29T05:42:31.2314892Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/kitchen/presentation/pages/kitchen_dashboard_page.dart:196:22 • deprecated_member_use
+2026-01-29T05:42:31.2316289Z    info • Missing type annotation • lib/features/kitchen/presentation/pages/kitchen_dashboard_page.dart:225:30 • strict_top_level_inference
+2026-01-29T05:42:31.2317288Z    info • Missing type annotation • lib/features/kitchen/presentation/pages/kitchen_dashboard_page.dart:225:43 • strict_top_level_inference
+2026-01-29T05:42:31.2318270Z    info • Missing type annotation • lib/features/kitchen/presentation/pages/kitchen_dashboard_page.dart:294:30 • strict_top_level_inference
+2026-01-29T05:42:31.2319488Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/kitchen/presentation/pages/kitchen_dashboard_page.dart:359:22 • deprecated_member_use
+2026-01-29T05:42:31.2320817Z    info • Missing type annotation • lib/features/kitchen/presentation/pages/kitchen_dashboard_page.dart:386:29 • strict_top_level_inference
+2026-01-29T05:42:31.2322015Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/kitchen/presentation/pages/order_detail_page.dart:91:44 • deprecated_member_use
+2026-01-29T05:42:31.2323178Z warning • The value of 'refresh' should be used • lib/features/kitchen/presentation/pages/production_stats_page.dart:61:13 • unused_result
+2026-01-29T05:42:31.2324248Z    info • Unnecessary use of string interpolation • lib/features/kitchen/presentation/pages/production_stats_page.dart:321:19 • unnecessary_string_interpolations
+2026-01-29T05:42:31.2325300Z warning • The value of 'refresh' should be used • lib/features/kitchen/presentation/pages/production_stats_page.dart:381:11 • unused_result
+2026-01-29T05:42:31.2326694Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/kitchen/presentation/pages/stock_management_page.dart:252:39 • deprecated_member_use
+2026-01-29T05:42:31.2328477Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/kitchen/presentation/providers/kanban_provider.dart:3:8 • unnecessary_import
+2026-01-29T05:42:31.2330367Z warning • Unused import: 'package:awid_mobile/features/kitchen/domain/repositories/kitchen_repository.dart' • lib/features/kitchen/presentation/providers/kitchen_orders_provider.dart:2:8 • unused_import
+2026-01-29T05:42:31.2332208Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/kitchen/presentation/providers/kitchen_orders_provider.dart:6:8 • unnecessary_import
+2026-01-29T05:42:31.2334007Z warning • Unused import: 'package:awid_mobile/features/kitchen/domain/repositories/kitchen_repository.dart' • lib/features/kitchen/presentation/providers/kitchen_stats_provider.dart:2:8 • unused_import
+2026-01-29T05:42:31.2335961Z    info • The import of 'package:state_notifier/state_notifier.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter_riverpod/flutter_riverpod.dart' • lib/features/kitchen/presentation/providers/stock_provider.dart:4:8 • unnecessary_import
+2026-01-29T05:42:31.2337652Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/kitchen/presentation/widgets/kanban_card.dart:170:22 • deprecated_member_use
+2026-01-29T05:42:31.2339003Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/kitchen/presentation/widgets/kanban_column.dart:86:35 • deprecated_member_use
+2026-01-29T05:42:31.2340469Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/kitchen/presentation/widgets/order_timer.dart:74:27 • deprecated_member_use
+2026-01-29T05:42:31.2341806Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/kitchen/presentation/widgets/order_timer.dart:76:46 • deprecated_member_use
+2026-01-29T05:42:31.2343126Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/kitchen/presentation/widgets/order_timer.dart:95:35 • deprecated_member_use
+2026-01-29T05:42:31.2344469Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/kitchen/presentation/widgets/priority_badge.dart:48:24 • deprecated_member_use
+2026-01-29T05:42:31.2346005Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/kitchen/presentation/widgets/priority_badge.dart:72:22 • deprecated_member_use
+2026-01-29T05:42:31.2347360Z    info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/kitchen/presentation/widgets/stock_alert.dart:39:20 • deprecated_member_use
+2026-01-29T05:42:31.2348758Z warning • The asset directory 'assets/images/' doesn't exist • pubspec.yaml:89:7 • asset_directory_does_not_exist
+2026-01-29T05:42:31.2350052Z warning • The asset directory 'assets/icons/' doesn't exist • pubspec.yaml:90:7 • asset_directory_does_not_exist
+2026-01-29T05:42:31.2350738Z 

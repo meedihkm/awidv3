@@ -1,0 +1,51 @@
+﻿2026-01-29T05:41:03.0067885Z ##[group]Run flutter doctor -v
+2026-01-29T05:41:03.0068166Z [36;1mflutter doctor -v[0m
+2026-01-29T05:41:03.0099872Z shell: /usr/bin/bash -e {0}
+2026-01-29T05:41:03.0100097Z env:
+2026-01-29T05:41:03.0100342Z   JAVA_HOME: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:41:03.0100722Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:41:03.0101103Z   FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.38.5-x64
+2026-01-29T05:41:03.0101411Z   PUB_CACHE: /home/runner/.pub-cache
+2026-01-29T05:41:03.0101638Z ##[endgroup]
+2026-01-29T05:41:07.8030202Z [✓] Flutter (Channel stable, 3.38.5, on Ubuntu 24.04.3 LTS 6.11.0-1018-azure, locale C.UTF-8) [46ms]
+2026-01-29T05:41:07.8034811Z     • Flutter version 3.38.5 on channel stable at /opt/hostedtoolcache/flutter/stable-3.38.5-x64
+2026-01-29T05:41:07.8037640Z     • Upstream repository https://github.com/flutter/flutter.git
+2026-01-29T05:41:07.8038487Z     • Framework revision f6ff1529fd (7 weeks ago), 2025-12-11 11:50:07 -0500
+2026-01-29T05:41:07.8040341Z     • Engine revision 1527ae0ec5
+2026-01-29T05:41:07.8040854Z     • Dart version 3.10.4
+2026-01-29T05:41:07.8041308Z     • DevTools version 2.51.1
+2026-01-29T05:41:07.8043199Z     • Feature flags: enable-web, enable-linux-desktop, enable-macos-desktop, enable-windows-desktop, enable-android, enable-ios, cli-animations, enable-native-assets, omit-legacy-version-file, enable-lldb-debugging
+2026-01-29T05:41:07.8044771Z 
+2026-01-29T05:41:15.6308478Z [!] Android toolchain - develop for Android devices (Android SDK version 36.1.0) [7.9s]
+2026-01-29T05:41:15.6309662Z     • Android SDK at /usr/local/lib/android/sdk
+2026-01-29T05:41:15.6310337Z     • Emulator version unknown
+2026-01-29T05:41:15.6311100Z     • Platform android-36.1, build-tools 36.1.0
+2026-01-29T05:41:15.6311771Z     • ANDROID_HOME = /usr/local/lib/android/sdk
+2026-01-29T05:41:15.6312386Z     • ANDROID_SDK_ROOT = /usr/local/lib/android/sdk
+2026-01-29T05:41:15.6314758Z     • Java binary at: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64/bin/java
+2026-01-29T05:41:15.6315967Z       This JDK is specified by the JAVA_HOME environment variable.
+2026-01-29T05:41:15.6316882Z       To manually set the JDK path, use: `flutter config --jdk-dir="path/to/jdk"`.
+2026-01-29T05:41:15.6318069Z     • Java version OpenJDK Runtime Environment Zulu17.64+15-CA (build 17.0.18+8-LTS)
+2026-01-29T05:41:15.6319169Z     ! Some Android licenses not accepted. To resolve this, run: flutter doctor --android-licenses
+2026-01-29T05:41:15.6320370Z 
+2026-01-29T05:41:15.6321365Z [✓] Chrome - develop for the web [46ms]
+2026-01-29T05:41:15.6322388Z     • Chrome at google-chrome
+2026-01-29T05:41:15.6322886Z 
+2026-01-29T05:41:15.9820496Z [✗] Linux toolchain - develop for Linux desktop [8.2s]
+2026-01-29T05:41:15.9821134Z     • Ubuntu clang version 18.1.3 (1ubuntu1)
+2026-01-29T05:41:15.9821684Z     • cmake version 3.31.6
+2026-01-29T05:41:15.9822360Z     • ninja version 1.13.2
+2026-01-29T05:41:15.9823197Z     • pkg-config version 1.8.1
+2026-01-29T05:41:15.9824773Z     ✗ GTK 3.0 development libraries are required for Linux development.
+2026-01-29T05:41:15.9825858Z       They are likely available from your distribution (e.g.: apt install libgtk-3-dev)
+2026-01-29T05:41:15.9826687Z     ! Unable to access driver information using 'eglinfo'.
+2026-01-29T05:41:15.9827427Z       It is likely available from your distribution (e.g.: apt install mesa-utils)
+2026-01-29T05:41:15.9827964Z 
+2026-01-29T05:41:15.9829314Z [✓] Connected device (2 available) [7.3s]
+2026-01-29T05:41:15.9830488Z     • Linux (desktop) • linux  • linux-x64      • Ubuntu 24.04.3 LTS 6.11.0-1018-azure
+2026-01-29T05:41:15.9831415Z     • Chrome (web)    • chrome • web-javascript • Google Chrome 144.0.7559.59
+2026-01-29T05:41:15.9832012Z 
+2026-01-29T05:41:15.9833806Z [✓] Network resources [349ms]
+2026-01-29T05:41:15.9834693Z     • All expected network resources are available.
+2026-01-29T05:41:15.9846169Z 
+2026-01-29T05:41:15.9846358Z ! Doctor found issues in 2 categories.

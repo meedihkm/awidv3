@@ -1,0 +1,87 @@
+﻿2026-01-29T05:40:04.2520959Z ##[group]Run subosito/flutter-action@v2
+2026-01-29T05:40:04.2521259Z with:
+2026-01-29T05:40:04.2521454Z   flutter-version: 3.38.5
+2026-01-29T05:40:04.2521679Z   channel: stable
+2026-01-29T05:40:04.2521857Z   cache: true
+2026-01-29T05:40:04.2522034Z   architecture: X64
+2026-01-29T05:40:04.2522240Z   pub-cache-path: default
+2026-01-29T05:40:04.2522439Z   dry-run: false
+2026-01-29T05:40:04.2522689Z   git-source: https://github.com/flutter/flutter.git
+2026-01-29T05:40:04.2522967Z env:
+2026-01-29T05:40:04.2523206Z   JAVA_HOME: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:40:04.2523593Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:40:04.2523907Z ##[endgroup]
+2026-01-29T05:40:04.2609769Z ##[group]Run chmod +x "$GITHUB_ACTION_PATH/setup.sh"
+2026-01-29T05:40:04.2610193Z [36;1mchmod +x "$GITHUB_ACTION_PATH/setup.sh"[0m
+2026-01-29T05:40:04.2647196Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-01-29T05:40:04.2647609Z env:
+2026-01-29T05:40:04.2647906Z   JAVA_HOME: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:40:04.2648301Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:40:04.2648629Z ##[endgroup]
+2026-01-29T05:40:04.2783042Z ##[group]Run $GITHUB_ACTION_PATH/setup.sh -p \
+2026-01-29T05:40:04.2783421Z [36;1m$GITHUB_ACTION_PATH/setup.sh -p \[0m
+2026-01-29T05:40:04.2783703Z [36;1m  -n '3.38.5' \[0m
+2026-01-29T05:40:04.2783903Z [36;1m  -f '' \[0m
+2026-01-29T05:40:04.2784089Z [36;1m  -a 'X64' \[0m
+2026-01-29T05:40:04.2784272Z [36;1m  -k '' \[0m
+2026-01-29T05:40:04.2784448Z [36;1m  -c '' \[0m
+2026-01-29T05:40:04.2784617Z [36;1m  -l '' \[0m
+2026-01-29T05:40:04.2784798Z [36;1m  -d 'default' \[0m
+2026-01-29T05:40:04.2785109Z [36;1m  -g 'https://github.com/flutter/flutter.git' \[0m
+2026-01-29T05:40:04.2785418Z [36;1m  stable[0m
+2026-01-29T05:40:04.2814852Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-01-29T05:40:04.2815180Z env:
+2026-01-29T05:40:04.2815600Z   JAVA_HOME: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:40:04.2816273Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:40:04.2816595Z ##[endgroup]
+2026-01-29T05:40:04.5660178Z ##[group]Run actions/cache@v4
+2026-01-29T05:40:04.5660420Z with:
+2026-01-29T05:40:04.5660651Z   path: /opt/hostedtoolcache/flutter/stable-3.38.5-x64
+2026-01-29T05:40:04.5661084Z   key: flutter-linux-stable-3.38.5-x64-f6ff1529fd6d8af5f706051d9251ac9231c83407
+2026-01-29T05:40:04.5661493Z   enableCrossOsArchive: false
+2026-01-29T05:40:04.5661730Z   fail-on-cache-miss: false
+2026-01-29T05:40:04.5661937Z   lookup-only: false
+2026-01-29T05:40:04.5662128Z   save-always: false
+2026-01-29T05:40:04.5662301Z env:
+2026-01-29T05:40:04.5662529Z   JAVA_HOME: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:40:04.5662904Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:40:04.5663221Z ##[endgroup]
+2026-01-29T05:40:04.8240360Z Cache not found for input keys: flutter-linux-stable-3.38.5-x64-f6ff1529fd6d8af5f706051d9251ac9231c83407
+2026-01-29T05:40:04.9537513Z ##[group]Run actions/cache@v4
+2026-01-29T05:40:04.9537771Z with:
+2026-01-29T05:40:04.9537958Z   path: /home/runner/.pub-cache
+2026-01-29T05:40:04.9538645Z   key: flutter-pub-linux-stable-3.38.5-x64-f6ff1529fd6d8af5f706051d9251ac9231c83407-766944f9ae1c2969b3cb7966b5c451f0c0fd6e3aed246d82ac379ae67acad727
+2026-01-29T05:40:04.9539353Z   enableCrossOsArchive: false
+2026-01-29T05:40:04.9539587Z   fail-on-cache-miss: false
+2026-01-29T05:40:04.9539804Z   lookup-only: false
+2026-01-29T05:40:04.9539990Z   save-always: false
+2026-01-29T05:40:04.9540169Z env:
+2026-01-29T05:40:04.9540392Z   JAVA_HOME: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:40:04.9540796Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:40:04.9541108Z ##[endgroup]
+2026-01-29T05:40:05.2243913Z Cache not found for input keys: flutter-pub-linux-stable-3.38.5-x64-f6ff1529fd6d8af5f706051d9251ac9231c83407-766944f9ae1c2969b3cb7966b5c451f0c0fd6e3aed246d82ac379ae67acad727
+2026-01-29T05:40:05.2325430Z ##[group]Run $GITHUB_ACTION_PATH/setup.sh \
+2026-01-29T05:40:05.2326030Z [36;1m$GITHUB_ACTION_PATH/setup.sh \[0m
+2026-01-29T05:40:05.2326285Z [36;1m  -n '3.38.5' \[0m
+2026-01-29T05:40:05.2326490Z [36;1m  -a 'x64' \[0m
+2026-01-29T05:40:05.2326783Z [36;1m  -c '/opt/hostedtoolcache/flutter/stable-3.38.5-x64' \[0m
+2026-01-29T05:40:05.2327120Z [36;1m  -d '/home/runner/.pub-cache' \[0m
+2026-01-29T05:40:05.2327373Z [36;1m  stable[0m
+2026-01-29T05:40:05.2359145Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-01-29T05:40:05.2359462Z env:
+2026-01-29T05:40:05.2359703Z   JAVA_HOME: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:40:05.2360090Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.18-8/x64
+2026-01-29T05:40:05.2360411Z ##[endgroup]
+2026-01-29T05:40:05.5301580Z   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+2026-01-29T05:40:05.5302782Z                                  Dload  Upload   Total   Spent    Left  Speed
+2026-01-29T05:40:05.5303249Z 
+2026-01-29T05:40:06.4606199Z   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+2026-01-29T05:40:07.4605017Z   8 1396M    8  114M    0     0   122M      0  0:00:11 --:--:--  0:00:11  122M
+2026-01-29T05:40:08.4608443Z  19 1396M   19  273M    0     0   141M      0  0:00:09  0:00:01  0:00:08  141M
+2026-01-29T05:40:09.4605040Z  32 1396M   32  450M    0     0   153M      0  0:00:09  0:00:02  0:00:07  153M
+2026-01-29T05:40:10.4605324Z  45 1396M   45  635M    0     0   161M      0  0:00:08  0:00:03  0:00:05  161M
+2026-01-29T05:40:11.4605230Z  58 1396M   58  818M    0     0   166M      0  0:00:08  0:00:04  0:00:04  165M
+2026-01-29T05:40:12.4605416Z  71 1396M   71 1002M    0     0   169M      0  0:00:08  0:00:05  0:00:03  177M
+2026-01-29T05:40:13.4607464Z  85 1396M   85 1187M    0     0   171M      0  0:00:08  0:00:06  0:00:02  182M
+2026-01-29T05:40:13.6834032Z  98 1396M   98 1372M    0     0   173M      0  0:00:08  0:00:07  0:00:01  184M
+2026-01-29T05:40:13.6834813Z 100 1396M  100 1396M    0     0   171M      0  0:00:08  0:00:08 --:--:--  180M
