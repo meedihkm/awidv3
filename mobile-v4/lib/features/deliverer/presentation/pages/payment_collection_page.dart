@@ -321,7 +321,13 @@ class _PaymentCollectionPageState extends ConsumerState<PaymentCollectionPage> {
         customerName: widget.customerName,
         amount: amount,
         mode: _selectedMode,
-        allocations: _manualAllocations,
+        allocations: _manualAllocations.map((alloc) => PaymentAllocation(
+          orderId: alloc.orderId,
+          orderNumber: '', // TODO: Get from unpaid orders
+          allocatedAmount: alloc.amount,
+          orderDate: DateTime.now(), // TODO: Get from unpaid orders
+          isFullyPaid: false,
+        )).toList(),
         reference: reference.isEmpty ? null : reference,
         notes: notes.isEmpty ? null : notes,
       );

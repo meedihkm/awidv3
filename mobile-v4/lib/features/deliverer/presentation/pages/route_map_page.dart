@@ -60,38 +60,34 @@ class RouteMapPage extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  locationState.when(
-                    data: (position) {
-                      if (position == null) {
-                        return const Text('GPS désactivé');
-                      }
-                      return Column(
-                        children: [
-                          Text(
-                            'Position actuelle:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey[700],
-                            ),
+                  if (locationState.position != null)
+                    Column(
+                      children: [
+                        Text(
+                          'Position actuelle:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[700],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Lat: ${position.latitude.toStringAsFixed(6)}',
-                            style: TextStyle(color: Colors.grey[600]),
-                          ),
-                          Text(
-                            'Lng: ${position.longitude.toStringAsFixed(6)}',
-                            style: TextStyle(color: Colors.grey[600]),
-                          ),
-                        ],
-                      );
-                    },
-                    loading: () => const CircularProgressIndicator(),
-                    error: (error, _) => Text(
-                      'Erreur GPS: $error',
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Lat: ${locationState.position!.latitude.toStringAsFixed(6)}',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        Text(
+                          'Lng: ${locationState.position!.longitude.toStringAsFixed(6)}',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
+                    )
+                  else if (locationState.error != null)
+                    Text(
+                      'Erreur GPS: ${locationState.error}',
                       style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
+                    )
+                  else
+                    const Text('GPS désactivé'),
                 ],
               ),
             ),

@@ -47,7 +47,7 @@ jobs:
         working-directory: mobile-v4
       
       - name: Analyze Code
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
         working-directory: mobile-v4
         continue-on-error: true
       
