@@ -33,9 +33,9 @@ migrate_working_dir/
 /build/
 /coverage/
 
-# Generated files
-*.freezed.dart
-*.g.dart
+# Generated files - MUST be committed for build to work
+# *.freezed.dart - COMMENTED OUT - these files must be in repo
+# *.g.dart - COMMENTED OUT - these files must be in repo
 *.mocks.dart
 
 # Test files (kept locally only, not in repository)
