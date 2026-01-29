@@ -1,18 +1,20 @@
+# ============================================
+# AWID V4 - Backend + Mobile Only
+# ============================================
+
 # Dependencies
 node_modules/
-mobile/build/
-mobile/.dart_tool/
-mobile/.flutter-plugins-dependencies
+backend-v4/node_modules/
 
 # Environment files (IMPORTANT: Ne jamais commiter les vrais .env)
 .env
 .env.local
 .env.production
 .env.*.local
+.env.build
+.env.coolify
 
 # Database
-prisma/dev.db
-prisma/dev.db-journal
 *.db
 *.db-journal
 
@@ -20,9 +22,7 @@ prisma/dev.db-journal
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
+logs/
 
 # OS generated files
 .DS_Store
@@ -47,162 +47,98 @@ desktop.ini
 *.swo
 *.sublime-project
 *.sublime-workspace
+*.code-workspace
 
 # Temporary files
 *.tmp
 *.temp
-.vercel
-.env*.local
+.vercel/
 
-# Android - fichiers locaux et cache
-mobile/android/local.properties
-mobile/android/.gradle/
-mobile/android/app/build/
-mobile/android/build/
-mobile/android/gradle/
-mobile/android/.idea/
+# ============================================
+# BACKEND V4
+# ============================================
+backend-v4/dist/
+backend-v4/build/
+backend-v4/.env
+backend-v4/.env.local
+backend-v4/.env.production
+
+# ============================================
+# MOBILE V4 - Flutter/Dart
+# ============================================
+
+# Build outputs
+mobile-v4/build/
+mobile-v4/.dart_tool/
+mobile-v4/.flutter-plugins
+mobile-v4/.flutter-plugins-dependencies
+mobile-v4/.packages
+mobile-v4/.pub-cache/
+mobile-v4/.pub/
+
+# Android
+mobile-v4/android/local.properties
+mobile-v4/android/.gradle/
+mobile-v4/android/app/build/
+mobile-v4/android/build/
+mobile-v4/android/.idea/
+mobile-v4/android/gradle/
 *.keystore
 *.jks
-mobile/android/key.properties
+mobile-v4/android/key.properties
 
 # iOS
-mobile/ios/Pods/
-mobile/ios/.symlinks/
-mobile/ios/Flutter/Flutter.framework
-mobile/ios/Flutter/Flutter.podspec
-mobile/ios/Runner.xcworkspace/
-mobile/ios/Runner.xcodeproj/
-mobile/ios/.generated/
+mobile-v4/ios/Pods/
+mobile-v4/ios/.symlinks/
+mobile-v4/ios/Flutter/Flutter.framework
+mobile-v4/ios/Flutter/Flutter.podspec
+mobile-v4/ios/Runner.xcworkspace/
+mobile-v4/ios/Runner.xcodeproj/
+mobile-v4/ios/.generated/
 
-# Flutter/Dart
-mobile/.flutter-plugins
-mobile/.flutter-plugins-dependencies
-mobile/.packages
-mobile/.pub-cache/
-mobile/.pub/
-mobile/build/
-mobile/.dart_tool/
+# Fichiers temporaires de build/test
+mobile-v4/analyze_*.txt
+mobile-v4/analyze_*.bat
+mobile-v4/build_*.bat
+mobile-v4/compile_output.txt
+mobile-v4/test_output.log
+mobile-v4/test_results.json
+mobile-v4/error_categories.json
+mobile-v4/fix_errors.ps1
+mobile-v4/clean_and_rebuild.bat
+mobile-v4/generate_freezed.bat
 
-# Coverage
-coverage/
-*.lcov
+# Documentation markdown (garder uniquement essentiels)
+*.md
+!README.md
+!backend-v4/README.md
+!mobile-v4/README.md
+!mobile-v4/README_BUILD.md
+!.github/**/*.md
 
-# Test
-test-results/
-*.test.js.snap
+# ============================================
+# EXCLUSIONS - Anciennes versions
+# ============================================
+api-v2/
+mobile/
+test/
+scripts/
+platform-tools/
+flutter_windows_*/
+flutter_macos_*/
+flutter_linux_*/
+flutter_debug.txt
+freezed_files.txt
+android-sdk-license.txt
 
-# Backup files
-*.bak
-*.backup
-*~
+# Docker (garder uniquement backend-v4)
+docker-compose.yml
+Dockerfile
 
-# Secrets (CRITIQUE)
+# Secrets
 *.pem
 *.key
 *.cert
 *.crt
 secrets/
 credentials/
-
-# Build outputs
-dist/
-out/
-.next/
-.nuxt/
-.cache/
-
-# Vercel
-.vercel/
-
-# Supabase
-.supabase/
-
-# Documentation builds
-docs/_build/
-site/
-
-# Documentation temporaire / archives
-AUDIT_*.md
-PHASE_*.md
-ALL_PHASES_COMPLETE.md
-ACTION_REQUISE_URGENT.md
-COMMIT_MESSAGE*.txt
-WORK_COMPLETED.md
-SESSION_SUMMARY.md
-IMPROVEMENTS_SUMMARY.md
-IMPLEMENTATION_STATUS.md
-FRONTEND_DEBT_PROGRESS.md
-BUG_FIX_ORGANIZATION_ISOLATION.md
-DEBT_MANAGEMENT_IMPLEMENTATION.md
-FINAL_LOCATION_CHANGES.md
-FLUTTER_BUILD_FIXES.md
-LOCATION_SYSTEM_*.md
-MIGRATION_GUIDE.md
-PLAN_AMELIORATION_AWID_2026.md
-PROMPTS_*.md
-TYPE_VERIFICATION.md
-
-# Backups et logs VPS
-supabase_backup.sql
-fix_organization_isolation.sql
-sql_*.sql
-log vps
-
-# Dossiers dupliqués
-Awidv2-main/
-
-# Fichiers de config Coolify locaux
-.env.coolify
-docker-compose.coolify.yml
-
-# Documentation non essentielle
-AWID_COMMERCIAL.md
-Audit_AWID_Application.md
-CHANGELOG_V2.md
-CONTRIBUTING.md
-DEPLOYMENT_GUIDE*.md
-docs/CDN_SETUP.md
-docs/MONITORING.md
-docs/SECURITY_AUDIT.md
-docs/SQL_OPTIMIZATIONS.md
-docs/USER_GUIDE.md
-
-# Scripts et tests de charge
-artillery/
-scripts/health-check.sh
-
-# Config workspace
-*.code-workspace
-
-# Tous les fichiers markdown sauf ceux dans .github
-*.md
-!.github/**/*.md
-
-# Migrations et scripts
-api-v2/migrations/
-api-v2/scripts/
-scripts/
-
-# Docker et déploiement
-docker-compose*.yml
-# Dockerfile - Commenté pour permettre le déploiement Coolify
-
-# Documentation
-docs/
-
-# Kiro steering files (documentation locale)
-.kiro/steering/*.md
-
-# Anciennes versions (garder en local uniquement)
-api-v2/
-mobile/
-
-# Flutter SDK local
-flutter_windows_*/
-flutter_macos_*/
-flutter_linux_*/
-
-# Fichiers temporaires de build
-freezed_files.txt
-log build
-remove_generated_files.bat

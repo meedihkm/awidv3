@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../domain/entities/packaging_transaction.dart';
+import '../../domain/entities/packaging_type.dart';
 import '../../domain/repositories/delivery_actions_repository.dart';
 
 part 'packaging_transaction_model.freezed.dart';
@@ -271,7 +272,6 @@ extension PackagingBalanceModelX on PackagingBalanceModel {
   PackagingBalance toPackagingBalance() {
     return PackagingBalance(
       customerId: customerId,
-      customerName: customerName,
       items: items.map((i) => i.toPackagingBalanceItem()).toList(),
       totalValue: totalValue,
       lastUpdated: lastUpdated,
@@ -338,9 +338,9 @@ extension PackagingTypeModelX on PackagingTypeModel {
     return PackagingType(
       id: id,
       name: name,
+      unitValue: value,
       description: description,
-      value: value,
-      qrCodePattern: qrCodePattern,
+      imageUrl: null,
       isActive: isActive,
     );
   }

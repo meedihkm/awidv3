@@ -35,8 +35,24 @@ class CustomerOrder with _$CustomerOrder {
     DateTime? updatedAt,
   }) = _CustomerOrder;
 
+  const CustomerOrder._();
+
   factory CustomerOrder.fromJson(Map<String, dynamic> json) =>
       _$CustomerOrderFromJson(json);
+
+  /// Date de commande formatée
+  String get orderDateFormatted {
+    return '${orderDate.day}/${orderDate.month}/${orderDate.year}';
+  }
+
+  /// Date de livraison formatée
+  String get deliveryDateFormatted {
+    if (deliveryDate == null) return 'Non planifiée';
+    return '${deliveryDate!.day}/${deliveryDate!.month}/${deliveryDate!.year}';
+  }
+
+  /// Vérifie si la commande est payée
+  bool get isPaid => remainingAmount <= 0;
 }
 
 /// Article de Commande Client
@@ -55,8 +71,20 @@ class CustomerOrderItem with _$CustomerOrderItem {
     String? notes,
   }) = _CustomerOrderItem;
 
+  const CustomerOrderItem._();
+
   factory CustomerOrderItem.fromJson(Map<String, dynamic> json) =>
       _$CustomerOrderItemFromJson(json);
+
+  /// Prix unitaire formaté
+  String get unitPriceFormatted {
+    return '${unitPrice.toStringAsFixed(2)} €';
+  }
+
+  /// Prix total formaté
+  String get totalPriceFormatted {
+    return '${totalPrice.toStringAsFixed(2)} €';
+  }
 }
 
 /// Statut de Commande

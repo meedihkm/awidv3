@@ -40,7 +40,7 @@ class _PhotoCaptureState extends ConsumerState<PhotoCapture> {
 
     // Écouter les changements d'état de la caméra
     ref.listen<CameraState>(cameraProvider, (previous, next) {
-      if (next is _PhotoTaken) {
+      if (next is CameraPhotoTaken) {
         setState(() {
           if (next.imagePath != null) {
             _selectedPhotos.add(next.imagePath);
@@ -48,7 +48,7 @@ class _PhotoCaptureState extends ConsumerState<PhotoCapture> {
           _isLoading = false;
         });
         ref.read(cameraProvider.notifier).resetState();
-      } else if (next is _MultiplePhotosTaken) {
+      } else if (next is CameraMultiplePhotosTaken) {
         setState(() {
           if (next.imagePaths != null) {
             _selectedPhotos.addAll(next.imagePaths);
@@ -56,17 +56,17 @@ class _PhotoCaptureState extends ConsumerState<PhotoCapture> {
           _isLoading = false;
         });
         ref.read(cameraProvider.notifier).resetState();
-      } else if (next is _Loading) {
+      } else if (next is CameraLoading) {
         setState(() {
           _isLoading = true;
         });
-      } else if (next is _Error) {
+      } else if (next is CameraError) {
         setState(() {
           _isLoading = false;
         });
         _showErrorSnackBar(next.message);
         ref.read(cameraProvider.notifier).resetState();
-      } else if (next is _Cancelled) {
+      } else if (next is CameraCancelled) {
         setState(() {
           _isLoading = false;
         });

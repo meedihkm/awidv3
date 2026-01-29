@@ -38,8 +38,58 @@ class CustomerDelivery with _$CustomerDelivery {
     DateTime? updatedAt,
   }) = _CustomerDelivery;
 
+  const CustomerDelivery._();
+
   factory CustomerDelivery.fromJson(Map<String, dynamic> json) =>
       _$CustomerDeliveryFromJson(json);
+
+  /// Message de statut formaté
+  String get statusMessage {
+    switch (status) {
+      case DeliveryStatus.scheduled:
+        return 'Livraison planifiée';
+      case DeliveryStatus.assigned:
+        return 'Livreur assigné';
+      case DeliveryStatus.inProgress:
+        return 'En cours de livraison';
+      case DeliveryStatus.nearDestination:
+        return 'Proche de la destination';
+      case DeliveryStatus.arrived:
+        return 'Livreur arrivé';
+      case DeliveryStatus.completed:
+        return 'Livraison terminée';
+      case DeliveryStatus.failed:
+        return 'Livraison échouée';
+      case DeliveryStatus.cancelled:
+        return 'Livraison annulée';
+    }
+  }
+
+  /// Temps restant estimé formaté
+  String get estimatedTimeRemaining {
+    if (estimatedArrival == null) return 'Non disponible';
+    final now = DateTime.now();
+    if (estimatedArrival!.isBefore(now)) return 'Arrivé';
+    final diff = estimatedArrival!.difference(now);
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes} min';
+    }
+    return '${diff.inHours}h ${diff.inMinutes % 60}min';
+  }
+
+  /// Distance restante formatée
+  String get distanceRemainingFormatted {
+    if (distanceRemaining == null) return 'Non disponible';
+    if (distanceRemaining! < 1) {
+      return '${(distanceRemaining! * 1000).toStringAsFixed(0)} m';
+    }
+    return '${distanceRemaining!.toStringAsFixed(1)} km';
+  }
+
+  /// Montant total formaté
+  String get totalAmountFormatted {
+    return '${totalAmount.toStringAsFixed(2)} €';
+  }
 }
 
 /// Point de Suivi de Livraison

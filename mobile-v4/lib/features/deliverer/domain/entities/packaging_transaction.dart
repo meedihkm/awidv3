@@ -46,8 +46,13 @@ class PackagingItem with _$PackagingItem {
     String? description,
   }) = _PackagingItem;
 
+  const PackagingItem._();
+
   factory PackagingItem.fromJson(Map<String, dynamic> json) =>
       _$PackagingItemFromJson(json);
+
+  /// Alias pour packagingId
+  String get packagingTypeId => packagingId;
 }
 
 extension PackagingTransactionTypeX on PackagingTransactionType {

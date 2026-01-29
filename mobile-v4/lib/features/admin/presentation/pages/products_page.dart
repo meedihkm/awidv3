@@ -136,7 +136,7 @@ class _ProductsPageState extends ConsumerState<ProductsPage> {
               child: productsAsync.when(
                 data: (products) {
                   if (products.isEmpty) {
-                    return const EmptyState(message: 'Aucun produit trouvé', icon: Icons.inventory_2_outlined);
+                    return const EmptyStateWidget(message: 'Aucun produit trouvé', icon: Icons.inventory_2_outlined);
                   }
 
                   return ListView.builder(

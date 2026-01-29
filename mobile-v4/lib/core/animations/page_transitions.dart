@@ -27,7 +27,7 @@ class PageTransitions {
   static Route<T> fade<T>(Widget page, {Duration duration = const Duration(milliseconds: 300)}) {
     return PageRouteBuilder<T>(
       pageBuilder: (context, animation, secondaryAnimation) => page,
-      transitionsDuration: duration,
+      transitionDuration: duration,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         return FadeTransition(
           opacity: animation,

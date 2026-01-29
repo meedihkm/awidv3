@@ -140,7 +140,7 @@ class _UsersPageState extends ConsumerState<UsersPage> {
               child: usersAsync.when(
                 data: (users) {
                   if (users.isEmpty) {
-                    return const EmptyState(message: 'Aucun utilisateur trouvé', icon: Icons.people_outline);
+                    return const EmptyStateWidget(message: 'Aucun utilisateur trouvé', icon: Icons.people_outline);
                   }
 
                   return ListView.builder(

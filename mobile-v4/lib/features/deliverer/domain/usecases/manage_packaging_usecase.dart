@@ -1,4 +1,5 @@
 import '../entities/packaging_transaction.dart';
+import '../entities/packaging_type.dart';
 import '../repositories/delivery_actions_repository.dart';
 
 /// Use Case: Gérer les Consignes
@@ -23,7 +24,7 @@ class ManagePackagingUseCase {
         customerId: params.customerId,
         customerName: params.customerName,
         type: PackagingTransactionType.deposit,
-        items: params.items.map((item) => packaging_transaction.PackagingItem(
+        items: params.items.map((item) => PackagingItem(
           packagingId: item.packagingTypeId,
           packagingName: item.packagingName,
           quantity: item.quantity,
@@ -98,7 +99,7 @@ class ManagePackagingUseCase {
         customerId: params.customerId,
         customerName: params.customerName,
         type: PackagingTransactionType.return_,
-        items: params.items.map((item) => packaging_transaction.PackagingItem(
+        items: params.items.map((item) => PackagingItem(
           packagingId: item.packagingTypeId,
           packagingName: item.packagingName,
           quantity: item.quantity,

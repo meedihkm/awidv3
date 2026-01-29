@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/entities/customer_delivery.dart';
 import '../providers/customer_tracking_provider.dart';
 import '../widgets/delivery_map.dart';
 

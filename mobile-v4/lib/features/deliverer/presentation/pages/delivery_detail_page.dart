@@ -106,7 +106,7 @@ class DeliveryDetailPage extends ConsumerWidget {
                     ),
                     _InfoRow(
                       label: 'Articles',
-                      value: '${delivery.itemsCount} article${delivery.itemsCount > 1 ? 's' : ''}',
+                      value: '${delivery.itemsCount ?? 0} article${(delivery.itemsCount ?? 0) > 1 ? 's' : ''}',
                     ),
                     _InfoRow(
                       label: 'Montant',
@@ -147,16 +147,13 @@ class DeliveryDetailPage extends ConsumerWidget {
                       icon: const Icon(Icons.check_circle),
                       label: const Text('Marquer comme livrée'),
                       onPressed: () async {
-                        // TODO: Navigation vers page de preuve de livraison
-                        await ref.read(deliveryActionsProvider.notifier).completeDelivery(deliveryId);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Livraison complétée'),
-                            ),
-                          );
-                          Navigator.pop(context);
-                        }
+                        // Navigate to proof of delivery page
+                        // TODO: Implement navigation to ProofOfDeliveryPage
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Navigation vers preuve de livraison à implémenter'),
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -226,7 +223,7 @@ class _HeaderCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        delivery.status.displayName,
+                        delivery.statusDisplayName,
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: statusColor,
@@ -277,11 +274,11 @@ class _HeaderCard extends StatelessWidget {
   Color _getStatusColor(BuildContext context) {
     final theme = Theme.of(context);
     final status = delivery.status;
-    if (status == DeliveryStatus.pending || status == DeliveryStatus.assigned) {
+    if (status == 'pending' || status == 'assigned') {
       return Colors.orange;
-    } else if (status == DeliveryStatus.pickedUp || status == DeliveryStatus.inTransit) {
+    } else if (status == 'picked_up' || status == 'in_transit') {
       return theme.colorScheme.primary;
-    } else if (status == DeliveryStatus.delivered || status == DeliveryStatus.completed) {
+    } else if (status == 'delivered' || status == 'completed') {
       return Colors.green;
     } else {
       return theme.colorScheme.error;
@@ -290,13 +287,13 @@ class _HeaderCard extends StatelessWidget {
 
   IconData _getStatusIcon() {
     final status = delivery.status;
-    if (status == DeliveryStatus.pending || status == DeliveryStatus.assigned) {
+    if (status == 'pending' || status == 'assigned') {
       return Icons.schedule;
-    } else if (status == DeliveryStatus.pickedUp) {
+    } else if (status == 'picked_up') {
       return Icons.shopping_bag;
-    } else if (status == DeliveryStatus.inTransit) {
+    } else if (status == 'in_transit') {
       return Icons.local_shipping;
-    } else if (status == DeliveryStatus.delivered || status == DeliveryStatus.completed) {
+    } else if (status == 'delivered' || status == 'completed') {
       return Icons.check_circle;
     } else {
       return Icons.cancel;

@@ -1,0 +1,74 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'mobile-v4/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'mobile-v4/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+      
+      - name: Flutter Doctor
+        run: flutter doctor -v
+        working-directory: mobile-v4
+      
+      - name: Get Dependencies
+        run: flutter pub get
+        working-directory: mobile-v4
+      
+      - name: Generate Freezed Files
+        run: dart run build_runner build --delete-conflicting-outputs
+        working-directory: mobile-v4
+      
+      - name: Analyze Code
+        run: flutter analyze --no-fatal-infos
+        working-directory: mobile-v4
+        continue-on-error: true
+      
+      - name: Build APK (Debug)
+        run: flutter build apk --debug
+        working-directory: mobile-v4
+      
+      - name: Build APK (Release)
+        run: flutter build apk --release
+        working-directory: mobile-v4
+      
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: awid-mobile-debug
+          path: mobile-v4/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 30
+      
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: awid-mobile-release
+          path: mobile-v4/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 90

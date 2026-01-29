@@ -73,21 +73,21 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryPage> {
     });
 
     ref.listen<CameraState>(cameraProvider, (previous, next) {
-      if (next is _PhotoTaken) {
+      if (next is CameraPhotoTaken) {
         setState(() {
           if (next.imagePath != null) {
             _photosPaths.add(next.imagePath);
           }
         });
         ref.read(cameraProvider.notifier).resetState();
-      } else if (next is _MultiplePhotosTaken) {
+      } else if (next is CameraMultiplePhotosTaken) {
         setState(() {
           if (next.imagePaths != null) {
             _photosPaths.addAll(next.imagePaths);
           }
         });
         ref.read(cameraProvider.notifier).resetState();
-      } else if (next is _Error) {
+      } else if (next is CameraError) {
         _showErrorSnackBar(next.message);
         ref.read(cameraProvider.notifier).resetState();
       }
@@ -626,7 +626,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryPage> {
       ),
       child: SafeArea(
         child: CustomButton(
-          text: 'Finaliser la Livraison',
+          label: 'Finaliser la Livraison',
           onPressed: isValid ? _completeDelivery : null,
           backgroundColor: Colors.green,
           icon: Icons.check_circle,

@@ -28,6 +28,9 @@ class Delivery with _$Delivery {
 
   const Delivery._();
 
+  /// Alias pour deliveryInstructions
+  String? get specialInstructions => deliveryInstructions;
+
   /// Check if delivery is pending
   bool get isPending => status == 'pending' || status == 'assigned';
 

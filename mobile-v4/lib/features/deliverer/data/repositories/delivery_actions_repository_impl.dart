@@ -2,25 +2,15 @@ import '../../../../core/storage/local_storage.dart';
 import '../../domain/entities/proof_of_delivery.dart';
 import '../../domain/entities/payment_collection.dart';
 import '../../domain/entities/packaging_transaction.dart';
+import '../../domain/entities/packaging_type.dart';
+import '../../domain/entities/unpaid_order.dart';
+import '../../domain/entities/delivery_history_item.dart';
+import '../../domain/entities/deliverer_earnings.dart';
 import '../../domain/repositories/delivery_actions_repository.dart';
 import '../datasources/delivery_actions_remote_datasource.dart';
 import '../models/proof_of_delivery_model.dart';
 import '../models/payment_collection_model.dart';
 import '../models/packaging_transaction_model.dart';
-
-// Import des classes auxiliaires du repository
-// Ces classes sont définies dans delivery_actions_repository.dart
-export '../../domain/repositories/delivery_actions_repository.dart' show
-    UnpaidOrder,
-    PackagingBalance,
-    PackagingBalanceItem,
-    PackagingType,
-    PackagingQrData,
-    DeliveryHistoryItem,
-    DelivererEarnings,
-    DelivererDetailedStats,
-    SyncResult,
-    SyncStatus;
 
 /// Implémentation du Repository: Actions de Livraison
 /// Gère la persistance locale et la synchronisation avec l'API
@@ -579,21 +569,24 @@ class DeliveryActionsRepositoryImpl implements DeliveryActionsRepository {
         offset: offset,
       );
 
-      return data.map((json) => DeliveryHistoryItem(
-        id: json['id'] as String,
-        deliveryNumber: json['order_number'] as String,
-        customerName: json['customer_name'] as String,
-        deliveryDate: DateTime.parse(json['delivery_date'] as String),
-        status: json['status'] as String,
-        deliveryAddress: json['delivery_address'] as String? ?? '',
-        orderCount: json['order_count'] as int? ?? 1,
-        totalAmount: (json['order_value'] as num).toDouble(),
-        paymentCollected: json['payment_collected'] != null 
-            ? (json['payment_collected'] as num).toDouble()
-            : null,
-        hasProofOfDelivery: json['has_proof_of_delivery'] as bool,
-        notes: json['notes'] as String?,
-      )).toList();
+      return data.map((json) {
+        final statusStr = json['status'] as String;
+        final status = DeliveryHistoryStatus.values.firstWhere(
+          (s) => s.name == statusStr,
+          orElse: () => DeliveryHistoryStatus.completed,
+        );
+        
+        return DeliveryHistoryItem(
+          id: json['id'] as String,
+          orderNumber: json['order_number'] as String,
+          customerName: json['customer_name'] as String,
+          customerAddress: json['customer_address'] as String? ?? '',
+          deliveryDate: DateTime.parse(json['delivery_date'] as String),
+          status: status,
+          orderAmount: (json['order_value'] as num).toDouble(),
+          notes: json['notes'] as String?,
+        );
+      }).toList();
     } catch (error) {
       throw Exception('Erreur lors de la récupération de l\'historique: $error');
     }
@@ -614,20 +607,18 @@ class DeliveryActionsRepositoryImpl implements DeliveryActionsRepository {
 
       return DelivererEarnings(
         delivererId: data['deliverer_id'] as String,
-        startDate: DateTime.parse(data['start_date'] as String),
-        endDate: DateTime.parse(data['end_date'] as String),
-        deliveryCount: data['total_deliveries'] as int,
-        totalOrderValue: (data['total_order_value'] as num).toDouble(),
-        commissionEarned: (data['total_commissions'] as num).toDouble(),
-        bonusEarned: (data['total_bonuses'] as num).toDouble(),
+        periodStart: DateTime.parse(data['start_date'] as String),
+        periodEnd: DateTime.parse(data['end_date'] as String),
         totalEarnings: (data['total_earnings'] as num).toDouble(),
-        breakdown: (data['breakdown'] as List).map((b) => EarningsBreakdown(
+        deliveryFees: (data['delivery_fees'] as num?)?.toDouble() ?? (data['total_commissions'] as num).toDouble(),
+        tips: (data['tips'] as num?)?.toDouble() ?? 0.0,
+        bonuses: (data['bonuses'] as num?)?.toDouble() ?? (data['total_bonuses'] as num).toDouble(),
+        totalDeliveries: data['total_deliveries'] as int,
+        completedDeliveries: data['completed_deliveries'] as int? ?? data['total_deliveries'] as int,
+        dailyBreakdown: (data['breakdown'] as List?)?.map((b) => DailyEarnings(
           date: DateTime.parse(b['date'] as String),
           deliveries: b['deliveries'] as int,
-          orderValue: (b['order_value'] as num).toDouble(),
-          commissions: (b['commissions'] as num).toDouble(),
-          bonuses: (b['bonuses'] as num).toDouble(),
-          total: (b['total'] as num).toDouble(),
+          earnings: (b['total'] as num).toDouble(),
         )).toList(),
       );
     } catch (error) {
@@ -649,23 +640,16 @@ class DeliveryActionsRepositoryImpl implements DeliveryActionsRepository {
       );
 
       return DelivererDetailedStats(
-        delivererId: data['deliverer_id'] as String,
-        startDate: DateTime.parse(data['start_date'] as String),
-        endDate: DateTime.parse(data['end_date'] as String),
         totalDeliveries: data['total_deliveries'] as int,
-        successfulDeliveries: data['successful_deliveries'] as int,
+        completedDeliveries: data['successful_deliveries'] as int,
+        cancelledDeliveries: data['cancelled_deliveries'] as int? ?? 0,
         failedDeliveries: data['failed_deliveries'] as int,
-        successRate: (data['success_rate'] as num).toDouble(),
-        averageDeliveryTime: (data['average_delivery_time'] as num).toDouble(),
-        totalDistance: (data['total_distance'] as num).toDouble(),
-        totalPaymentsCollected: (data['total_payments_collected'] as num?)?.toDouble() ?? 0.0,
         averageRating: (data['average_rating'] as num).toDouble(),
-        deliveriesByStatus: Map<String, int>.from(data['deliveries_by_status']),
-        dailyEarnings: (data['daily_earnings'] as List?)?.map((e) => DailyEarning(
-          date: DateTime.parse(e['date'] as String),
-          earnings: (e['earnings'] as num).toDouble(),
-          deliveries: e['deliveries'] as int,
-        )).toList() ?? [],
+        totalRatings: data['total_ratings'] as int? ?? 0,
+        onTimePercentage: (data['on_time_percentage'] as num?)?.toDouble() ?? 0.0,
+        averageDeliveryTime: (data['average_delivery_time'] as num).toDouble(),
+        totalCustomers: data['total_customers'] as int? ?? 0,
+        repeatCustomers: data['repeat_customers'] as int? ?? 0,
       );
     } catch (error) {
       throw Exception('Erreur lors de la récupération des statistiques: $error');

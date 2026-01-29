@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../domain/entities/payment_collection.dart';
+import '../../domain/entities/unpaid_order.dart';
 import '../../domain/repositories/delivery_actions_repository.dart';
 
 part 'payment_collection_model.freezed.dart';
@@ -249,13 +250,13 @@ extension UnpaidOrderModelX on UnpaidOrderModel {
   /// Convertit le model en classe auxiliaire
   UnpaidOrder toUnpaidOrder() {
     return UnpaidOrder(
-      id: id,
+      orderId: id,
       orderNumber: orderNumber,
       orderDate: orderDate,
       totalAmount: totalAmount,
       paidAmount: paidAmount,
       remainingAmount: remainingAmount,
-      daysSinceOrder: daysSinceOrder,
+      notes: null,
     );
   }
 }

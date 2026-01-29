@@ -96,7 +96,6 @@ class _DeliveryMapWidgetState extends State<DeliveryMapWidget> {
                   points: [currentLocation, deliveryLocation],
                   strokeWidth: 3,
                   color: Colors.blue,
-                  isDotted: true,
                 ),
               ],
             ),

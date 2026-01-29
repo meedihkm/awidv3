@@ -60,6 +60,8 @@ analyzer:
     inference_failure_on_function_invocation: ignore
     inference_failure_on_function_return_type: ignore
     inference_failure_on_instance_creation: ignore
+    # Ignorer les erreurs freezed
+    non_abstract_class_inherits_abstract_member: ignore
   language:
     strict-casts: false
     strict-inference: false

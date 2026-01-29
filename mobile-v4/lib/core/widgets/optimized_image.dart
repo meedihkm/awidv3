@@ -211,7 +211,7 @@ class OptimizedAvatar extends StatelessWidget {
           placeholder: (context, url) => ShimmerLoading(
             width: radius * 2,
             height: radius * 2,
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(radius),
           ),
           errorWidget: (context, url, error) => Text(
             fallbackText?.substring(0, 1).toUpperCase() ?? '?',

@@ -434,12 +434,12 @@ class SignaturePreview extends StatelessWidget {
             ),
           
           // Indicateur de signature valide
-          const Positioned(
+          Positioned(
             bottom: 8,
             left: 8,
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: const BoxDecoration(
                 color: Colors.green,
                 borderRadius: BorderRadius.all(Radius.circular(12)),
               ),

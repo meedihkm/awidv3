@@ -325,8 +325,10 @@ class _PackagingManagementPageState extends ConsumerState<PackagingManagementPag
       if (entry.value > 0) {
         final type = packagingTypes.firstWhere((t) => t.id == entry.key);
         items.add(PackagingItem(
-          packagingTypeId: type.id,
+          packagingId: type.id,
+          packagingName: type.name,
           quantity: entry.value,
+          unitValue: type.unitValue,
         ));
       }
     }
@@ -336,9 +338,13 @@ class _PackagingManagementPageState extends ConsumerState<PackagingManagementPag
       return;
     }
 
+    // TODO: Récupérer delivererId depuis le provider auth
+    final delivererId = 'current-deliverer-id'; // Temporaire
+
     final params = PackagingDepositParams(
-      deliveryId: widget.deliveryId,
+      delivererId: delivererId,
       customerId: widget.customerId,
+      customerName: widget.customerName,
       items: items,
     );
 
@@ -352,8 +358,10 @@ class _PackagingManagementPageState extends ConsumerState<PackagingManagementPag
       if (entry.value > 0) {
         final type = packagingTypes.firstWhere((t) => t.id == entry.key);
         items.add(PackagingItem(
-          packagingTypeId: type.id,
+          packagingId: type.id,
+          packagingName: type.name,
           quantity: entry.value,
+          unitValue: type.unitValue,
         ));
       }
     }
@@ -363,9 +371,13 @@ class _PackagingManagementPageState extends ConsumerState<PackagingManagementPag
       return;
     }
 
+    // TODO: Récupérer delivererId depuis le provider auth
+    final delivererId = 'current-deliverer-id'; // Temporaire
+
     final params = PackagingReturnParams(
-      deliveryId: widget.deliveryId,
+      delivererId: delivererId,
       customerId: widget.customerId,
+      customerName: widget.customerName,
       items: items,
     );
 

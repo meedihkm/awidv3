@@ -283,11 +283,15 @@ class _PaymentCollectionPageState extends ConsumerState<PaymentCollectionPage> {
     final reference = _referenceController.text.trim();
     final notes = _notesController.text.trim();
 
+    // TODO: Récupérer delivererId depuis le provider auth
+    final delivererId = 'current-deliverer-id'; // Temporaire
+
     if (_isAutoAllocation) {
       // Auto allocation
       final params = CollectPaymentAutoParams(
-        deliveryId: widget.deliveryId,
+        delivererId: delivererId,
         customerId: widget.customerId,
+        customerName: widget.customerName,
         amount: amount,
         mode: _selectedMode,
         reference: reference.isEmpty ? null : reference,
@@ -312,8 +316,9 @@ class _PaymentCollectionPageState extends ConsumerState<PaymentCollectionPage> {
       }
 
       final params = CollectPaymentManualParams(
-        deliveryId: widget.deliveryId,
+        delivererId: delivererId,
         customerId: widget.customerId,
+        customerName: widget.customerName,
         amount: amount,
         mode: _selectedMode,
         allocations: _manualAllocations,

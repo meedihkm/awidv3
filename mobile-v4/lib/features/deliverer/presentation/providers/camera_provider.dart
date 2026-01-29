@@ -271,62 +271,62 @@ class CameraNotifier extends StateNotifier<CameraState> {
 sealed class CameraState {
   const CameraState();
 
-  const factory CameraState.idle() = _Idle;
-  const factory CameraState.loading() = _Loading;
-  const factory CameraState.error(String message) = _Error;
-  const factory CameraState.cancelled() = _Cancelled;
+  const factory CameraState.idle() = CameraIdle;
+  const factory CameraState.loading() = CameraLoading;
+  const factory CameraState.error(String message) = CameraError;
+  const factory CameraState.cancelled() = CameraCancelled;
   
   const factory CameraState.photoTaken({
     required String imagePath,
     required String originalPath,
     required int size,
-  }) = _PhotoTaken;
+  }) = CameraPhotoTaken;
   
   const factory CameraState.multiplePhotosTaken({
     required List<String> imagePaths,
     required List<String> originalPaths,
     required List<int> sizes,
     required int totalSize,
-  }) = _MultiplePhotosTaken;
+  }) = CameraMultiplePhotosTaken;
   
-  const factory CameraState.photoDeleted() = _PhotoDeleted;
+  const factory CameraState.photoDeleted() = CameraPhotoDeleted;
   
   const factory CameraState.imageCompressed({
     required String imagePath,
     required int newSize,
     required int quality,
-  }) = _ImageCompressed;
+  }) = CameraImageCompressed;
   
   const factory CameraState.imageResized({
     required String imagePath,
     int? maxWidth,
     int? maxHeight,
-  }) = _ImageResized;
+  }) = CameraImageResized;
 }
 
-class _Idle extends CameraState {
-  const _Idle();
+class CameraIdle extends CameraState {
+  const CameraIdle();
 }
 
-class _Loading extends CameraState {
-  const _Loading();
+class CameraLoading extends CameraState {
+  const CameraLoading();
 }
 
-class _Error extends CameraState {
+class CameraError extends CameraState {
   final String message;
-  const _Error(this.message);
+  const CameraError(this.message);
 }
 
-class _Cancelled extends CameraState {
-  const _Cancelled();
+class CameraCancelled extends CameraState {
+  const CameraCancelled();
 }
 
-class _PhotoTaken extends CameraState {
+class CameraPhotoTaken extends CameraState {
   final String imagePath;
   final String originalPath;
   final int size;
   
-  const _PhotoTaken({
+  const CameraPhotoTaken({
     required this.imagePath,
     required this.originalPath,
     required this.size,
@@ -340,13 +340,13 @@ class _PhotoTaken extends CameraState {
   }
 }
 
-class _MultiplePhotosTaken extends CameraState {
+class CameraMultiplePhotosTaken extends CameraState {
   final List<String> imagePaths;
   final List<String> originalPaths;
   final List<int> sizes;
   final int totalSize;
   
-  const _MultiplePhotosTaken({
+  const CameraMultiplePhotosTaken({
     required this.imagePaths,
     required this.originalPaths,
     required this.sizes,
@@ -364,16 +364,16 @@ class _MultiplePhotosTaken extends CameraState {
   }
 }
 
-class _PhotoDeleted extends CameraState {
-  const _PhotoDeleted();
+class CameraPhotoDeleted extends CameraState {
+  const CameraPhotoDeleted();
 }
 
-class _ImageCompressed extends CameraState {
+class CameraImageCompressed extends CameraState {
   final String imagePath;
   final int newSize;
   final int quality;
   
-  const _ImageCompressed({
+  const CameraImageCompressed({
     required this.imagePath,
     required this.newSize,
     required this.quality,
@@ -387,12 +387,12 @@ class _ImageCompressed extends CameraState {
   }
 }
 
-class _ImageResized extends CameraState {
+class CameraImageResized extends CameraState {
   final String imagePath;
   final int? maxWidth;
   final int? maxHeight;
   
-  const _ImageResized({
+  const CameraImageResized({
     required this.imagePath,
     this.maxWidth,
     this.maxHeight,
@@ -415,40 +415,40 @@ class _ImageResized extends CameraState {
 
 extension CameraStateX on CameraState {
   /// Vérifie si l'état est idle
-  bool get isIdle => this is _Idle;
+  bool get isIdle => this is CameraIdle;
 
   /// Vérifie si l'état est loading
-  bool get isLoading => this is _Loading;
+  bool get isLoading => this is CameraLoading;
 
   /// Vérifie si l'état est error
-  bool get isError => this is _Error;
+  bool get isError => this is CameraError;
 
   /// Vérifie si l'état est cancelled
-  bool get isCancelled => this is _Cancelled;
+  bool get isCancelled => this is CameraCancelled;
 
   /// Vérifie si une photo a été prise
-  bool get hasPhoto => this is _PhotoTaken || this is _MultiplePhotosTaken;
+  bool get hasPhoto => this is CameraPhotoTaken || this is CameraMultiplePhotosTaken;
 
   /// Récupère le message d'erreur
   String? get errorMessage {
-    if (this is _Error) {
-      return (this as _Error).message;
+    if (this is CameraError) {
+      return (this as CameraError).message;
     }
     return null;
   }
 
   /// Récupère le chemin de la photo (pour photo unique)
   String? get imagePath {
-    if (this is _PhotoTaken) {
-      return (this as _PhotoTaken).imagePath;
+    if (this is CameraPhotoTaken) {
+      return (this as CameraPhotoTaken).imagePath;
     }
     return null;
   }
 
   /// Récupère les chemins des photos (pour photos multiples)
   List<String>? get imagePaths {
-    if (this is _MultiplePhotosTaken) {
-      return (this as _MultiplePhotosTaken).imagePaths;
+    if (this is CameraMultiplePhotosTaken) {
+      return (this as CameraMultiplePhotosTaken).imagePaths;
     }
     return null;
   }
