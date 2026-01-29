@@ -38,6 +38,9 @@ migrate_working_dir/
 *.g.dart
 *.mocks.dart
 
+# Test files (kept locally only, not in repository)
+test/
+
 # Symbolication related
 app.*.symbols
 
