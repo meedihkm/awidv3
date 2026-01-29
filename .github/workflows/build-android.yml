@@ -42,6 +42,10 @@ jobs:
         run: flutter pub get
         working-directory: mobile-v4
       
+      - name: Generate Freezed Files
+        run: dart run build_runner build --delete-conflicting-outputs
+        working-directory: mobile-v4
+      
       - name: Analyze Code
         run: flutter analyze --no-fatal-infos
         working-directory: mobile-v4
